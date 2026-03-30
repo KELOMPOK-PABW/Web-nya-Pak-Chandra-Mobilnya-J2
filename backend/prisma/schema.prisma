@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum CartStatus {
+  active
+  checked_out
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
+enum OrderItemStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
+
+enum OrderHistoryStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
+
+model User {
+  id                   Int                  @id @default(autoincrement())
+  name                 String?
+  carts                Cart[]
+  buyerOrders          Order[]              @relation("BuyerOrders")
+  sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
+  orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
+
+  @@map("users")
+}
+
+model Product {
+  id         Int         @id @default(autoincrement())
+  name       String?
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Address {
+  id     Int     @id @default(autoincrement())
+  detail String?
+  orders Order[]
+
+  @@map("addresses")
+}
+
+model Payment {
+  id      Int     @id @default(autoincrement())
+  orderId Int     @unique @map("order_id")
+  amount  Decimal @db.Decimal(15, 2)
+  order   Order   @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model Cart {
+  id         Int        @id @default(autoincrement())
+  userId     Int        @map("user_id")
+  status     CartStatus @default(active)
+  checkedOut DateTime?  @map("checked_out")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user   User       @relation(fields: [userId], references: [id])
+  items  CartItem[]
+  orders Order[]
+
+  @@index([userId])
+  @@map("carts")
+}
+
+model CartItem {
+  id            Int      @id @default(autoincrement())
+  cartId        Int      @map("cart_id")
+  productListId Int      @map("product_list_id")
+  qty           Int
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productListId], references: [id])
+
+  @@unique([cartId, productListId])
+  @@map("cart_items")
+}
+
+model Order {
+  id            Int           @id @default(autoincrement())
+  buyerId       Int           @map("buyer_id")
+  cartId        Int           @map("cart_id")
+  addressId     Int           @map("address_id")
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(15, 2)
+  paymentStatus PaymentStatus @default(pending) @map("payment_status")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  paidAt        DateTime?     @map("paid_at")
+
+  buyer     User                 @relation("BuyerOrders", fields: [buyerId], references: [id])
+  cart      Cart                 @relation(fields: [cartId], references: [id])
+  address   Address              @relation(fields: [addressId], references: [id])
+  items     OrderItem[]
+  histories OrderStatusHistory[]
+  payment   Payment?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id              Int             @id @default(autoincrement())
+  orderId         Int             @map("order_id")
+  productListId   Int             @map("product_list_id")
+  sellerId        Int             @map("seller_id")
+  productNameSnap String          @map("product_name_snap")
+  priceSnap       Decimal         @map("price_snap") @db.Decimal(15, 2)
+  qty             Int
+  subtotal        Decimal         @db.Decimal(15, 2)
+  status          OrderItemStatus @default(menunggu_penjual)
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productListId], references: [id])
+  seller  User    @relation("SellerOrderItems", fields: [sellerId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        Int                @id @default(autoincrement())
+  orderId   Int                @map("order_id")
+  status    OrderHistoryStatus
+  updatedBy Int                @map("updated_by")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  order   Order @relation(fields: [orderId], references: [id])
+  updater User  @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("order_status_history")
+}
