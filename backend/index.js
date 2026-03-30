@@ -1,33 +1,41 @@
-require('dotenv').config();
-const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const { PrismaMariaDb } = require('@prisma/adapter-mariadb');
-const mariadb = require('mariadb');
+require("dotenv").config({ override: true });
+
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
 const app = express();
-
-
-const connectionString = process.env.DATABASE_URL
-const pool = mariadb.createPool(connectionString);
-const adapter = new PrismaMariaDb(pool);
-const prisma = new PrismaClient({ adapter });
-
-const PORT = process.env.PORT || 3000;
+const prisma = new PrismaClient();
 
 app.use(express.json());
 
-
-app.get('/', async (req, res) => {
+app.post("/users", async (req, res) => {
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ message: 'Welcome to API', database: 'Connected' });
+    const { name } = req.body;
+
+    if (!name) {
+      return res.status(400).json({
+        message: "name is required",
+      });
+    }
+
+    const user = await prisma.user.create({
+      data: { name },
+    });
+
+    return res.status(201).json({
+      message: "User created successfully",
+      data: user,
+    });
   } catch (error) {
-    console.error('Database failed:', error);
-    res.status(500).json({ message: 'Database failed', error: error.message });
+    console.error("Create user failed:", error);
+
+    return res.status(500).json({
+      message: "Failed to create user",
+      error: error.message,
+    });
   }
 });
 
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Server running on port ${process.env.PORT || 3000}`);
 });
