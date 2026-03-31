@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   buyer
   seller
+  kurir
 }
 
 model User {
@@ -24,6 +25,7 @@ model User {
   buyerOrders          Order[]              @relation("BuyerOrders")
   sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
   orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
+  kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
 
   @@map("users")
 }
@@ -169,6 +171,7 @@ model OrderItem {
   order           Order           @relation(fields: [orderId], references: [id])
   product         Product         @relation(fields: [productId], references: [id])
   seller          User            @relation("SellerOrderItems", fields: [sellerId], references: [id])
+  kurirAssignment KurirAssignment?
 
   @@map("order_items")
 }
@@ -181,6 +184,20 @@ enum OrderHistoryStatus {
   sampai_di_tujuan
   diterima_pembeli
   transaksi_gagal
+}
+
+model KurirAssignment {
+  id          Int       @id @default(autoincrement()) @map("kurir_assignment_id")
+  orderItemId Int       @unique @map("order_item_id")
+  kurirId     Int       @map("kurir_id")
+  assignedAt  DateTime  @default(now()) @map("assigned_at")
+  pickupAt    DateTime? @map("pickup_at")
+  deliveredAt DateTime? @map("delivered_at")
+
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+  kurir       User      @relation("KurirAssignments", fields: [kurirId], references: [id])
+
+  @@map("kurir_assignments")
 }
 
 model OrderStatusHistory {
