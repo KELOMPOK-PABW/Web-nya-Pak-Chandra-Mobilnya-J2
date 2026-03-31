@@ -7,37 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum CartStatus {
-  active
-  checked_out
-}
-
-enum PaymentStatus {
-  pending
-  paid
-  failed
-}
-
-enum OrderItemStatus {
-  menunggu_penjual
-  diproses_penjual
-  menunggu_kurir
-  sedang_dikirim
-  sampai_di_tujuan
-  diterima_pembeli
-  transaksi_gagal
-}
-
-enum OrderHistoryStatus {
-  menunggu_penjual
-  diproses_penjual
-  menunggu_kurir
-  sedang_dikirim
-  sampai_di_tujuan
-  diterima_pembeli
-  transaksi_gagal
-}
-
 enum UserRole {
   buyer
   seller
@@ -95,92 +64,134 @@ model Address {
   @@map("addresses")
 }
 
+enum PaymentMethod {
+  ewallet
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
 model Payment {
-  id      Int     @id @default(autoincrement())
-  orderId Int     @unique @map("order_id")
-  amount  Decimal @db.Decimal(15, 2)
-  order   Order   @relation(fields: [orderId], references: [id])
+  id        Int           @id @default(autoincrement()) @map("payment_id")
+  orderId   Int           @unique @map("order_id")
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(15, 2)
+  status    PaymentStatus @default(pending)
+  paidAt    DateTime?     @map("paid_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  order      Order        @relation(fields: [orderId], references: [id])
 
   @@map("payments")
 }
 
-model Cart {
-  id         Int        @id @default(autoincrement())
-  userId     Int        @map("user_id")
-  status     CartStatus @default(active)
-  checkedOut DateTime?  @map("checked_out")
-  createdAt  DateTime   @default(now()) @map("created_at")
+enum CartStatus {
+  active
+  checked_out
+  abandoned
+}
 
-  user   User       @relation(fields: [userId], references: [id])
-  items  CartItem[]
-  orders Order[]
+model Cart {
+  id           Int         @id @default(autoincrement()) @map("cart_id")
+  userId       Int         @map("user_id")
+  status       CartStatus  @default(active)
+  checkedOutAt DateTime?   @map("checked_out_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  user         User        @relation(fields: [userId], references: [id])
+  items        CartItem[]
+  orders       Order[]
 
   @@index([userId])
   @@map("carts")
 }
 
 model CartItem {
-  id            Int      @id @default(autoincrement())
-  cartId        Int      @map("cart_id")
-  productListId Int      @map("product_list_id")
-  qty           Int
-  createdAt     DateTime @default(now()) @map("created_at")
+  id        Int      @id @default(autoincrement()) @map("cart_item_id")
+  cartId    Int      @map("cart_id")
+  productId Int      @map("product_id")
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
 
-  cart    Cart    @relation(fields: [cartId], references: [id])
-  product Product @relation(fields: [productListId], references: [id])
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 
-  @@unique([cartId, productListId])
+  @@index([cartId])
+  @@index([productId])
   @@map("cart_items")
 }
 
 model Order {
-  id            Int           @id @default(autoincrement())
-  buyerId       Int           @map("buyer_id")
-  cartId        Int           @map("cart_id")
-  addressId     Int           @map("address_id")
-  totalAmount   Decimal       @map("total_amount") @db.Decimal(15, 2)
-  paymentStatus PaymentStatus @default(pending) @map("payment_status")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  paidAt        DateTime?     @map("paid_at")
+  id            Int                @id @default(autoincrement()) @map("order_id")
+  buyerId       Int                @map("buyer_id")
+  cartId        Int                @map("cart_id")
+  addressId     Int                @map("address_id")
+  totalAmount   Decimal            @db.Decimal(15, 2) @map("total_amount")
+  paymentStatus PaymentStatus      @default(pending) @map("payment_status")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  paidAt        DateTime?          @map("paid_at")
 
-  buyer     User                 @relation("BuyerOrders", fields: [buyerId], references: [id])
-  cart      Cart                 @relation(fields: [cartId], references: [id])
-  address   Address              @relation(fields: [addressId], references: [id])
-  items     OrderItem[]
-  histories OrderStatusHistory[]
-  payment   Payment?
+  buyer         User               @relation("BuyerOrders", fields: [buyerId], references: [id])
+  cart          Cart               @relation(fields: [cartId], references: [id])
+  address       Address            @relation(fields: [addressId], references: [id])
+  items         OrderItem[]
+  histories     OrderStatusHistory[]
+  payment       Payment?
 
   @@map("orders")
 }
 
+enum OrderItemStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
+
 model OrderItem {
-  id              Int             @id @default(autoincrement())
+  id              Int             @id @default(autoincrement()) @map("order_item_id")
   orderId         Int             @map("order_id")
-  productListId   Int             @map("product_list_id")
+  productId       Int             @map("product_id")
   sellerId        Int             @map("seller_id")
   productNameSnap String          @map("product_name_snap")
-  priceSnap       Decimal         @map("price_snap") @db.Decimal(15, 2)
+  priceSnap       Decimal         @db.Decimal(15, 2) @map("price_snap")
   qty             Int
   subtotal        Decimal         @db.Decimal(15, 2)
   status          OrderItemStatus @default(menunggu_penjual)
   createdAt       DateTime        @default(now()) @map("created_at")
 
-  order   Order   @relation(fields: [orderId], references: [id])
-  product Product @relation(fields: [productListId], references: [id])
-  seller  User    @relation("SellerOrderItems", fields: [sellerId], references: [id])
+  order           Order           @relation(fields: [orderId], references: [id])
+  product         Product         @relation(fields: [productId], references: [id])
+  seller          User            @relation("SellerOrderItems", fields: [sellerId], references: [id])
 
   @@map("order_items")
 }
 
-model OrderStatusHistory {
-  id        Int                @id @default(autoincrement())
-  orderId   Int                @map("order_id")
-  status    OrderHistoryStatus
-  updatedBy Int                @map("updated_by")
-  createdAt DateTime           @default(now()) @map("created_at")
+enum OrderHistoryStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
 
-  order   Order @relation(fields: [orderId], references: [id])
-  updater User  @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
+model OrderStatusHistory {
+  id         Int                @id @default(autoincrement())
+  orderId    Int                @map("order_id")
+  status     OrderHistoryStatus
+  updatedBy  Int                @map("updated_by")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  order      Order              @relation(fields: [orderId], references: [id])
+  updater    User               @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("order_status_history")
 }
