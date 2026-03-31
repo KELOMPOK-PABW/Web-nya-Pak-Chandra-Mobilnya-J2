@@ -38,9 +38,19 @@ enum OrderHistoryStatus {
   transaksi_gagal
 }
 
+enum UserRole {
+  buyer
+  seller
+}
+
 model User {
   id                   Int                  @id @default(autoincrement())
-  name                 String?
+  full_name            String
+  email                String               @unique
+  password             String
+  role                 UserRole
+  products             Product[]
+  addresses            Address[]
   carts                Cart[]
   buyerOrders          Order[]              @relation("BuyerOrders")
   sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
@@ -49,9 +59,23 @@ model User {
   @@map("users")
 }
 
+enum StockStatus {
+  tersedia
+  habis
+}
+
 model Product {
-  id         Int         @id @default(autoincrement())
-  name       String?
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String
+  price       Int
+  stock       Int
+  stockStatus StockStatus @map("stock_status")
+  imageUrl    String      @map("image_url")
+  sellerId    Int         @map("seller_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  seller     User        @relation(fields: [sellerId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
 
@@ -59,9 +83,14 @@ model Product {
 }
 
 model Address {
-  id     Int     @id @default(autoincrement())
-  detail String?
-  orders Order[]
+  id         Int     @id @default(autoincrement()) @map("address_id")
+  userId     Int     @map("user_id")
+  address    String
+  city       String
+  postalCode String  @map("postal_code")
+
+  user       User    @relation(fields: [userId], references: [id])
+  orders     Order[]
 
   @@map("addresses")
 }
