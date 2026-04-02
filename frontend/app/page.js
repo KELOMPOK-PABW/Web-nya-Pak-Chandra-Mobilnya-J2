@@ -1,21 +1,15 @@
-import Link from "next/link";
+"use client";
 
-export default function LandingPage() {
-  return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <section className="w-full max-w-xl rounded-2xl border border-zinc-200 p-6">
-        <h1 className="text-2xl font-bold">Ecommerce Page</h1>
-        <p className="mt-2 text-zinc-600">
-          Routing test
-        </p>
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-        <nav className="mt-6 grid grid-cols-2 gap-3">
-          <Link href="/home" className="rounded-lg border p-3 hover:bg-zinc-50">Home</Link>
-          <Link href="/product" className="rounded-lg border p-3 hover:bg-zinc-50">Product</Link>
-          <Link href="/cart" className="rounded-lg border p-3 hover:bg-zinc-50">Cart</Link>
-          <Link href="/login" className="rounded-lg border p-3 hover:bg-zinc-50">Login</Link>
-        </nav>
-      </section>
-    </main>
-  );
+export default function RootPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    router.replace(token ? "/home" : "/login");
+  }, [router]);
+
+  return null; 
 }
