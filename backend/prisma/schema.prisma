@@ -124,6 +124,7 @@ model CartItem {
   @@index([cartId])
   @@index([productId])
   @@map("cart_items")
+  @@unique([cartId, productId])
 }
 
 model Order {
