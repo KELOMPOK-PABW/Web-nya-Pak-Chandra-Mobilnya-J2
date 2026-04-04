@@ -26,6 +26,8 @@ model User {
   sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
   orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
   kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
+  ewallets             EWallet[]
+  reviews              Review[]
 
   @@map("users")
 }
@@ -49,19 +51,20 @@ model Product {
   seller     User        @relation(fields: [sellerId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
+  reviews    Review[]
 
   @@map("products")
 }
 
 model Address {
-  id         Int     @id @default(autoincrement()) @map("address_id")
-  userId     Int     @map("user_id")
+  id         Int    @id @default(autoincrement()) @map("address_id")
+  userId     Int    @map("user_id")
   address    String
   city       String
-  postalCode String  @map("postal_code")
+  postalCode String @map("postal_code")
 
-  user       User    @relation(fields: [userId], references: [id])
-  orders     Order[]
+  user   User    @relation(fields: [userId], references: [id])
+  orders Order[]
 
   @@map("addresses")
 }
@@ -85,7 +88,7 @@ model Payment {
   paidAt    DateTime?     @map("paid_at")
   createdAt DateTime      @default(now()) @map("created_at")
 
-  order      Order        @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 
   @@map("payments")
 }
@@ -97,15 +100,15 @@ enum CartStatus {
 }
 
 model Cart {
-  id           Int         @id @default(autoincrement()) @map("cart_id")
-  userId       Int         @map("user_id")
-  status       CartStatus  @default(active)
-  checkedOutAt DateTime?   @map("checked_out_at")
-  createdAt    DateTime    @default(now()) @map("created_at")
+  id           Int        @id @default(autoincrement()) @map("cart_id")
+  userId       Int        @map("user_id")
+  status       CartStatus @default(active)
+  checkedOutAt DateTime?  @map("checked_out_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
 
-  user         User        @relation(fields: [userId], references: [id])
-  items        CartItem[]
-  orders       Order[]
+  user   User       @relation(fields: [userId], references: [id])
+  items  CartItem[]
+  orders Order[]
 
   @@index([userId])
   @@map("carts")
@@ -118,31 +121,33 @@ model CartItem {
   quantity  Int      @default(1)
   createdAt DateTime @default(now()) @map("created_at")
 
-  cart      Cart     @relation(fields: [cartId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
+  @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
   @@map("cart_items")
-  @@unique([cartId, productId])
 }
 
 model Order {
-  id            Int                @id @default(autoincrement()) @map("order_id")
-  buyerId       Int                @map("buyer_id")
-  cartId        Int                @map("cart_id")
-  addressId     Int                @map("address_id")
-  totalAmount   Decimal            @db.Decimal(15, 2) @map("total_amount")
-  paymentStatus PaymentStatus      @default(pending) @map("payment_status")
-  createdAt     DateTime           @default(now()) @map("created_at")
-  paidAt        DateTime?          @map("paid_at")
+  id            Int           @id @default(autoincrement()) @map("order_id")
+  buyerId       Int           @map("buyer_id")
+  cartId        Int           @map("cart_id")
+  addressId     Int           @map("address_id")
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(15, 2)
+  paymentStatus PaymentStatus @default(pending) @map("payment_status")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  paidAt        DateTime?     @map("paid_at")
 
-  buyer         User               @relation("BuyerOrders", fields: [buyerId], references: [id])
-  cart          Cart               @relation(fields: [cartId], references: [id])
-  address       Address            @relation(fields: [addressId], references: [id])
-  items         OrderItem[]
-  histories     OrderStatusHistory[]
-  payment       Payment?
+  buyer        User                 @relation("BuyerOrders", fields: [buyerId], references: [id])
+  cart         Cart                 @relation(fields: [cartId], references: [id])
+  address      Address              @relation(fields: [addressId], references: [id])
+  items        OrderItem[]
+  histories    OrderStatusHistory[]
+  payment      Payment?
+  transactions EWalletTransaction[]
+  reviews      Review[]
 
   @@map("orders")
 }
@@ -163,15 +168,15 @@ model OrderItem {
   productId       Int             @map("product_id")
   sellerId        Int             @map("seller_id")
   productNameSnap String          @map("product_name_snap")
-  priceSnap       Decimal         @db.Decimal(15, 2) @map("price_snap")
+  priceSnap       Decimal         @map("price_snap") @db.Decimal(15, 2)
   qty             Int
   subtotal        Decimal         @db.Decimal(15, 2)
   status          OrderItemStatus @default(menunggu_penjual)
   createdAt       DateTime        @default(now()) @map("created_at")
 
-  order           Order           @relation(fields: [orderId], references: [id])
-  product         Product         @relation(fields: [productId], references: [id])
-  seller          User            @relation("SellerOrderItems", fields: [sellerId], references: [id])
+  order           Order            @relation(fields: [orderId], references: [id])
+  product         Product          @relation(fields: [productId], references: [id])
+  seller          User             @relation("SellerOrderItems", fields: [sellerId], references: [id])
   kurirAssignment KurirAssignment?
 
   @@map("order_items")
@@ -195,21 +200,72 @@ model KurirAssignment {
   pickupAt    DateTime? @map("pickup_at")
   deliveredAt DateTime? @map("delivered_at")
 
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
-  kurir       User      @relation("KurirAssignments", fields: [kurirId], references: [id])
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  kurir     User      @relation("KurirAssignments", fields: [kurirId], references: [id])
 
   @@map("kurir_assignments")
 }
 
 model OrderStatusHistory {
-  id         Int                @id @default(autoincrement())
-  orderId    Int                @map("order_id")
-  status     OrderHistoryStatus
-  updatedBy  Int                @map("updated_by")
-  createdAt  DateTime           @default(now()) @map("created_at")
+  id        Int                @id @default(autoincrement())
+  orderId   Int                @map("order_id")
+  status    OrderHistoryStatus
+  updatedBy Int                @map("updated_by")
+  createdAt DateTime           @default(now()) @map("created_at")
 
-  order      Order              @relation(fields: [orderId], references: [id])
-  updater    User               @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
+  order   Order @relation(fields: [orderId], references: [id])
+  updater User  @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("order_status_history")
+}
+
+model EWallet {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  balance   Decimal  @default(0.00) @db.Decimal(15, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user         User?                @relation(fields: [userId], references: [id])
+  transactions EWalletTransaction[]
+
+  @@map("ewallet")
+}
+
+enum EWalletTransactionType {
+  topup
+  payment
+  refund
+}
+
+model EWalletTransaction {
+  id            Int                    @id @default(autoincrement())
+  eWalletId     Int?                   @map("e_wallet_id")
+  orderId       Int?                   @map("order_id")
+  type          EWalletTransactionType
+  amount        Decimal                @db.Decimal(15, 2)
+  balanceBefore Decimal                @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter  Decimal                @map("balance_after") @db.Decimal(15, 2)
+  createdAt     DateTime               @default(now()) @map("created_at")
+
+  eWallet EWallet? @relation(fields: [eWalletId], references: [id])
+  order   Order?   @relation(fields: [orderId], references: [id])
+
+  @@map("ewallet_transaction")
+}
+
+model Review {
+  id            Int      @id @default(autoincrement())
+  productListId Int?     @map("product_list_id")
+  orderItemsId  Int?     @map("order_items_id")
+  reviewerId    Int?     @map("reviewer_id")
+  rating        Int      @db.TinyInt
+  comment       String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  product  Product? @relation(fields: [productListId], references: [id])
+  order    Order?   @relation(fields: [orderItemsId], references: [id])
+  reviewer User?    @relation(fields: [reviewerId], references: [id])
+
+  @@map("review")
 }
