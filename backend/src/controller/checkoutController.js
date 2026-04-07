@@ -1,7 +1,7 @@
-const { checkoutSchema } = require("../validations/checkoutValidation");
+const {checkoutSchema} = require("../validations/checkoutValidation");
 const checkoutService = require("../services/checkoutService");
 
-const checkout = async (req, res, next) => {
+const checkout = async (req, res) => {
   try {
     const { error, value } = checkoutSchema.validate(req.body);
 
@@ -18,7 +18,9 @@ const checkout = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    next(error);
+    return res.status(500).json({
+        error : error
+    })
   }
 };
 
