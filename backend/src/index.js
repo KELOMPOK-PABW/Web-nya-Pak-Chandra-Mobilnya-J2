@@ -4,11 +4,13 @@ const app = express();
 
 const userRoutes = require("./routes/usersRoutes")
 const cartRoutes = require("./routes/cartRoutes")
+const checkoutRoutes = require("./routes/checkoutRoutes")
 
 app.use(express.json());
 
 app.use("/api/users",userRoutes)
 app.use("/api/cart", cartRoutes)
+app.use("/api/checkout", checkoutRoutes)
 
 app.listen(process.env.PORT || 3000, () => {
   console.log(`Server running on port ${process.env.PORT }`);

@@ -1,17 +1,17 @@
 const prisma = require("../config/database")
 
 const findCartById = async(cartId) => {
-    return prisma.cart.findUnique(
-        {
-            where : {id : cartId},
-            include : {
-                items : {
-                    product : true
-                },
-                user : true,
-            }
-        }
-    )
+  return prisma.cart.findUnique({
+  where: { id: cartId },
+  include: {
+    items: {
+      include: {
+        product: true,
+      },
+    },
+    user: true,
+  },
+});
 }
 
 const findAddressById = async (addressId) => {
