@@ -52,10 +52,29 @@ const createCartItem = async ({ cartId, productId, quantity }) => {
   });
 };
 
+const findCartItemByIdAndUser = async (cartItemId, userId) => {
+  return prisma.cartItem.findFirst({
+    where: {
+      id: Number(cartItemId),
+      cart: {
+        userId: Number(userId),
+        status: "active",
+      },
+    },
+    include: {
+      product: true,
+      cart: true,
+    },
+  });
+};
+
 const updateCartItemQuantity = async (cartItemId, quantity) => {
   return prisma.cartItem.update({
     where: { id: cartItemId },
-    data: { quantity },
+    data: { quantity, },
+    include: {
+      product : true
+    }
   });
 };
 
@@ -72,6 +91,45 @@ const getCartDetailByCartId = async (cartId) => {
   });
 };
 
+const deleteCartItemById = async (cartItemId) => {
+  return prisma.cartItem.delete({
+    where: {
+      id: Number(cartItemId),
+    },
+  });
+};
+
+const clearCartItemsByUserId = async (userId) => {
+  const activeCart = await prisma.cart.findFirst({
+    where: {
+      userId: Number(userId),
+      status: "active",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!activeCart) {
+    return {
+      cart: null,
+      deletedCount: 0,
+    };
+  }
+
+  const deleted = await prisma.cartItem.deleteMany({
+    where: {
+      cartId: activeCart.id,
+    },
+  });
+
+  return {
+    cart: activeCart,
+    deletedCount: deleted.count,
+  };
+};
+
+
 module.exports = {
   findActiveCartByUserId,
   createCart,
@@ -80,4 +138,7 @@ module.exports = {
   createCartItem,
   updateCartItemQuantity,
   getCartDetailByCartId,
+  deleteCartItemById,
+  clearCartItemsByUserId,
+  findCartItemByIdAndUser
 };
