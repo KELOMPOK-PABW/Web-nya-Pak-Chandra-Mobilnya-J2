@@ -1,3 +1,4 @@
+const { user } = require("../config/database");
 const cartRepository = require("../repository/cartRepository");
 
 const formatCartResponse = (cart) => {
@@ -86,6 +87,11 @@ const addItemToCart = async (userId, payload) => {
     qty: finalQty,
   };
 };
+
+const updateCartItem = async({cartItemId, quantity, userId}) => {
+  const cartItem = await cartRepository.findCartItemByIdAndUser(cartItemId,userId)
+
+}
 
 module.exports = {
   getCart,
