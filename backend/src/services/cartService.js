@@ -1,3 +1,4 @@
+const { number } = require("joi");
 const { user } = require("../config/database");
 const cartRepository = require("../repository/cartRepository");
 
@@ -90,10 +91,51 @@ const addItemToCart = async (userId, payload) => {
 
 const updateCartItem = async({cartItemId, quantity, userId}) => {
   const cartItem = await cartRepository.findCartItemByIdAndUser(cartItemId,userId)
+  if (!cartItem) {
+    throw new Error("Item cart tidak ditemukan");
+  }
 
+  const productPrice = Number(cartItem.product.price);
+
+  if (qty > cartItem.product.stock) {
+    throw new Error("qty melebihi stock");
+  }
+
+  const updateItem = await cartRepository.updateCartItemQuantity(cartItemId,quantity)
+  return {
+    message : "jumblah produk diperbarui",
+    id : updateItem.id,
+    qty : updateItem.quantity,
+    subtotal : number(updateItem.quantity) * number(updateItem.product)
+  }
 }
+
+const deleteCartItem = async({cartItemId, userId}) => {
+  const findCartItem = await cartRepository.findCartItemByIdAndUser(cartItemId,userId)
+
+  if (!findCartItem){
+    throw new Error("item cart tidak ditemukan")
+  }
+
+  await cartRepository.deleteCartItemById(userId)
+  
+  return {
+    message : "product dihapus dari cart"
+  }
+}
+
+const clearCart = async ({ user_id }) => {
+  await cartRepository.clearCartItemsByUserId(user_id);
+
+  return {
+    message: "Cart dikosongkan",
+  };
+};
 
 module.exports = {
   getCart,
   addItemToCart,
+  updateCartItem,
+  clearCart,
+  deleteCartItem
 };
