@@ -8,9 +8,9 @@ export default function SellerOrdersPage() {
       <Navbar />
       <div className="flex flex-1 max-w-[1280px] w-full mx-auto">
         <Sidebar menus={[
-          { label: "Dashboard", href: "/seller/dashboard", icon: "📊" },
-          { label: "Produk", href: "/seller/products", icon: "📦" },
-          { label: "Pesanan", href: "/seller/orders", icon: "🛒" },
+          { label: "Dashboard", href: "/seller/dashboard"},
+          { label: "Produk", href: "/seller/products"},
+          { label: "Pesanan", href: "/seller/orders"},
         ]} />
         <main className="flex-1 p-8">
           <h1 className="text-2xl font-bold text-[#1A1A1A] mb-4">Pesanan Masuk</h1>

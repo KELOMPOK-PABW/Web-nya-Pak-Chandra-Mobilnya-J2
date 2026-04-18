@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
+
+// Set ke `false` saat backend sudah siap
+const DEV_BYPASS = true;
+
+if (DEV_BYPASS && typeof window !== "undefined") {
+  localStorage.setItem("token", "dev-token");
+  localStorage.setItem("user", JSON.stringify({
+    id: "dev-001",
+    full_name: "Dev Seller",
+    role: "seller",
+  }));
+  window.location.replace("/seller/dashboard");
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +23,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  //  DEV BYPASS: inject dummy session lalu langsung redirect
+  useEffect(() => {
+    if (!DEV_BYPASS) return;
+    authService.saveSession(DEV_DUMMY_SESSION);   // isi localStorage
+    router.replace("/seller/dashboard");           // replace agar tidak bisa back ke login
+  }, [router]);
+
+  if (DEV_BYPASS) {
+    // Tampilkan layar kosong selama redirect berlangsung
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
+        <p style={{ fontFamily: "DM Sans, sans-serif", color: "#1A3C34", fontSize: "15px" }}>
+          🛠 Dev mode — mengalihkan ke dashboard...
+        </p>
+      </div>
+    );
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -25,12 +55,12 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const data = await authService.login(form);
-      authService.saveSession(data);
-      const role = data.role;
-      if (role === "seller") router.push("/seller/dashboard");
-      else if (role === "kurir") router.push("/courier/tasks");
-      else router.push("/home");
+      // const data = await authService.login(form);
+      // authService.saveSession(data);
+      // const role = data.role;
+      // if (role === "seller") router.push("/seller/dashboard");
+      // else if (role === "kurir") router.push("/courier/tasks");
+      // else router.push("/home");
     } catch (err) {
       setError(err.message || "Login gagal. Coba lagi.");
     } finally {
