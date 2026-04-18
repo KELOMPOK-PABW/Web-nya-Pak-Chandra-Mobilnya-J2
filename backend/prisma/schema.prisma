@@ -26,6 +26,7 @@ model User {
   sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
   orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
   kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
+  wallet               Wallet?
 
   @@map("users")
 }
@@ -212,4 +213,37 @@ model OrderStatusHistory {
   updater    User               @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("order_status_history")
+}
+
+enum WalletTransactionType {
+  topup
+  payment
+  refund
+}
+
+model Wallet {
+  id           Int                 @id @default(autoincrement()) @map("wallet_id")
+  userId       Int                 @unique @map("user_id")
+  balance      Decimal             @default(0) @db.Decimal(15, 2)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  user         User                @relation(fields: [userId], references: [id])
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id           Int                   @id @default(autoincrement()) @map("wallet_transaction_id")
+  walletId     Int                   @map("wallet_id")
+  type         WalletTransactionType
+  amount       Decimal               @db.Decimal(15, 2)
+  balanceAfter Decimal               @db.Decimal(15, 2) @map("balance_after")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  wallet       Wallet                @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@map("wallet_transactions")
 }
