@@ -42,8 +42,8 @@ CREATE TABLE `review` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- CreateIndex
-CREATE UNIQUE INDEX `cart_items_cart_id_product_id_key` ON `cart_items`(`cart_id`, `product_id`);
+-- CreateIndex (Sudah ada di migrasi sebelumnya 20260404130211_be_1_migrate)
+-- CREATE UNIQUE INDEX `cart_items_cart_id_product_id_key` ON `cart_items`(`cart_id`, `product_id`);
 
 -- AddForeignKey
 ALTER TABLE `ewallet` ADD CONSTRAINT `ewallet_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
