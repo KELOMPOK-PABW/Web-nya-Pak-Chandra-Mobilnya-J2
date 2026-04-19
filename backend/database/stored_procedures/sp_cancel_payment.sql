@@ -1,16 +1,4 @@
--- ============================================================
--- STORED PROCEDURE: sp_cancel_payment
--- Membatalkan pembayaran yang masih berstatus 'pending':
--- ubah status payment dan order menjadi 'failed'.
---
--- Parameter:
---   IN  p_payment_id INT          - ID payment yang akan dibatalkan
---   OUT p_message    VARCHAR(255) - Pesan hasil eksekusi
---
--- Contoh:
---   CALL sp_cancel_payment(1, @msg);
---   SELECT @msg AS pesan;
--- ============================================================
+
 
 DROP PROCEDURE IF EXISTS sp_cancel_payment;
 
