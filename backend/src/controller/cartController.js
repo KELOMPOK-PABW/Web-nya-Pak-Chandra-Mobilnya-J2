@@ -131,12 +131,47 @@ const clearCart = async (req, res) => {
   }
 };
 
+const validateCart = async(req,res) => {
+  try {
+    const results = await cartService.validateCart(req)
+    return res.status(results.statusCode).json({
+      message : results.message,
+      sucsess : results.success,
+      data : results.data
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null
+  })
+  }
+}
 
+const countCartItems = async (req, res) => {
+  try {
+    const result = await cartService.countCartItems(req);
+
+    return res.status(result.statusCode).json({
+      success: result.success,
+      message: result.message,
+      data: result.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
 
 module.exports = {
   getCart,
   addItem,
   updateCartItem,
   clearCart,
-  deleteCartItem
-};
+  deleteCartItem,
+  validateCart,
+  countCartItems
+}

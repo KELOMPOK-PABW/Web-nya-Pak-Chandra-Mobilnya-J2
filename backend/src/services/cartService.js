@@ -132,10 +132,132 @@ const clearCart = async ({ user_id }) => {
   };
 };
 
+const getUserIdFromRequest = (req) => {
+  return req.headers["x-user-id"] || req.query.user_id;
+};
+
+
+const validateCart = async (req) => {
+  const userId = getUserIdFromRequest(req);
+
+  if (!userId) {
+    return {
+      statusCode: 400,
+      success: false,
+      message: "user_id is required",
+      data: null,
+    };
+  }
+
+  const cart = await cartRepository.getCartByUserId(userId);
+
+  if (!cart) {
+    return {
+      statusCode: 404,
+      success: false,
+      message: "Cart not found",
+      data: null,
+    };
+  }
+
+  const cartItems = await cartRepository.getCartItemsByCartId(cart.id);
+
+  if (!cartItems.length) {
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Cart is empty",
+      data: {
+        valid: false,
+        cart_id: cart.id,
+        invalid_items: [],
+      },
+    };
+  }
+
+  const invalidItems = [];
+
+  for (const item of cartItems) {
+    if (!item.product) {
+      invalidItems.push({
+        cart_item_id: item.id,
+        product_id: item.product_id,
+        reason: "Product not found",
+      });
+      continue;
+    }
+
+    if (item.product.stock < item.quantity) {
+      invalidItems.push({
+        cart_item_id: item.id,
+        product_id: item.product_id,
+        product_name: item.product.name,
+        requested_quantity: item.quantity,
+        available_stock: item.product.stock,
+        reason: "Insufficient stock",
+      });
+    }
+  }
+
+  return {
+    statusCode: 200,
+    success: true,
+    message: invalidItems.length === 0 ? "Cart is valid" : "Some cart items are invalid",
+    data: {
+      valid: invalidItems.length === 0,
+      cart_id: cart.id,
+      invalid_items: invalidItems,
+    },
+  };
+};
+
+const countCartItems = async (req) => {
+  const userId = getUserIdFromRequest(req);
+
+  if (!userId) {
+    return {
+      statusCode: 400,
+      success: false,
+      message: "user_id is required",
+      data: null,
+    };
+  }
+
+  const cart = await cartRepository.getCartByUserId(userId);
+
+  if (!cart) {
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Cart count fetched successfully",
+      data: {
+        cart_id: null,
+        total_items: 0,
+        total_quantity: 0,
+      },
+    };
+  }
+
+  const count = await cartRepository.getCartCountByCartId(cart.id);
+
+  return {
+    statusCode: 200,
+    success: true,
+    message: "Cart count fetched successfully",
+    data: {
+      cart_id: cart.id,
+      total_items: count.totalItems,
+      total_quantity: count.totalQuantity,
+    },
+  };
+};
+
 module.exports = {
   getCart,
   addItemToCart,
   updateCartItem,
   clearCart,
-  deleteCartItem
+  deleteCartItem,
+  validateCart,
+  countCartItems
 };

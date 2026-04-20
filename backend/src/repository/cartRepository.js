@@ -129,6 +129,40 @@ const clearCartItemsByUserId = async (userId) => {
   };
 };
 
+const getCartByUserId = async(userID) => {
+  return prisma.cart.findFirst({
+    where : {userId : Number(userID)}
+  })
+}
+
+const getCartItemByCartId = async (cartId) => {
+  return prisma.cartItem.findUnique({
+    where: {
+      cartId: {
+        cartId,
+      },
+    },
+    include: {product: true}
+  });
+};
+
+const getCartCountByCartId = async (cartId) => {
+  const items = await prisma.cartItem.findMany({
+    where: { cart_id: Number(cartId) },
+    select: {
+      quantity: true,
+    },
+  });
+
+  const totalItems = items.length;
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return {
+    totalItems,
+    totalQuantity,
+  };
+};
+
 
 module.exports = {
   findActiveCartByUserId,
@@ -140,5 +174,8 @@ module.exports = {
   getCartDetailByCartId,
   deleteCartItemById,
   clearCartItemsByUserId,
-  findCartItemByIdAndUser
+  findCartItemByIdAndUser,
+  getCartByUserId,
+  getCartCountByCartId,
+  getCartItemByCartId
 };
