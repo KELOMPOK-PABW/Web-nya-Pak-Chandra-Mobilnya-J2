@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { Navbar } from '@/components/layout/Navbar';
+import { Sidebar } from '@/components/layout/Sidebar';
 
 // DATA
 const PRODUK_DUMMY = [
@@ -47,52 +49,7 @@ function formatRp(n) {
 }
 
 // SUB-COMPONENTS
-function Navbar() {
-  return (
-    <nav style={{
-      background:"#1A3C34", padding:"0 24px", height:56,
-      display:"flex", alignItems:"center", justifyContent:"space-between",
-      position:"sticky", top:0, zIndex:100,
-    }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-        <div style={{
-          width:32, height:32, background:"rgba(255,255,255,0.15)",
-          borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center",
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 01-8 0"/>
-          </svg>
-        </div>
-        <span style={{ color:"#fff", fontWeight:800, fontSize:16, letterSpacing:"-0.3px" }}>PABW Shop</span>
-      </div>
-      <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-        <div style={{ position:"relative" }}>
-          <button style={{
-            width:34, height:34, borderRadius:8, background:"rgba(255,255,255,0.1)",
-            border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0"/>
-            </svg>
-          </button>
-          <span style={{
-            position:"absolute", top:4, right:4, width:7, height:7,
-            borderRadius:"50%", background:"#FF6B6B", border:"1.5px solid #1A3C34",
-          }} />
-        </div>
-        <div style={{
-          width:32, height:32, borderRadius:"50%",
-          background:"linear-gradient(135deg,#4DB6AC,#26A69A)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:13, fontWeight:700, color:"#fff", cursor:"pointer",
-        }}>RK</div>
-      </div>
-    </nav>
-  );
-}
+// Using shared `Navbar` and `Sidebar` components for consistent layout
 
 function SidebarStats() {
   const rows = [
@@ -119,76 +76,7 @@ function SidebarStats() {
   );
 }
 
-function Sidebar() {
-  const menus = [
-    { label:"Dashboard", href:"/seller/dashboard" },
-    { label:"Produk",    href:"/seller/products",  active:true },
-    { label:"Pesanan",   href:"/seller/orders" },
-  ];
-  return (
-    <aside style={{ width:220, flexShrink:0, display:"flex", flexDirection:"column", gap:8 }}>
-      <div style={{
-        background:"#fff", borderRadius:14, padding:16,
-        border:"1px solid #E8EDE8", marginBottom:4,
-        display:"flex", alignItems:"center", gap:12,
-      }}>
-        <div style={{
-          width:40, height:40, borderRadius:"50%",
-          background:"linear-gradient(135deg,#1A3C34,#2D6A5E)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontWeight:700, color:"#fff", fontSize:14,
-        }}>NR</div>
-        <div>
-          <div style={{ fontSize:13, fontWeight:700, color:"#1A1A1A" }}>Naomi Store</div>
-          <div style={{ fontSize:11, color:"#999", marginTop:2 }}>Seller Center</div>
-          <div style={{
-            display:"inline-flex", alignItems:"center", gap:4,
-            background:"#E0F5F0", color:"#0F6E56", fontSize:10, fontWeight:700,
-            padding:"2px 8px", borderRadius:20, marginTop:4,
-          }}>Star Seller</div>
-        </div>
-      </div>
-
-      <div style={{ fontSize:10, fontWeight:700, color:"#999", textTransform:"uppercase", letterSpacing:1, padding:"0 10px 6px" }}>
-        Menu Utama
-      </div>
-      <div style={{ background:"#fff", borderRadius:14, overflow:"hidden", border:"1px solid #E8EDE8" }}>
-        {menus.map((m, i) => (
-          <a key={i} href={m.href} style={{
-            display:"flex", alignItems:"center", gap:10, padding:"11px 14px",
-            fontSize:13, fontWeight: m.active ? 700 : 500,
-            color: m.active ? "#1A3C34" : "#555",
-            background: m.active ? "#E0F5F0" : "transparent",
-            textDecoration:"none",
-            borderTop: i>0 ? "1px solid #F3F4F6" : "none",
-            position:"relative",
-          }}>
-            {m.active && (
-              <span style={{
-                position:"absolute", left:0, top:6, bottom:6,
-                width:3, background:"#1A3C34", borderRadius:"0 3px 3px 0",
-              }} />
-            )}
-            {/* <span style={{
-              width:28, height:28, borderRadius:7,
-              background: m.active ? "rgba(26,60,52,0.12)" : "#F3F4F6",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13,
-            }}>{m.icon}</span> */}
-            {m.label}
-            {m.badge && (
-              <span style={{
-                marginLeft:"auto", background:"#FF6B6B", color:"#fff",
-                fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:10,
-              }}>{m.badge}</span>
-            )}
-          </a>
-        ))}
-      </div>
-
-      <SidebarStats />
-    </aside>
-  );
-}
+// Sidebar replaced by shared component
 
 function SummaryCards() {
   const cards = [
@@ -469,7 +357,13 @@ export default function SellerProductsPage() {
       <Navbar />
 
       <div style={{ display:"flex", maxWidth:1200, margin:"0 auto", width:"100%", padding:"20px 16px", gap:20 }}>
-        <Sidebar />
+        <Sidebar
+          menus={[
+            { label: "Dashboard", href: "/seller/dashboard" },
+            { label: "Produk", href: "/seller/products", active: true },
+            { label: "Pesanan", href: "/seller/orders" },
+          ]}
+        />
 
         <main style={{ flex:1, minWidth:0 }}>
           {/* Page Header */}

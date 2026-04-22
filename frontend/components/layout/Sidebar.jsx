@@ -1,25 +1,60 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { authService } from "../../services/authService";
 
 export function Sidebar({ menus, title, subtitle }) {
   const pathname = usePathname();
 
+  const defaultMenus = [
+    { label: "Dashboard", href: "/seller/dashboard" },
+    { label: "Produk", href: "/seller/products" },
+    { label: "Pesanan", href: "/seller/orders" },
+  ];
+  const menuList = menus ?? defaultMenus;
+
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const u = authService.getUser();
+    if (u) setUser(u);
+  }, []);
+
+  const initials = user?.full_name
+    ? user.full_name
+        .split(" ")
+        .map((n) => n?.[0] ?? "")
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : undefined;
+
   return (
     <aside className="w-64 flex-shrink-0 bg-white border-r border-[#EBEBEB] min-h-[calc(100vh-72px)] py-6 flex flex-col">
 
-      {/* Header opsional (untuk seller/kurir) */}
-      {title && (
-        <div className="px-5 mb-4 pb-4 border-b border-[#F3F4F6]">
-          <p className="text-xs font-semibold text-[#888] uppercase tracking-wider mb-0.5">{subtitle}</p>
-          <p className="text-sm font-bold text-[#1A3C34]">{title}</p>
+      {/* Tampilkan kartu profil jika ada `title` atau `user` (dinamis) */}
+      {(title || user) && (
+        <div className="px-4 mb-4">
+          <div className="bg-white rounded-xl p-4 border border-[#E8EDE8] mb-2 flex items-center gap-3">
+            <div style={{ width:40, height:40 }} className="rounded-full flex items-center justify-center font-bold text-white" >
+              <div style={{ width:40, height:40, borderRadius:999, background:"linear-gradient(135deg,#1A3C34,#2D6A5E)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
+                {initials ?? (user?.full_name?.slice(0,1) ?? "-")}
+              </div>
+            </div>
+            <div>
+              <div className="text-[13px] font-semibold text-[#1A1A1A]">{user?.full_name ?? title}</div>
+              <div className="text-[11px] text-[#999] mt-1">{subtitle ?? "Seller Center"}</div>
+              <div className="inline-flex items-center gap-2 bg-[#E0F5F0] text-[#0F6E56] text-[10px] font-bold px-3 py-1 rounded-full mt-2">Star Seller</div>
+            </div>
+          </div>
+          <div className="text-[10px] font-bold text-[#999] uppercase tracking-wider px-1 mb-2">Menu Utama</div>
         </div>
       )}
 
       <nav className="flex flex-col gap-0.5 px-3 flex-1">
-        {menus.map((menu, idx) => {
+        {menuList.map((menu, idx) => {
           const isActive = pathname === menu.href || pathname.startsWith(menu.href + "/");
           return (
             <Link
