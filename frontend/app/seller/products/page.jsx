@@ -11,6 +11,8 @@ export default function SellerProductsPage() {
           { label: "Dashboard", href: "/seller/dashboard", icon: "📊" },
           { label: "Produk", href: "/seller/products", icon: "📦" },
           { label: "Pesanan", href: "/seller/orders", icon: "🛒" },
+          { label: "Toko Saya", href: "/stores/me", icon: "🏬" },
+          { label: "Status Pengajuan", href: "/seller/application", icon: "📄" },
         ]} />
         <main className="flex-1 p-8">
           <h1 className="text-2xl font-bold text-[#1A1A1A] mb-4">Produk Toko</h1>
