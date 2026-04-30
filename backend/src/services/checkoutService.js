@@ -1,7 +1,7 @@
 const prisma = require("../config/database")
 const checkoutRepository = require("../repository/checkoutRepository")
 
-const checkout = async({cart_id, address_id}) => {
+const checkout = async({cart_id, address_id, payment_method}) => {
     const cart = await checkoutRepository.findCartById(cart_id)
 
     if (!cart){
@@ -84,13 +84,21 @@ const checkout = async({cart_id, address_id}) => {
     }
 
     await checkoutRepository.updateCartToCheckedOut(tx, cart.id);
+
+    await checkoutRepository.createPayment(tx, {
+      orderId: order.id,
+      method: payment_method,
+      amount: totalAmount,
+      status: "pending",
+    });
+
         return order;
     });
 
     return {
         order_id: createdOrder.id,
-        payment_status: createdOrder.paymentStatus,
-        total_amount: Number(createdOrder.totalAmount),
+        total_price: Number(createdOrder.totalAmount),
+        status: createdOrder.paymentStatus,
     };
 
 }

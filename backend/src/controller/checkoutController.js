@@ -14,6 +14,7 @@ const checkout = async (req, res,next) => {
     const result = await checkoutService.checkout(value);
 
     return res.status(201).json({
+      success: true,
       message: "Checkout berhasil",
       data: result,
     });

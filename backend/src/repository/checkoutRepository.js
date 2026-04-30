@@ -58,6 +58,12 @@ const updateCartToCheckedOut = async (tx, cartId) => {
   });
 };
 
+const createPayment = async (tx, data) => {
+  return tx.payment.create({
+    data,
+  });
+};
+
 module.exports = {
   findCartById,
   findAddressById,
@@ -66,4 +72,5 @@ module.exports = {
   createOrderStatusHistory,
   updateProductStock,
   updateCartToCheckedOut,
+  createPayment,
 };
