@@ -8,6 +8,9 @@ const checkoutRoutes = require("./routes/checkoutRoutes")
 const walletRoutes = require("./routes/walletRoutes")
 const productRoutes = require("./routes/productRoutes")
 const paymentRoutes = require("./routes/paymentRoutes")
+const authRoutes = require("./routes/authRoutes")
+const authController = require("./controller/authController")
+const { authenticate } = require("./middleware/authMiddleware")
 
 app.use(express.json());
 
@@ -17,6 +20,8 @@ app.use("/api/checkout", checkoutRoutes)
 app.use("/api/wallet", walletRoutes)
 app.use("/api/products", productRoutes)
 app.use("/api/payments", paymentRoutes)
+app.use("/api/auth", authRoutes)
+app.get("/api/me", authenticate, authController.getMe)
 
 app.listen(process.env.PORT || 3000, () => {
   console.log(`Server running on port ${process.env.PORT }`);
