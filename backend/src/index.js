@@ -9,6 +9,7 @@ const walletRoutes = require("./routes/walletRoutes")
 const productRoutes = require("./routes/productRoutes")
 const paymentRoutes = require("./routes/paymentRoutes")
 const authRoutes = require("./routes/authRoutes")
+const addressRoutes = require("./routes/addressRoutes")
 const authController = require("./controller/authController")
 const { authenticate } = require("./middleware/authMiddleware")
 
@@ -21,6 +22,7 @@ app.use("/api/wallet", walletRoutes)
 app.use("/api/products", productRoutes)
 app.use("/api/payments", paymentRoutes)
 app.use("/api/auth", authRoutes)
+app.use("/api/addresses", authenticate, addressRoutes)
 app.get("/api/me", authenticate, authController.getMe)
 
 app.listen(process.env.PORT || 3000, () => {
