@@ -16,6 +16,7 @@ if (DEV_BYPASS && typeof window !== "undefined") {
     role: "seller",
   }));
   window.location.replace("/seller/dashboard");
+}
 
 export default function LoginPage() {
   const router = useRouter();
