@@ -1,17 +1,5 @@
 -- ============================================================
 -- STORED PROCEDURE: sp_create_payment
--- Membuat record pembayaran baru dengan status 'pending'
--- untuk sebuah order yang sudah ada.
---
--- Parameter:
---   IN  p_order_id   INT             - ID order yang akan dibayar
---   IN  p_method     ENUM('ewallet') - Metode pembayaran
---   OUT p_payment_id INT             - ID payment yang baru dibuat
---   OUT p_message    VARCHAR(255)    - Pesan hasil eksekusi
---
--- Contoh:
---   CALL sp_create_payment(1, 'ewallet', @pid, @msg);
---   SELECT @pid AS payment_id, @msg AS pesan;
 -- ============================================================
 
 DROP PROCEDURE IF EXISTS sp_create_payment;
@@ -24,22 +12,25 @@ CREATE PROCEDURE sp_create_payment(
     OUT p_payment_id INT,
     OUT p_message    VARCHAR(255)
 )
-BEGIN
+-- 1. TAMBAHKAN LABEL DI SINI
+proc_main: BEGIN
     DECLARE v_order_exists   INT DEFAULT 0;
     DECLARE v_already_paid   INT DEFAULT 0;
     DECLARE v_payment_exists INT DEFAULT 0;
     DECLARE v_total_amount   DECIMAL(15,2);
 
-    -- Cek apakah order ada
+    -- Cek apakah order ada dan ambil total_amount
+    -- Gunakan LIMIT 1 untuk memastikan hanya satu baris yang diproses
     SELECT COUNT(*), total_amount
     INTO v_order_exists, v_total_amount
     FROM orders
-    WHERE order_id = p_order_id;
+    WHERE order_id = p_order_id
+    GROUP BY order_id, total_amount LIMIT 1;
 
     IF v_order_exists = 0 THEN
         SET p_payment_id = NULL;
         SET p_message    = 'ERROR: Order tidak ditemukan.';
-        LEAVE sp_create_payment;
+        LEAVE proc_main; -- 2. GUNAKAN LABEL UNTUK KELUAR
     END IF;
 
     -- Cek apakah order sudah dibayar
@@ -51,27 +42,29 @@ BEGIN
     IF v_already_paid > 0 THEN
         SET p_payment_id = NULL;
         SET p_message    = 'ERROR: Order sudah dibayar sebelumnya.';
-        LEAVE sp_create_payment;
+        LEAVE proc_main;
     END IF;
 
-    -- Cek apakah sudah ada payment record untuk order ini
+    -- Cek apakah sudah ada payment record untuk order ini yang berstatus selain 'failed'
     SELECT COUNT(*)
     INTO v_payment_exists
     FROM payments
-    WHERE order_id = p_order_id;
+    WHERE order_id = p_order_id AND status != 'failed';
 
     IF v_payment_exists > 0 THEN
         SET p_payment_id = NULL;
-        SET p_message    = 'ERROR: Payment untuk order ini sudah dibuat.';
-        LEAVE sp_create_payment;
+        SET p_message    = 'ERROR: Payment aktif untuk order ini sudah dibuat.';
+        LEAVE proc_main;
     END IF;
 
     -- Buat payment record baru
     INSERT INTO payments (order_id, method, amount, status, created_at)
     VALUES (p_order_id, p_method, v_total_amount, 'pending', NOW());
 
+    -- Ambil ID terakhir yang diinsert
     SET p_payment_id = LAST_INSERT_ID();
     SET p_message    = 'SUCCESS: Payment berhasil dibuat dengan status pending.';
+
 END$$
 
 DELIMITER ;

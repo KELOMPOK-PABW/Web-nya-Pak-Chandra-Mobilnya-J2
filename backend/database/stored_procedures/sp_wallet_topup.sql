@@ -1,17 +1,5 @@
 -- ============================================================
 -- STORED PROCEDURE: sp_wallet_topup
--- Menambah saldo wallet user. Jika wallet belum ada, buat baru.
--- Mencatat transaksi topup ke wallet_transactions.
---
--- Parameter:
---   IN  p_user_id       INT            - ID user yang topup
---   IN  p_amount        DECIMAL(15,2)  - Jumlah topup
---   OUT p_balance_after DECIMAL(15,2)  - Saldo setelah topup
---   OUT p_message       VARCHAR(255)   - Pesan hasil eksekusi
---
--- Contoh:
---   CALL sp_wallet_topup(1, 200000, @bal, @msg);
---   SELECT @bal AS balance_after, @msg AS pesan;
 -- ============================================================
 
 DROP PROCEDURE IF EXISTS sp_wallet_topup;
@@ -24,19 +12,27 @@ CREATE PROCEDURE sp_wallet_topup(
     OUT p_balance_after DECIMAL(15,2),
     OUT p_message       VARCHAR(255)
 )
-BEGIN
+-- 1. TAMBAHKAN LABEL DI SINI
+proc_main: BEGIN
     DECLARE v_wallet_id     INT DEFAULT 0;
     DECLARE v_current_bal   DECIMAL(15,2) DEFAULT 0;
     DECLARE v_user_exists   INT DEFAULT 0;
+
+    -- Handler untuk rollback otomatis jika terjadi error database
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+        SET p_message = 'ERROR: Terjadi kesalahan sistem saat proses topup.';
+    END;
 
     -- Validasi amount
     IF p_amount <= 0 THEN
         SET p_balance_after = NULL;
         SET p_message       = 'ERROR: Jumlah topup harus lebih dari 0.';
-        LEAVE sp_wallet_topup;
+        LEAVE proc_main; -- 2. GUNAKAN LABEL UNTUK KELUAR
     END IF;
 
-    -- Cek apakah user ada
+    -- Cek apakah user ada (Pastikan nama kolom ID sesuai, biasanya 'id' atau 'user_id')
     SELECT COUNT(*)
     INTO v_user_exists
     FROM users
@@ -45,18 +41,20 @@ BEGIN
     IF v_user_exists = 0 THEN
         SET p_balance_after = NULL;
         SET p_message       = 'ERROR: User tidak ditemukan.';
-        LEAVE sp_wallet_topup;
+        LEAVE proc_main;
     END IF;
 
     START TRANSACTION;
 
-    -- Cari wallet user, buat jika belum ada
+    -- Cari wallet user (Gunakan FOR UPDATE untuk keamanan data saldo)
     SELECT wallet_id, balance
     INTO v_wallet_id, v_current_bal
     FROM wallets
-    WHERE user_id = p_user_id;
+    WHERE user_id = p_user_id
+    FOR UPDATE;
 
-    IF v_wallet_id = 0 THEN
+    -- Jika wallet belum ada, buat baru
+    IF v_wallet_id = 0 OR v_wallet_id IS NULL THEN
         INSERT INTO wallets (user_id, balance, created_at, updated_at)
         VALUES (p_user_id, 0, NOW(3), NOW(3));
 
@@ -79,7 +77,8 @@ BEGIN
 
     COMMIT;
 
-    SET p_message = 'SUCCESS: Top up berhasil.';
+    SET p_message = CONCAT('SUCCESS: Top up sebesar ', p_amount, ' berhasil.');
+
 END$$
 
 DELIMITER ;
