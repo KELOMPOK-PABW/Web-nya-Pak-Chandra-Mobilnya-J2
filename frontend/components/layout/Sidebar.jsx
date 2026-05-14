@@ -46,7 +46,6 @@ export function Sidebar({ menus, title, subtitle }) {
             <div>
               <div className="text-[13px] font-semibold text-[#1A1A1A]">{user?.full_name ?? title}</div>
               <div className="text-[11px] text-[#999] mt-1">{subtitle ?? "Seller Center"}</div>
-              <div className="inline-flex items-center gap-2 bg-[#E0F5F0] text-[#0F6E56] text-[10px] font-bold px-3 py-1 rounded-full mt-2">Star Seller</div>
             </div>
           </div>
           <div className="text-[10px] font-bold text-[#999] uppercase tracking-wider px-1 mb-2">Menu Utama</div>
@@ -66,9 +65,7 @@ export function Sidebar({ menus, title, subtitle }) {
                   : "text-[#555] hover:bg-[#FAFAFA] hover:text-[#1A1A1A]"
               }`}
             >
-              <span className={`text-base ${isActive ? "opacity-100" : "opacity-60"}`}>
-                {menu.icon}
-              </span>
+              {/* icon intentionally omitted to avoid emoji rendering */}
               <span className="flex-1">{menu.label}</span>
               {/* Badge opsional */}
               {menu.badge && (
