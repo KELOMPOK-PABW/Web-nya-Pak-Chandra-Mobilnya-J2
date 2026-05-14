@@ -340,7 +340,7 @@ export default function OrdersPage() {
                             color: "#fff", cursor: "pointer",
                           }}
                         >
-                          ✅ Konfirmasi Terima
+                        Buat halaman Wallet (/wallet): saldo + histori transaksiBuat halaman Payment / Konfirmasi Bayar Konfirmasi Terima
                         </button>
                       )}
 

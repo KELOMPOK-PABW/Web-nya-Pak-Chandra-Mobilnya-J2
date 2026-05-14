@@ -3,8 +3,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { productService } from '@/services/productService';
-import { authService } from '@/services/authService';
 
 // DATA
 const PRODUK_DUMMY = [
@@ -29,7 +27,7 @@ const DROPDOWN_ITEMS = [
   { label:"Duplikat Produk"},
   { label:"Pengingat Stok" },
   null,
-  { label:"Hapus Produk", danger:true },
+  { label:"Hapus Produk",     icon:"🗑️", danger:true },
   null,
   { label:"Iklankan Produk" },
   { label:"Buat Kupon", badge:"BARU" },
@@ -55,7 +53,7 @@ function formatRp(n) {
 
 function SidebarStats() {
   const rows = [
-    { label:"Penilaian",    val:"4.9", green:true },
+    { label:"Penilaian",    val:"4.9 ⭐", green:true },
     { label:"Respons Chat", val:"98%",    green:true },
     { label:"Pengiriman",   val:"< 1 hari" },
     { label:"Produk Aktif", val:"25",     green:true },
@@ -142,34 +140,27 @@ function Toggle({ on, onToggle }) {
   );
 }
 
-function DropdownMenu({ onClose, onEdit, onDelete }) {
+function DropdownMenu({ onClose }) {
   return (
     <div style={{
       position:"absolute", right:0, top:"calc(100% + 4px)", zIndex:200,
       background:"#fff", border:"1px solid #E8EDE8", borderRadius:12,
       overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,0.1)", width:200,
     }}>
-          {DROPDOWN_ITEMS.map((item, i) =>
+      {DROPDOWN_ITEMS.map((item, i) =>
         item === null ? (
           <div key={i} style={{ height:1, background:"#F3F4F6", margin:"4px 0" }} />
         ) : (
-          <button
-            key={i}
-            onClick={() => {
-              // map some items to callbacks when provided
-              if (item.label === "Edit Produk" && typeof onEdit === "function") onEdit();
-              if (item.label === "Hapus Produk" && typeof onDelete === "function") onDelete();
-              onClose();
-            }}
-            style={{
-              display:"flex", alignItems:"center", gap:10, padding:"9px 14px",
-              fontSize:13, color: item.danger ? "#EF5350" : "#333",
-              background:"none", border:"none", width:"100%", textAlign:"left",
-              cursor:"pointer",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = item.danger?"#FEF2F2":"#F5FAF8"}
-            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          <button key={i} onClick={onClose} style={{
+            display:"flex", alignItems:"center", gap:10, padding:"9px 14px",
+            fontSize:13, color: item.danger ? "#EF5350" : "#333",
+            background:"none", border:"none", width:"100%", textAlign:"left",
+            cursor:"pointer",
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = item.danger?"#FEF2F2":"#F5FAF8"}
+          onMouseLeave={e => e.currentTarget.style.background = "none"}
           >
+            <span style={{ fontSize:13, width:18, textAlign:"center" }}>{item.icon}</span>
             {item.label}
             {item.badge && (
               <span style={{
@@ -213,7 +204,10 @@ function EtalaseDropdown() {
           fontWeight: active ? 700 : 400,
         }}
       >
-        {selected ? selected.label : 'Etalase'}
+        {selected
+          ? <><span style={{ fontSize:14 }}>{selected.emoji}</span> {selected.label}</>
+          : <><span style={{ fontSize:14 }}></span> Etalase</>
+        }
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <polyline points={open ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
         </svg>
@@ -328,65 +322,6 @@ export default function SellerProductsPage() {
   const [sortBy,    setSortBy]    = useState("");
   const [produk,    setProduk]    = useState(PRODUK_DUMMY);
   const [openMenu,  setOpenMenu]  = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function fetchProducts() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await productService.getSellerProducts();
-      setProduk(res.data || []);
-    } catch (err) {
-      setError(err.message || "Gagal memuat produk");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function handleCreate() {
-    try {
-      const name = window.prompt("Nama produk:");
-      if (!name) return;
-      const price = parseInt(window.prompt("Harga (angka):")) || 0;
-      const stock = parseInt(window.prompt("Stok (angka):")) || 0;
-      const category_id = parseInt(window.prompt("Category ID (angka):")) || null;
-      const payload = { name, desc: "", price, stock, category_id, image_url: "" };
-      await productService.createProduct(payload);
-      await fetchProducts();
-    } catch (err) {
-      alert(err.message || "Gagal membuat produk");
-    }
-  }
-
-  async function handleEdit(item) {
-    try {
-      const name = window.prompt("Nama produk:", item.name);
-      if (name === null) return;
-      const price = parseInt(window.prompt("Harga (angka):", item.harga)) || item.harga;
-      const stock = parseInt(window.prompt("Stok (angka):", item.stok)) || item.stok;
-      const payload = { name, price, stock };
-      await productService.updateProduct(item.id, payload);
-      await fetchProducts();
-    } catch (err) {
-      alert(err.message || "Gagal mengupdate produk");
-    }
-  }
-
-  async function handleDelete(id) {
-    if (!confirm("Hapus produk ini?")) return;
-    try {
-      await productService.deleteProduct(id);
-      await fetchProducts();
-    } catch (err) {
-      alert(err.message || "Gagal menghapus produk");
-    }
-  }
 
   const filtered = useMemo(() => {
     let list = produk.filter(p => {
@@ -541,7 +476,7 @@ export default function SellerProductsPage() {
                             width:48, height:48, borderRadius:10, background:"#F3F4F6",
                             border:"1px solid #EBEBEB", display:"flex", alignItems:"center",
                             justifyContent:"center", flexShrink:0, fontSize:22,
-                          }} />
+                          }}>{p.emoji}</div>
                           <div>
                             <div style={{ fontWeight:700, color:"#1A1A1A", maxWidth:200, lineHeight:1.4 }}>{p.name}</div>
                             <div style={{ fontSize:11, color:"#bbb", marginTop:3 }}>SKU: {p.sku}</div>
@@ -606,11 +541,7 @@ export default function SellerProductsPage() {
                             </svg>
                           </button>
                           {openMenu === p.id && (
-                            <DropdownMenu
-                              onClose={() => setOpenMenu(null)}
-                              onEdit={() => handleEdit(p)}
-                              onDelete={() => handleDelete(p.id)}
-                            />
+                            <DropdownMenu onClose={() => setOpenMenu(null)} />
                           )}
                         </div>
                       </td>
