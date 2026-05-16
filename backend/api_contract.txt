@@ -1,0 +1,1680 @@
+ 
+Dokumen Ekstraksi Lengkap: API Contract & Validation Rules 
+Tugas: [BE2] dan [BE3] (Cart, Products, Categories, Reviews, Rating) 
+1. API CONTRACTS (Keseluruhan Tanpa Diringkas) 
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+Categories GET 
+/categories get all 
+categories 
+{ 
+ "success": 
+true, 
+ "data": [ 
+   { 
+     "id": 1, 
+     
+"category_
+name": 
+"Elektronik" 
+   }, 
+   { 
+     "id": 2, 
+     
+"category_
+name": 
+"Fashion" 
+   } 
+ ] 
+} 
+GET 
+/categories/
+{id} 
+get 
+category by 
+ID 
+{ 
+ "success": 
+true, 
+ "data": { 
+   "id": 1, 
+   
+"category_
+name": 
+"Elektronik" 
+ } 
+} 
+POST 
+/categories add 
+category 
+{ 
+ 
+"category_
+name": 
+"Kesehatan
+" 
+{ 
+ "success": 
+true, 
+ 
+"message": 
+"Kategori 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+} 
+berhasil 
+dibuat", 
+ "data": { 
+   "id": 3, 
+   
+"category_
+name": 
+"Kesehatan
+" 
+ } 
+} 
+PUT 
+/categories/
+{id} 
+edit 
+category 
+{ 
+ 
+"category_
+name": 
+"Kesehatan 
+& Beauty" 
+} 
+{ 
+ "success": 
+true, 
+ 
+"message": 
+"Kategori 
+berhasil 
+diperbarui", 
+ "data": { 
+   "id": 3, 
+   
+"category_
+name": 
+"Kesehatan 
+& Beauty" 
+ } 
+} 
+product 
+GET 
+/products 
+Ambil 
+semua 
+produk 
+- 
+{ 
+ "success": 
+true, 
+ "data": [ 
+   { 
+     "id": 10, 
+     "name": 
+"Laptop 
+Gaming", 
+     "price": 
+8000000, 
+     "stock": 
+5, 
+     
+"stock_stat
+us": 
+"tersedia", 
+- 
+- 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+     
+"image_url"
+: "...", 
+     "store": 
+{ 
+       "id": 2, 
+       
+"store_nam
+e": "Toko 
+Rahmi" 
+     }, 
+     
+"category": 
+{ 
+       "id": 1, 
+       
+"category_
+name": 
+"Elektronik" 
+     } 
+   } 
+ ], 
+ "meta": { 
+   "page": 
+1, 
+   "limit": 
+10 
+ } 
+} 
+GET 
+/products/{i
+d} 
+Lihat detail 
+product 
+- 
+{ 
+ "success": 
+true, 
+ "data": { 
+   "id": 10, 
+   "name": 
+"Laptop 
+Gaming", 
+   "desc": 
+"Spesifikasi 
+tinggi", 
+   "price": 
+8000000, 
+   "stock": 
+5, 
+   
+- 
+- 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+"image_url"
+: "...", 
+   "store": { 
+     "id": 2, 
+     
+"store_nam
+e": "Toko 
+Rahmi" 
+   }, 
+   
+"category": 
+{ 
+     "id": 1, 
+     
+"category_
+name": 
+"Elektronik" 
+   } 
+ } 
+} 
+POST 
+/seller/prod
+ucts 
+Menambah
+kan produk 
+{ 
+ "name": 
+"Laptop 
+Gaming", 
+ "desc": 
+"Spesifikasi 
+tinggi", 
+ "price": 
+8000000, 
+ "stock": 5, 
+ 
+"category_i
+d": 1, 
+ 
+"image_url"
+: "..." 
+} 
+{ 
+ 
+"message": 
+"Produk 
+berhasil 
+ditambahka
+n", 
+ "data": { 
+   "id": 1, 
+   "name": 
+"Laptop 
+Gaming", 
+   
+"stock_stat
+us": "stok 
+tersedia" 
+ } 
+} 
+hanya 
+seller 
+stock: 
+0 -> stock 
+kosong 
+>0 -> stock 
+tersedia 
+PUT 
+/seller/prod
+ucts/{id} 
+Mengedit 
+produk 
+{ 
+ "name": 
+"Sepatu 
+terbaru", 
+ "price": 
+120000, 
+ "stock": 5 
+{ 
+ 
+"message": 
+"Produk 
+berhasil 
+diperbarui", 
+ "data": { 
+- hanya 
+seller 
+update 
+stock -> 
+update 
+stock_statu
+s otomatis 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+} 
+   "id": 1, 
+   "stock": 
+5, 
+   
+"stock_stat
+us": "stok 
+tersedia" 
+ } 
+} 
+DELETE 
+/seller/prod
+ucts/{id} 
+menghapus 
+product 
+- 
+{ 
+ 
+"message": 
+"Produk 
+berhasil 
+dihapus" 
+} 
+hanya 
+seller 
+cart 
+GET 
+/cart 
+mengambil 
+cart 
+- 
+{ 
+ "success": 
+true, 
+ "data": [ 
+   { 
+     "id": 1, 
+     
+"product": { 
+       "id": 
+10, 
+       
+"name": 
+"Laptop 
+Gaming", 
+       
+"price": 
+8000000 
+     }, 
+     "qty": 1, 
+     
+"subtotal": 
+8000000 
+   } 
+ ] 
+} 
+- 
+- 
+POST 
+/cart/items menambah 
+item ke cart 
+{ 
+ 
+"product_id
+": 1, 
+{ 
+ 
+"message": 
+"Produk 
+* cart 
+otomatis 
+dibuat 
+kalau 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+ "qty": 2 
+} 
+berhasil 
+ditambahka
+n ke cart", 
+ "data": { 
+   
+"product_id
+": 1, 
+   "qty": 2 
+ } 
+} 
+belum ada 
+* qty tidak 
+boleh > 
+stock 
+* jika 
+product 
+sudah ada 
+di cart: 
+👉 *qty 
+ditambah 
+(bukan 
+duplicate 
+item)* 
+tidak bisa 
+diubah 
+kalau: 
+cart.status 
+= 
+checked_o
+ut 
+PUT 
+/cart/items/{
+id} 
+update 
+kuantitas 
+item 
+{ 
+ "qty": 3 
+} 
+json 
+{ 
+ 
+"message": 
+"Jumlah 
+produk 
+diperbarui", 
+ "data": { 
+   "id": 1, 
+   "qty": 3, 
+   
+"subtotal": 
+300000 
+ } 
+} 
+* qty ≥ 1 
+* qty ≤ 
+stock 
+DELETE 
+/cart/items/{
+id} 
+menghapus 
+item di cart 
+- 
+{ 
+ 
+"message": 
+"Produk 
+dihapus 
+dari cart" 
+} 
+- 
+DELETE 
+/cart 
+clear cart 
+- 
+{ 
+ 
+- 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+"message": 
+"Cart 
+dikosongka
+n" 
+} 
+GET 
+/cart/validat
+e 
+validate 
+cart, buat 
+checkout 
+- 
+{ 
+ 
+"message": 
+"Validasi 
+cart", 
+ "data": { 
+   "valid": 
+true, 
+   
+"invalid_ite
+ms": [] 
+ } 
+} 
+contoh 
+invalid: 
+{ 
+ "valid": 
+false, 
+ 
+"invalid_ite
+ms": [ 
+   { 
+     
+"product_id
+": 1, 
+     
+"reason": 
+"stok tidak 
+cukup" 
+   } 
+ ] 
+} 
+- 
+GET 
+/cart/count menhitung 
+jumlah item 
+di cart 
+- 
+{ 
+ 
+"message": 
+"Jumlah 
+item cart", 
+ "data": { 
+- 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+   
+"total_items
+": 3 
+ } 
+} 
+review 
+POST 
+/reviews 
+create 
+review 
+{ 
+ 
+"order_item
+_id": 1, 
+ "rating": 5, 
+ 
+"comment": 
+"Bagus 
+banget" 
+} 
+{ 
+ 
+"message": 
+"Review 
+berhasil 
+ditambahka
+n", 
+ "data": { 
+   
+"review_id": 
+1, 
+   "rating": 
+5, 
+   
+"comment": 
+"Bagus 
+banget" 
+ } 
+} 
+1. cek 
+order_item 
+milik user 
+2. cek 
+status = 
+diterima 
+pembeli 
+3. cek 
+belum 
+pernah 
+review 
+4. insert 
+review 
+GET 
+/products/{i
+d}/reviews 
+get reviews 
+by product 
+- 
+{ 
+ 
+"message": 
+"List review 
+produk", 
+ "data": [ 
+   { 
+     "user": { 
+       
+"name": 
+"Rahmi" 
+     }, 
+     "rating": 
+5, 
+     
+"comment": 
+"Bagus 
+banget", 
+     
+"created_at
+": "..." 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+   } 
+ ] 
+} 
+GET 
+/my/review
+s 
+get my 
+reviews 
+- 
+{ 
+ "data": [ 
+   { 
+     
+"product_n
+ame": 
+"Sepatu", 
+     "rating": 
+5, 
+     
+"comment": 
+"Mantap" 
+   } 
+ ] 
+} 
+PUT 
+/reviews/{id
+} 
+update 
+review 
+{ 
+ "rating": 4, 
+ 
+"comment": 
+"Lumayan" 
+} 
+{ 
+ 
+"message": 
+"Review 
+berhasil 
+diperbarui", 
+ "data": { 
+   
+"review_id": 
+1, 
+   "rating": 
+4, 
+   
+"comment": 
+"Lumayan", 
+   
+"is_edited": 
+true 
+ } 
+} 
+DELETE 
+/reviews/{id
+} 
+delete 
+review 
+- 
+{ 
+ 
+"message": 
+"Review 
+berhasil 
+dihapus" 
+} 
+
+Module 
+Method 
+Endpoint 
+Description Request 
+Response Business 
+Rules 
+Logic 
+GET 
+/products/{i
+d}/rating 
+get product 
+rating 
+summary 
+- 
+{ 
+ 
+"message": 
+"Rating 
+produk", 
+ "data": { 
+   
+"average_r
+ating": 4.5, 
+   
+"total_revie
+ws": 20 
+ } 
+} 
+2. VALIDATION RULES - CART 
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+POST /cart 
+user_id 
+number 
+yes 
+must exist in 
+users table 
+User tidak 
+ditemukan 
+POST /cart 
+user_id 
+number 
+yes 
+must be 
+authenticate
+d user 
+Unauthorized 
+POST /cart 
+product_id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+POST /cart 
+product_id 
+number 
+yes 
+product must 
+be active 
+Produk tidak 
+tersedia 
+POST /cart 
+quantity 
+number 
+yes 
+must be 
+integer 
+Jumlah harus 
+bilangan 
+bulat 
+POST /cart 
+quantity 
+number 
+yes 
+>= 1 
+Jumlah 
+minimal 1 
+POST /cart 
+quantity 
+number 
+yes 
+<= product 
+stock 
+Stok tidak 
+mencukupi 
+POST /cart 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+POST /cart 
+business_rul
+e 
+yes 
+if product 
+already in 
+cart then 
+update 
+quantity 
+Gagal 
+update cart 
+auto 
+increment 
+quantity 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+GET /cart 
+user_id 
+number 
+yes 
+must exist in 
+users table 
+User tidak 
+ditemukan 
+GET /cart 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+GET /cart 
+authorization yes 
+only owner 
+can access 
+cart 
+Akses ditolak 
+PUT /cart/{id} id 
+number 
+yes 
+must exist in 
+cart table 
+Cart item 
+tidak 
+ditemukan 
+PUT /cart/{id} quantity 
+number 
+yes 
+must be 
+integer 
+Jumlah harus 
+bilangan 
+bulat 
+PUT /cart/{id} quantity 
+number 
+yes 
+>= 1 
+Jumlah 
+minimal 1 
+PUT /cart/{id} quantity 
+number 
+yes 
+<= product 
+stock 
+Stok tidak 
+mencukupi 
+PUT /cart/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+PUT /cart/{id} 
+authorization yes 
+only owner 
+can update 
+Akses ditolak 
+DELETE 
+/cart/{id} 
+id 
+number 
+yes 
+must exist in 
+cart table 
+Cart item 
+tidak 
+ditemukan 
+DELETE 
+/cart/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+DELETE 
+/cart/{id} 
+authorization yes 
+only owner 
+can delete 
+Akses ditolak 
+DELETE 
+/cart 
+user_id 
+number 
+yes 
+must exist in 
+users table 
+User tidak 
+ditemukan 
+DELETE 
+/cart 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+DELETE 
+/cart 
+authorization yes 
+only owner 
+can clear cart 
+Akses ditolak 
+SYSTEM 
+cart_item 
+object 
+yes 
+must belong 
+to one user 
+only 
+Data tidak 
+valid 
+relasi 
+user-cart 
+SYSTEM 
+cart_item 
+object 
+yes 
+product_id 
+must be 
+unique per 
+Produk 
+sudah ada di 
+cart 
+no duplicate 
+item 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+user cart 
+SYSTEM 
+cart_total 
+number 
+yes 
+sum(price * 
+quantity) 
+Total tidak 
+valid 
+calculated 
+field 
+SYSTEM 
+cart_total 
+number 
+yes 
+must be >= 0 Total tidak 
+valid 
+SYSTEM 
+stock_check number 
+yes 
+validate 
+stock before 
+checkout 
+Stok berubah 
+saat 
+checkout 
+race 
+condition 
+handling 
+SYSTEM 
+cart_status 
+enum 
+yes 
+active or 
+checked_out 
+Status tidak 
+valid 
+3. VALIDATION RULES - PRODUCTS & SELLER 
+PRODUCTS 
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+POST 
+/products 
+name 
+string 
+yes 
+not empty 
+Nama produk 
+wajib diisi 
+POST 
+/products 
+name 
+string 
+yes 
+min length 3 Nama 
+minimal 3 
+karakter 
+POST 
+/products 
+name 
+string 
+yes 
+max length 
+100 
+Nama 
+maksimal 
+100 karakter 
+POST 
+/products 
+description 
+string 
+no 
+max length 
+1000 
+Deskripsi 
+terlalu 
+panjang 
+POST 
+/products 
+price 
+number 
+yes 
+not empty 
+Harga wajib 
+diisi 
+POST 
+/products 
+price 
+number 
+yes 
+must be 
+numeric 
+Harga harus 
+angka 
+POST 
+/products 
+price 
+number 
+yes 
+>= 0 
+Harga tidak 
+boleh negatif 
+POST 
+/products 
+stock 
+number 
+yes 
+not empty 
+Stok wajib 
+diisi 
+POST 
+/products 
+stock 
+number 
+yes 
+must be 
+integer 
+Stok harus 
+bilangan 
+bulat 
+POST 
+/products 
+stock 
+number 
+yes 
+>= 0 
+Stok tidak 
+boleh negatif 
+POST 
+/products 
+category_id number 
+yes 
+must exist in 
+categories 
+table 
+Kategori 
+tidak 
+ditemukan 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+POST 
+/products 
+seller_id 
+number 
+yes 
+must exist in 
+users table 
+Seller tidak 
+ditemukan 
+POST 
+/products 
+seller_id 
+number 
+yes 
+role must be 
+seller 
+User bukan 
+seller 
+POST 
+/products 
+image_url 
+string 
+no 
+must be valid 
+URL 
+URL gambar 
+tidak valid 
+POST 
+/products 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+POST 
+/products 
+authorization yes 
+only seller 
+can create 
+product 
+Akses ditolak 
+GET 
+/products 
+keyword 
+string 
+no 
+max length 
+100 
+Keyword 
+terlalu 
+panjang 
+GET 
+/products 
+min_price 
+number 
+no 
+>= 0 
+Harga 
+minimum 
+tidak valid 
+GET 
+/products 
+max_price 
+number 
+no 
+>= min_price Harga 
+maksimum 
+tidak valid 
+GET 
+/products/{id} 
+id 
+number 
+yes 
+must be 
+integer 
+ID tidak valid 
+GET 
+/products/{id} 
+id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+PUT 
+/products/{id} 
+id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+PUT 
+/products/{id} 
+name 
+string 
+no 
+min length 3 Nama 
+minimal 3 
+karakter 
+PUT 
+/products/{id} 
+name 
+string 
+no 
+max length 
+100 
+Nama 
+maksimal 
+100 karakter 
+PUT 
+/products/{id} 
+description 
+string 
+no 
+max length 
+1000 
+Deskripsi 
+terlalu 
+panjang 
+PUT 
+/products/{id} 
+price 
+number 
+no 
+must be 
+numeric 
+Harga harus 
+angka 
+PUT 
+/products/{id} 
+price 
+number 
+no 
+>= 0 
+Harga tidak 
+boleh negatif 
+PUT 
+/products/{id} 
+stock 
+number 
+no 
+must be 
+integer 
+Stok harus 
+bilangan 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+bulat 
+PUT 
+/products/{id} 
+stock 
+number 
+no 
+>= 0 
+Stok tidak 
+boleh negatif 
+PUT 
+/products/{id} 
+category_id number 
+no 
+must exist in 
+categories 
+table 
+Kategori 
+tidak 
+ditemukan 
+PUT 
+/products/{id} 
+image_url 
+string 
+no 
+must be valid 
+URL 
+URL gambar 
+tidak valid 
+PUT 
+/products/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+PUT 
+/products/{id} 
+authorization yes 
+only product 
+owner 
+(seller) can 
+update 
+Akses ditolak 
+DELETE 
+/products/{id} 
+id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+DELETE 
+/products/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+DELETE 
+/products/{id} 
+authorization yes 
+only product 
+owner 
+(seller) can 
+delete 
+Akses ditolak 
+GET 
+/seller/produc
+ts 
+seller_id 
+number 
+yes 
+must exist in 
+users table 
+Seller tidak 
+ditemukan 
+GET 
+/seller/produc
+ts 
+seller_id 
+number 
+yes 
+role must be 
+seller 
+User bukan 
+seller 
+GET 
+/seller/produc
+ts 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+GET 
+/seller/produc
+ts 
+authorization yes 
+only seller 
+can access 
+own products 
+Akses ditolak 
+4. VALIDATION RULES - REVIEWS & RATING 
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+POST 
+/reviews 
+user_id 
+number 
+yes 
+must exist in 
+users table 
+User tidak 
+ditemukan 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+POST 
+/reviews 
+user_id 
+number 
+yes 
+must be 
+authenticate
+d user 
+Unauthorized 
+POST 
+/reviews 
+product_id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+POST 
+/reviews 
+order_id 
+number 
+yes 
+must exist in 
+orders table 
+Order tidak 
+ditemukan 
+POST 
+/reviews 
+order_id 
+number 
+yes 
+order must 
+belong to 
+user 
+Akses ditolak 
+POST 
+/reviews 
+order_id 
+number 
+yes 
+order status 
+must be 
+delivered 
+Belum bisa 
+review 
+POST 
+/reviews 
+product_id 
+number 
+yes 
+product must 
+be in 
+order_items 
+Produk tidak 
+ada di order 
+POST 
+/reviews 
+rating 
+number 
+yes 
+must be 
+integer 
+Rating tidak 
+valid 
+POST 
+/reviews 
+rating 
+number 
+yes 
+between 1 
+and 5 
+Rating harus 
+1-5 
+POST 
+/reviews 
+comment 
+string 
+no 
+max length 
+1000 
+Komentar 
+terlalu 
+panjang 
+POST 
+/reviews 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+POST 
+/reviews 
+business_rul
+e 
+yes 
+one review 
+per product 
+per order 
+Sudah 
+pernah 
+review 
+POST 
+/reviews 
+business_rul
+e 
+yes 
+store review 
+with 
+timestamp 
+Gagal 
+menyimpan 
+review 
+GET 
+/reviews/prod
+uct/{product_
+id} 
+product_id 
+number 
+yes 
+must exist in 
+products 
+table 
+Produk tidak 
+ditemukan 
+GET 
+/reviews/prod
+uct/{product_
+id} 
+business_rul
+e 
+yes 
+return list of 
+reviews 
+Data tidak 
+valid 
+GET 
+/reviews/prod
+uct/{product_
+id} 
+business_rul
+e 
+yes 
+calculate 
+average 
+rating 
+Gagal 
+menghitung 
+rating 
+
+Endpoint 
+Field 
+Type 
+Required 
+Validation 
+Rule 
+Error 
+Message 
+Notes 
+GET 
+/reviews/user 
+user_id 
+number 
+yes 
+must exist in 
+users table 
+User tidak 
+ditemukan 
+GET 
+/reviews/user 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+GET 
+/reviews/user 
+authorization yes 
+only owner 
+can access 
+Akses ditolak 
+PUT 
+/reviews/{id} 
+id 
+number 
+yes 
+must exist in 
+reviews table 
+Review tidak 
+ditemukan 
+PUT 
+/reviews/{id} 
+rating 
+number 
+no 
+must be 
+integer 
+Rating tidak 
+valid 
+PUT 
+/reviews/{id} 
+rating 
+number 
+no 
+between 1 
+and 5 
+Rating harus 
+1-5 
+PUT 
+/reviews/{id} 
+comment 
+string 
+no 
+max length 
+1000 
+Komentar 
+terlalu 
+panjang 
+PUT 
+/reviews/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+PUT 
+/reviews/{id} 
+authorization yes 
+only owner 
+can update 
+Akses ditolak 
+DELETE 
+/reviews/{id} 
+id 
+number 
+yes 
+must exist in 
+reviews table 
+Review tidak 
+ditemukan 
+DELETE 
+/reviews/{id} 
+auth 
+yes 
+must be 
+authenticate
+d 
+Unauthorized 
+DELETE 
+/reviews/{id} 
+authorization yes 
+only owner or 
+admin 
+Akses ditolak 
+ 

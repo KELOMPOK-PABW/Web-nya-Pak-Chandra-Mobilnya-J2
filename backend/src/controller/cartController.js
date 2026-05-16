@@ -12,7 +12,7 @@ const getCart = async (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({
-        message : error
+        message : error.message
     })
   }
 };
@@ -36,7 +36,7 @@ const addItem = async (req, res) => {
     });
   } catch (error) {
     return res.status(400).json({
-        message : error
+        message : error.message
     })
   }
 };
@@ -44,83 +44,74 @@ const addItem = async (req, res) => {
 const updateCartItem = async (req,res) => {
   try {
     const {id} = req.params
-    const {user_id, qty} = req.body
+    const userId = req.user.id;
+    const {qty} = req.body
 
-    const validation = updateCartItemSchema({
-      user_id : Number(user_id),
+    const { error } = updateCartItemSchema.validate({
       qty : Number(qty)
     })
-    if (!validation.isValid){
-      return res.status(404).json({
-        message : "req error",
-        errors : validation.errors
+    if (error){
+      return res.status(400).json({
+        message : "Validation error",
+        errors : error.details[0].message
       })
     }
 
     const result = await cartService.updateCartItem({
-      userId : user_id,
-      cartItemId : id,
-      quantity : qty
+      userId : userId,
+      cartItemId : Number(id),
+      quantity : Number(qty)
     })
 
     return res.status(200).json({
-      result
+      message: "Cart item berhasil diupdate",
+      data: result
     })
   } catch (error) {
     res.status(400).json({
-      error : error.message
+      message : error.message
     })
   }
 }
 
 const deleteCartItem = async(req,res) => {
-  const {id} = req.params
-  const {user_id, cartItemId} = req.body
-  const validateReqDeleteCartItem = deleteCartItemSchema.validate({
-    user_id : Number(user_id),
-    qty : Number(qty)
-  })
-
-  if (!validation.isValid){
-    return res.status(404).json({
-      message : "req error",
-      errors : validation.errors
-    })
-  }
-
   try {
+    const {id} = req.params
+    const userId = req.user.id;
+
     const result = await cartService.deleteCartItem({
-      cartItemId : Number(cartItemId),
-      userId : Number(user_id)
+      cartItemId : Number(id),
+      userId : userId
     })
 
     return res.status(200).json({
-      result
+      message: "Item berhasil dihapus dari cart",
+      data: result
     })
   } catch (error) {
     res.status(400).json({
-      error : error.message
+      message : error.message
     })
   }
 }
 
 const clearCart = async (req, res) => {
   try {
-    const { user_id } = req.body;
+    const userId = req.user.id;
 
-    const validation = validateClearCart({
-      user_id: Number(user_id),
+    const { error } = clearCartSchema.validate({
+      user_id: userId,
     });
 
-    if (!validation.isValid) {
+    if (error) {
       return res.status(400).json({
         message: "Validation error",
-        errors: validation.errors,
+        errors: error.details[0].message,
       });
     }
 
     const result = await cartService.clearCart({
-      user_id: Number(user_id),
+      user_id: userId,
     });
 
     return res.status(200).json(result);
@@ -136,7 +127,7 @@ const validateCart = async(req,res) => {
     const results = await cartService.validateCart(req)
     return res.status(results.statusCode).json({
       message : results.message,
-      sucsess : results.success,
+      success : results.success,
       data : results.data
     })
   } catch (error) {
