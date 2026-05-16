@@ -1,4 +1,5 @@
 require("dotenv").config({ path: "src/config/.env" });
+require("dotenv").config();
 const express = require("express");
 const app = express();
 
@@ -12,6 +13,8 @@ const authRoutes = require("./routes/authRoutes")
 const sellerRoutes = require("./routes/sellerRoutes")
 const categoryRoutes = require("./routes/categoryRoutes")
 const reviewRoutes = require("./routes/reviewRoutes")
+const chatRoutes = require("./routes/chatRoutes")
+const llmRoutes = require("./routes/llmRoutes")
 const authController = require("./controller/authController")
 const reviewController = require("./controller/reviewController")
 const { authenticate } = require("./middleware/authMiddleware")
@@ -31,6 +34,8 @@ app.use("/api/wallet", authenticate, walletRoutes)
 app.use("/api/payments", authenticate, paymentRoutes)
 app.use("/api/seller", authenticate, sellerRoutes)
 app.use("/api/reviews", authenticate, reviewRoutes)
+app.use("/api/chat", authenticate, chatRoutes)
+app.use("/api/llm", authenticate, llmRoutes)
 app.get("/api/my/reviews", authenticate, reviewController.getMyReviews)
 app.get("/api/me", authenticate, authController.getMe)
 
