@@ -144,15 +144,15 @@ Seluruh endpoint berada di bawah prefix yang ditentukan di `backend/src/index.js
 | Resource    | Method & Path (ringkas)              | Auth | Keterangan                                   |
 |-------------|--------------------------------------|------|----------------------------------------------|
 | Auth        | `POST /auth/register`, `/login`, `/logout` | —   | Registrasi, login, logout pengguna           |
-| Users       | `GET /users/...`                     | 🔒   | Profil & data pengguna                       |
-| Products    | `GET /products`, `POST /products`    | 🔒\* | Browse publik, create oleh seller            |
+| Users       | `GET /users/...`                     | v   | Profil & data pengguna                       |
+| Products    | `GET /products`, `POST /products`    | v\* | Browse publik, create oleh seller            |
 | Categories  | `GET /categories`                    | —    | Daftar kategori produk                       |
-| Cart        | `GET/POST /cart`                     | 🔒   | Manajemen keranjang belanja                  |
-| Checkout    | `POST /checkout`                     | 🔒   | Membuat order dari isi keranjang             |
-| Payments    | `POST /payments`                     | 🔒   | Pembayaran via e-wallet                      |
-| Wallet      | `GET /wallet`                        | 🔒   | Saldo & riwayat transaksi e-wallet           |
-| Seller      | `GET /seller/...`                    | 🔒   | Dashboard & manajemen produk seller          |
-| Reviews     | `GET/POST /reviews`                  | 🔒   | Ulasan & rating produk                       |
+| Cart        | `GET/POST /cart`                     | v   | Manajemen keranjang belanja                  |
+| Checkout    | `POST /checkout`                     | v   | Membuat order dari isi keranjang             |
+| Payments    | `POST /payments`                     | v   | Pembayaran via e-wallet                      |
+| Wallet      | `GET /wallet`                        | v   | Saldo & riwayat transaksi e-wallet           |
+| Seller      | `GET /seller/...`                    | v   | Dashboard & manajemen produk seller          |
+| Reviews     | `GET/POST /reviews`                  | v   | Ulasan & rating produk                       |
 
 \* GET publik, POST/PUT/DELETE memerlukan autentikasi seller.
 
@@ -184,12 +184,3 @@ Setiap intent mencantumkan daftar entitas seperti `product`, `color`, `price`, `
 
 ## Kontributor
 
-Proyek kuliah PABW yang dikerjakan oleh tim mahasiswa. Daftar lengkap kontributor dapat dilihat melalui:
-
-```bash
-git log --format='%aN' | sort -u
-```
-
----
-
-> **Catatan:** Fitur chat LLM Gemini saat ini berada di branch `feat/chat-llm-gemini` dan belum di-merge ke `main`. Untuk mencoba fiturnya, checkout branch tersebut terlebih dahulu.
