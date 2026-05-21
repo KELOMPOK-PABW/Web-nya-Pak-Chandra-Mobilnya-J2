@@ -1,26 +1,18 @@
-const { number } = require("joi");
-const { user } = require("../config/database");
 const cartRepository = require("../repository/cartRepository");
 
 const formatCartResponse = (cart) => {
   const items = (cart.items || []).map((item) => ({
     id: item.id,
-    product_id: item.productId,
-    name: item.product.name,
-    price: item.product.price,
-    stock: item.product.stock,
+    product: {
+      id: item.productId,
+      name: item.product.name,
+      price: item.product.price,
+    },
     qty: item.quantity,
     subtotal: item.product.price * item.quantity,
   }));
 
-  const total_price = items.reduce((acc, item) => acc + item.subtotal, 0);
-
-  return {
-    cart_id: cart.id,
-    status: cart.status,
-    items,
-    total_price,
-  };
+  return items;
 };
 
 const getCart = async (userId) => {
@@ -89,38 +81,35 @@ const addItemToCart = async (userId, payload) => {
   };
 };
 
-const updateCartItem = async({cartItemId, quantity, userId}) => {
-  const cartItem = await cartRepository.findCartItemByIdAndUser(cartItemId,userId)
+const updateCartItem = async({ cartItemId, quantity, userId }) => {
+  const cartItem = await cartRepository.findCartItemByIdAndUser(cartItemId, userId)
   if (!cartItem) {
     throw new Error("Item cart tidak ditemukan");
   }
 
-  const productPrice = Number(cartItem.product.price);
-
-  if (qty > cartItem.product.stock) {
-    throw new Error("qty melebihi stock");
+  if (quantity > cartItem.product.stock) {
+    throw new Error("Qty melebihi stock produk");
   }
 
-  const updateItem = await cartRepository.updateCartItemQuantity(cartItemId,quantity)
+  const updateItem = await cartRepository.updateCartItemQuantity(Number(cartItemId), quantity)
   return {
-    message : "jumblah produk diperbarui",
     id : updateItem.id,
     qty : updateItem.quantity,
-    subtotal : number(updateItem.quantity) * number(updateItem.product)
+    subtotal : Number(updateItem.quantity) * Number(updateItem.product.price)
   }
 }
 
-const deleteCartItem = async({cartItemId, userId}) => {
-  const findCartItem = await cartRepository.findCartItemByIdAndUser(cartItemId,userId)
+const deleteCartItem = async({ cartItemId, userId }) => {
+  const findCartItem = await cartRepository.findCartItemByIdAndUser(cartItemId, userId)
 
   if (!findCartItem){
-    throw new Error("item cart tidak ditemukan")
+    throw new Error("Item cart tidak ditemukan")
   }
 
-  await cartRepository.deleteCartItemById(userId)
+  await cartRepository.deleteCartItemById(cartItemId)
   
   return {
-    message : "product dihapus dari cart"
+    message : "Product dihapus dari cart"
   }
 }
 

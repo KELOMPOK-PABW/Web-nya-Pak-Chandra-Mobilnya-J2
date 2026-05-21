@@ -31,6 +31,7 @@ model User {
   kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
   ewallets             EWallet[]
   reviews              Review[]
+  chatSessions         ChatSession[]
 
   @@map("users")
 }
@@ -38,6 +39,16 @@ model User {
 enum StockStatus {
   tersedia
   habis
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String    @default("") @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  products    Product[]
+
+  @@map("categories")
 }
 
 model Product {
@@ -49,9 +60,11 @@ model Product {
   stockStatus StockStatus @map("stock_status")
   imageUrl    String      @map("image_url")
   sellerId    Int         @map("seller_id")
+  categoryId  Int?        @map("category_id")
   createdAt   DateTime    @default(now()) @map("created_at")
 
   seller     User        @relation(fields: [sellerId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
   reviews    Review[]
@@ -271,4 +284,39 @@ model Review {
   reviewer User?    @relation(fields: [reviewerId], references: [id])
 
   @@map("review")
+}
+
+enum ChatRole {
+  user
+  assistant
+  system
+}
+
+model ChatSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  title     String?  @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id])
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id                  Int      @id @default(autoincrement())
+  sessionId           Int      @map("session_id")
+  role                ChatRole
+  content             String   @db.Text
+  intent              String?  @db.VarChar(50)
+  suggestedProductIds Json?    @map("suggested_product_ids")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
 }

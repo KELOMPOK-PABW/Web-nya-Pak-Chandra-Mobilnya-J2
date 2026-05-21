@@ -6,12 +6,13 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --verbose --forceExit --detectOpenHandles"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^2.3.0",
     "@prisma/client": "^6.19.2",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.0",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.7.0",
+    "jest": "^30.4.2",
     "nodemon": "^3.1.14"
   }
 }

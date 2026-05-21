@@ -6,11 +6,6 @@ const addCartItemSchema = Joi.object({
 });
 
 const updateCartItemSchema = Joi.object({
-  user_id: Joi.number().integer().required().messages({
-    "any.required": "user_id is required",
-    "number.base": "user_id must be a number",
-    "number.integer": "user_id must be an integer",
-  }),
   qty: Joi.number().integer().min(1).required().messages({
     "any.required": "qty is required",
     "number.base": "qty must be a number",
