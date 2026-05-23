@@ -2,11 +2,16 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/index.js",
+    "start:prod": "NODE_ENV=production node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --verbose --forceExit --detectOpenHandles"
+    "test": "jest --verbose --forceExit --detectOpenHandles",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "build": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -15,15 +20,22 @@
     "@google/genai": "^2.3.0",
     "@prisma/client": "^6.19.2",
     "bcrypt": "^6.0.0",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "joi": "^18.1.2",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.20.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
     "prisma": "^6.19.2"
   },
   "devDependencies": {
     "jest": "^30.4.2",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "pino-pretty": "^13.1.3"
   }
 }
