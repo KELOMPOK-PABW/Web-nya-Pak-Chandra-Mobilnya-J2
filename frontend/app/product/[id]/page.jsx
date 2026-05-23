@@ -33,7 +33,7 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
       <Navbar />
-      <main className="max-w-[1280px] mx-auto px-6 py-8">
+      <main className="max-w-7xluto px-6 py-8">
         {loading ? (
           <div>Loading...</div>
         ) : error ? (

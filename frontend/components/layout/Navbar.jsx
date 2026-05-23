@@ -4,9 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authService } from "../../services/authService";
+import { cartService } from "@/services/cartService";
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
 
   const isSeller    = pathname.startsWith("/seller");
@@ -19,7 +22,30 @@ export function Navbar() {
     if (u) setUser(u);
   }, []);
 
-  const [user, setUser] = useState(null);
+  useEffect(() => {
+    let active = true;
+
+    async function loadCartCount() {
+      try {
+        const count = await cartService.countCartItems();
+        if (!active) return;
+        setCartCount(Number(count?.total_quantity || 0));
+      } catch {
+        if (active) setCartCount(0);
+      }
+    }
+
+    if (mounted && user && !isDashboard) {
+      loadCartCount();
+    } else if (mounted) {
+      setCartCount(0);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [mounted, user, isDashboard]);
+
   const initials = user?.full_name
     ? user.full_name
         .split(" ")
@@ -86,7 +112,7 @@ export function Navbar() {
               width: 14, height: 14,
               display: "flex", alignItems: "center", justifyContent: "center",
               borderRadius: "50%", border: "1.5px solid #1A3C34",
-            }}>3</span>
+            }}>{cartCount}</span>
           </Link>
         )}
 
