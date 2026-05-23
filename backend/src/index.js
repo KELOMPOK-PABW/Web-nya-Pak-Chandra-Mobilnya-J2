@@ -1,6 +1,14 @@
-require("dotenv").config({ path: "src/config/.env" });
-require("dotenv").config();
+const env = require("./config/env");
 const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
+const pinoHttp = require("pino-http");
+
+const logger = require("./utils/logger");
+const { notFound, errorHandler } = require("./middleware/errorHandler");
+
 const app = express();
 
 const userRoutes = require("./routes/usersRoutes")

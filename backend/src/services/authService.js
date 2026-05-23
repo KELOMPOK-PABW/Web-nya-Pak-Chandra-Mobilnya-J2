@@ -1,8 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authRepository = require("../repository/authRepository");
-
-const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+const env = require("../config/env");
 
 const registerUser = async (userData) => {
   const { full_name, email, password, phone, role } = userData;
@@ -14,7 +13,7 @@ const registerUser = async (userData) => {
   }
 
   // Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
 
   // Create user
   const newUser = await authRepository.createUser({
@@ -45,8 +44,8 @@ const loginUser = async (email, password) => {
   // Generate token
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: "1d" }
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN }
   );
 
   return { token, user };

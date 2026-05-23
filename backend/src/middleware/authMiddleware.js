@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
-
-const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+const env = require("../config/env");
 
 const authenticate = (req, res, next) => {
   try {
@@ -13,7 +12,7 @@ const authenticate = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET);
 
     req.user = decoded;
     next();
