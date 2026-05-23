@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 
 const ADMIN_MENUS = [
   { label: "Users",           href: "/admin/users",  },
-  { label: "Seller Approval", href: "/admin/seller-applications", badge: "3" },
+  { label: "Seller Approval", href: "/admin/seller-approval", badge: "3" },
   { label: "Kategori",        href: "/admin/categories",  },
   { label: "Kurir",           href: "/admin/couriers",     },
   { label: "Produk",          href: "/admin/products",          },
@@ -79,7 +79,7 @@ export default function AdminUserDetailPage() {
     <div className="min-h-screen flex flex-col bg-[#f5f5f5]"
       style={{ fontFamily: "'DM Sans','Inter',sans-serif" }}>
       <Navbar />
-      <div className="flex flex-1 max-w-[1280px] w-full mx-auto">
+      <div className="flex flex-1 max-w-7xl w-full mx-auto">
         <Sidebar title="Admin Panel" subtitle="Administrator" menus={ADMIN_MENUS} />
 
         <main className="flex-1 p-8">
@@ -93,7 +93,7 @@ export default function AdminUserDetailPage() {
           {/* Profile Card */}
           <div className="bg-white rounded-xl border border-[#EBEBEB] p-6 mb-6 flex items-center gap-6">
             <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold
-              text-xl text-white flex-shrink-0"
+              text-xl text-white shrink-0"
               style={{ background: "linear-gradient(135deg,#1A3C34,#4DB6AC)" }}>
               {initials}
             </div>
@@ -111,7 +111,7 @@ export default function AdminUserDetailPage() {
               </div>
               <p className="text-sm text-gray-500">{user.email} · {user.phone}</p>
             </div>
-            <div className="text-right flex-shrink-0">
+            <div className="text-right shrink-0">
               <p className="text-xs text-gray-400">Bergabung</p>
               <p className="text-sm font-semibold text-[#1A1A1A]">{user.created_at}</p>
               <p className="text-xs text-gray-400 mt-2">ID Pengguna</p>

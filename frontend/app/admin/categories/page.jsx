@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 
 const ADMIN_MENUS = [
   { label: "Users",           href: "/admin/users",              },
-  { label: "Seller Approval", href: "/admin/seller-applications",badge: "3" },
+  { label: "Seller Approval", href: "/admin/seller-approval", badge: "3" },
   { label: "Kategori",        href: "/admin/categories",           },
   { label: "Kurir",           href: "/admin/couriers",            },
   { label: "Produk",          href: "/admin/products",            },
