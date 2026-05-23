@@ -6,6 +6,7 @@ const app = express();
 const userRoutes = require("./routes/usersRoutes")
 const cartRoutes = require("./routes/cartRoutes")
 const checkoutRoutes = require("./routes/checkoutRoutes")
+const orderRoutes = require("./routes/orderRoutes")
 const walletRoutes = require("./routes/walletRoutes")
 const productRoutes = require("./routes/productRoutes")
 const paymentRoutes = require("./routes/paymentRoutes")
@@ -30,6 +31,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/users", authenticate, userRoutes)
 app.use("/api/cart", authenticate, cartRoutes)
 app.use("/api/checkout", authenticate, checkoutRoutes)
+app.use("/api/orders", authenticate, orderRoutes)
 app.use("/api/wallet", authenticate, walletRoutes)
 app.use("/api/payments", authenticate, paymentRoutes)
 app.use("/api/seller", authenticate, sellerRoutes)
@@ -40,5 +42,5 @@ app.get("/api/my/reviews", authenticate, reviewController.getMyReviews)
 app.get("/api/me", authenticate, authController.getMe)
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server running on port ${process.env.PORT }`);
+  console.log(`Server running on port ${process.env.PORT}`);
 });
