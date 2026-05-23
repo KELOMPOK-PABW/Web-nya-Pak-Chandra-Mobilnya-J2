@@ -1,5 +1,9 @@
+-- ============================================================
+-- 1. FIX SP REGISTER
+-- ============================================================
+DROP PROCEDURE IF EXISTS sp_register;
 
-DELIMITER //
+DELIMITER $$
 
 CREATE PROCEDURE sp_register(
     IN p_full_name VARCHAR(255),
@@ -18,13 +22,22 @@ BEGIN
     SET new_user_id = LAST_INSERT_ID();
 
     -- Otomatis buatkan wallet untuk user baru
+    -- Pastikan nama tabel benar: 'ewallet' atau 'wallets'? (Sesuaikan)
     INSERT INTO ewallet (user_id, balance)
     VALUES (new_user_id, 0.00);
-END //
+
+-- PERBAIKAN: Gunakan $$ sebagai penutup karena DELIMITER sudah diganti ke $$
+END$$
 
 DELIMITER ;
 
-DELIMITER //
+
+-- ============================================================
+-- 2. FIX SP LOGIN
+-- ============================================================
+DROP PROCEDURE IF EXISTS sp_login;
+
+DELIMITER $$
 
 CREATE PROCEDURE sp_login(
     IN p_email VARCHAR(255)
@@ -32,8 +45,11 @@ CREATE PROCEDURE sp_login(
 BEGIN
     SELECT u.id, u.full_name, u.email, u.password_hash, r.nama_role, u.is_active
     FROM users u
+    -- Pastikan nama tabel 'role' atau 'roles' dan kolom 'nama_role' sesuai di DB kamu
     JOIN role r ON u.role_id = r.id
     WHERE u.email = p_email AND u.is_active = 1;
-END //
+
+-- PERBAIKAN: Gunakan $$ sebagai penutup (kamu sebelumnya pakai //)
+END$$
 
 DELIMITER ;
