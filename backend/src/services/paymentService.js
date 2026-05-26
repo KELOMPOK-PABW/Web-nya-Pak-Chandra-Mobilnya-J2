@@ -35,7 +35,7 @@ const payPayment = async (paymentId) => {
   }
 
   const userId = payment.order.buyerId;
-  const wallet = await paymentRepository.findEWalletByUserId(userId);
+  const wallet = await paymentRepository.findWalletByUserId(userId);
   if (!wallet) {
     throw new Error("Wallet user tidak ditemukan");
   }
@@ -54,7 +54,7 @@ const payPayment = async (paymentId) => {
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
-    await paymentRepository.updateEWalletBalance(tx, wallet.id, newBalance);
+    await paymentRepository.updateWalletBalance(tx, wallet.id, newBalance);
     await paymentRepository.updatePaymentStatus(tx, payment.id, "paid", now);
     await paymentRepository.updateOrderPaymentStatus(
       tx,
@@ -62,12 +62,10 @@ const payPayment = async (paymentId) => {
       "paid",
       now
     );
-    await paymentRepository.createEWalletTransaction(tx, {
-      eWalletId: wallet.id,
-      orderId: payment.order.id,
+    await paymentRepository.createWalletTransaction(tx, {
+      walletId: wallet.id,
       type: "payment",
       amount,
-      balanceBefore: balance,
       balanceAfter: newBalance,
     });
   });

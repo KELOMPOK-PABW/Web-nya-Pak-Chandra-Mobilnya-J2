@@ -24,8 +24,8 @@ const createPayment = async (data) => {
   return prisma.payment.create({ data });
 };
 
-const findEWalletByUserId = async (userId) => {
-  return prisma.eWallet.findFirst({
+const findWalletByUserId = async (userId) => {
+  return prisma.wallet.findUnique({
     where: { userId },
   });
 };
@@ -51,15 +51,15 @@ const updateOrderPaymentStatus = async (tx, orderId, status, paidAt = null) => {
   });
 };
 
-const updateEWalletBalance = async (tx, walletId, newBalance) => {
-  return tx.eWallet.update({
+const updateWalletBalance = async (tx, walletId, newBalance) => {
+  return tx.wallet.update({
     where: { id: walletId },
     data: { balance: newBalance },
   });
 };
 
-const createEWalletTransaction = async (tx, data) => {
-  return tx.eWalletTransaction.create({ data });
+const createWalletTransaction = async (tx, data) => {
+  return tx.walletTransaction.create({ data });
 };
 
 module.exports = {
@@ -67,10 +67,10 @@ module.exports = {
   findPaymentByOrderId,
   findPaymentById,
   createPayment,
-  findEWalletByUserId,
+  findWalletByUserId,
   updatePaymentStatus,
   setPaymentFailed,
   updateOrderPaymentStatus,
-  updateEWalletBalance,
-  createEWalletTransaction,
+  updateWalletBalance,
+  createWalletTransaction,
 };

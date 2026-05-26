@@ -29,7 +29,7 @@ model User {
   sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
   orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
   kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
-  ewallets             EWallet[]
+  wallets              Wallet[]
   reviews              Review[]
 
   @@map("users")
@@ -149,7 +149,6 @@ model Order {
   items        OrderItem[]
   histories    OrderStatusHistory[]
   payment      Payment?
-  transactions EWalletTransaction[]
   reviews      Review[]
 
   @@map("orders")
@@ -222,38 +221,38 @@ model OrderStatusHistory {
   @@map("order_status_history")
 }
 
-model EWallet {
-  id        Int      @id @default(autoincrement())
-  userId    Int?     @map("user_id")
+model Wallet {
+  id        Int      @id @default(autoincrement()) @map("wallet_id")
+  userId    Int      @map("user_id")
   balance   Decimal  @default(0.00) @db.Decimal(15, 2)
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user         User?                @relation(fields: [userId], references: [id])
-  transactions EWalletTransaction[]
+  user         User                @relation(fields: [userId], references: [id])
+  transactions WalletTransaction[]
 
-  @@map("ewallet")
+  @@unique([userId])
+  @@map("wallets")
 }
 
-enum EWalletTransactionType {
+enum WalletTransactionType {
   topup
   payment
   refund
 }
 
-model EWalletTransaction {
-  id            Int                    @id @default(autoincrement())
-  eWalletId     Int?                   @map("e_wallet_id")
-  orderId       Int?                   @map("order_id")
-  type          EWalletTransactionType
-  amount        Decimal                @db.Decimal(15, 2)
-  balanceBefore Decimal                @map("balance_before") @db.Decimal(15, 2)
-  balanceAfter  Decimal                @map("balance_after") @db.Decimal(15, 2)
-  createdAt     DateTime               @default(now()) @map("created_at")
+model WalletTransaction {
+  id           Int                    @id @default(autoincrement()) @map("wallet_transaction_id")
+  walletId     Int                    @map("wallet_id")
+  type         WalletTransactionType
+  amount       Decimal                @db.Decimal(15, 2)
+  balanceAfter Decimal                @map("balance_after") @db.Decimal(15, 2)
+  createdAt    DateTime               @default(now()) @map("created_at")
 
-  eWallet EWallet? @relation(fields: [eWalletId], references: [id])
-  order   Order?   @relation(fields: [orderId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 
-  @@map("ewallet_transaction")
+  @@index([walletId])
+  @@map("wallet_transactions")
 }
 
 model Review {
