@@ -331,17 +331,36 @@ export default function OrdersPage() {
 
                       {/* Confirm receipt — only for shipped */}
                       {status === "shipped" && !confirmed && (
-                        <button
-                          onClick={() => handleConfirm(order.id)}
-                          style={{
-                            padding: "7px 14px", borderRadius: 10,
-                            border: "none", background: "#1A3C34",
-                            fontFamily: "inherit", fontWeight: 700, fontSize: 13,
-                            color: "#fff", cursor: "pointer",
-                          }}
-                        >
-                        Buat halaman Wallet (/wallet): saldo + histori transaksiBuat halaman Payment / Konfirmasi Bayar Konfirmasi Terima
-                        </button>
+                        <>
+                          {/* Status Pengiriman */}
+                          <div style={{
+                            padding: "6px 12px", borderRadius: 10,
+                            background: "#EDE9FE", border: "1px solid #DDD6FE",
+                            display: "flex", alignItems: "center", gap: 6,
+                          }}>
+                            <span style={{ fontSize: 13 }}></span>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#5B21B6" }}>
+                                Sedang dikirim
+                              </p>
+                              <p style={{ margin: 0, fontSize: 11, color: "#6B7280" }}>
+                                {order.trackingNo !== "-" ? `Resi: ${order.trackingNo}` : "Menunggu resi"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleConfirm(order.id)}
+                            style={{
+                              padding: "7px 14px", borderRadius: 10,
+                              border: "none", background: "#1A3C34",
+                              fontFamily: "inherit", fontWeight: 700, fontSize: 13,
+                              color: "#fff", cursor: "pointer",
+                            }}
+                          >
+                            Konfirmasi Terima
+                          </button>
+                        </>
                       )}
 
                       {/* Already confirmed */}

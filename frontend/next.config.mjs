@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  // Proxy API calls to backend during development to avoid CORS
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8081/api/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

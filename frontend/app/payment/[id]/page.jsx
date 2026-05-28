@@ -1,67 +1,102 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-
-// ── Dummy data (nanti: GET /payments/{order_id} + GET /wallet) ────
-const ORDERS_PAYMENT = {
-  "ORD-20240503-003": {
-    order_id:    "ORD-20240503-003",
-    store:       "Gadget World",
-    items: [
-      { name: "Earphone TWS NoisePro X", variant: "Putih",        qty: 1, price: 599000, emoji: "🎧" },
-      { name: "Case Pelindung AirPods",  variant: "Transparan",   qty: 1, price: 45000,  emoji: "📦" },
-    ],
-    subtotal:    644000,
-    shipping:    55000,
-    discount:    40000,
-    total:       659000,
-    status:      "pending",   // pending | paid | failed
-  },
-  "ORD-20240427-005": {
-    order_id:    "ORD-20240427-005",
-    store:       "Home Living",
-    items: [
-      { name: "Lampu LED Smart Bulb", variant: "Warm White", qty: 3, price: 65000, emoji: "💡" },
-    ],
-    subtotal:    195000,
-    shipping:    15000,
-    discount:    0,
-    total:       210000,
-    status:      "pending",
-  },
-};
-
-const WALLET_BALANCE = 1250000;
+import { paymentService } from "@/services/paymentService";
+import { walletService } from "@/services/walletService";
 
 function fmt(n) {
   return "Rp " + Number(n).toLocaleString("id-ID");
 }
 
-function RowDetail({ label, value, valueColor, bold }) {
+function RowDetail({ label, value, valueColor }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
       <span style={{ fontSize: 13, color: "#6B7280" }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 600, color: valueColor ?? "#0A0A0A" }}>
-        {value}
-      </span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: valueColor ?? "#0A0A0A" }}>{value}</span>
     </div>
   );
 }
 
 export default function PaymentPage() {
-  const { id } = useParams();
-  const router = useRouter();
+  const { id } = useParams(); // id = order_id
 
-  const order = ORDERS_PAYMENT[id];
-
+  const [order,       setOrder]       = useState(null);
+  const [balance,     setBalance]     = useState(null);
+  const [paymentId,   setPaymentId]   = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState("");
   const [payState,    setPayState]    = useState("idle"); // idle | confirm | processing | success | failed
   const [walletAfter, setWalletAfter] = useState(null);
+  const [payError,    setPayError]    = useState("");
 
-  // Not found 
-  if (!order) {
+  // Fetch order detail + wallet balance
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const [orderData, bal] = await Promise.all([
+          paymentService.getPaymentByOrderId(id),
+          walletService.getBalance(),
+        ]);
+        setOrder(orderData);
+        setBalance(bal);
+      } catch (err) {
+        setError(err.message || "Gagal memuat data pembayaran.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  const isInsufficient = balance !== null && order !== null && balance < order.amount;
+
+  // Handle pay
+  const handlePay = async () => {
+    setPayState("processing");
+    setPayError("");
+    try {
+      // Step 1: POST /payments → dapat payment_id
+      let pid = paymentId;
+      if (!pid) {
+        const created = await paymentService.createPayment(id);
+        pid = created.payment_id;
+        setPaymentId(pid);
+      }
+      // Step 2: POST /payments/{id}/pay
+      const result = await paymentService.pay(pid);
+      setWalletAfter(result.balance_after);
+      setPayState("success");
+    } catch (err) {
+      setPayError(err.message || "Pembayaran gagal. Coba lagi.");
+      setPayState("failed");
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
+        <Navbar />
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "40px 20px" }}>
+          {[120, 200, 100].map((h, i) => (
+            <div key={i} style={{
+              height: h, borderRadius: 16, background: "#E5E7EB",
+              marginBottom: 16, animation: "pulse 1.5s ease-in-out infinite",
+            }} />
+          ))}
+          <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  // Error / not found
+  if (error || !order) {
     return (
       <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
         <Navbar />
@@ -71,7 +106,7 @@ export default function PaymentPage() {
             Pesanan Tidak Ditemukan
           </h1>
           <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 24 }}>
-            ID <strong>{id}</strong> tidak ditemukan atau sudah dibayar.
+            {error || `ID ${id} tidak ditemukan atau sudah dibayar.`}
           </p>
           <Link href="/orders" style={{
             padding: "12px 28px", borderRadius: 12,
@@ -85,18 +120,16 @@ export default function PaymentPage() {
     );
   }
 
-  const isInsufficient = WALLET_BALANCE < order.total;
-
-  //Success state
+  // Success state
   if (payState === "success") {
     return (
       <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
         <Navbar />
         <div style={{ maxWidth: 500, margin: "60px auto", textAlign: "center", padding: "0 24px" }}>
           <div style={{
-            width: 80, height: 80, borderRadius: "50%",
-            background: "#D1FAE5", margin: "0 auto 20px",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36,
+            width: 80, height: 80, borderRadius: "50%", background: "#D1FAE5",
+            margin: "0 auto 20px", display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: 36,
           }}></div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0A0A0A", marginBottom: 8 }}>
             Pembayaran Berhasil!
@@ -105,23 +138,22 @@ export default function PaymentPage() {
             Pesanan <strong>{order.order_id}</strong> telah dibayar.
           </p>
           <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 28 }}>
-            Saldo tersisa: <strong style={{ color: "#1A3C34" }}>{fmt(walletAfter)}</strong>
+            Saldo tersisa:{" "}
+            <strong style={{ color: "#1A3C34" }}>{fmt(walletAfter ?? 0)}</strong>
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <Link href={`/orders/${order.order_id}`}
-              style={{
-                padding: "12px 24px", borderRadius: 12,
-                background: "#1A3C34", color: "#fff",
-                fontWeight: 700, fontSize: 14, textDecoration: "none",
-              }}>
+            <Link href={`/orders/${order.order_id}`} style={{
+              padding: "12px 24px", borderRadius: 12,
+              background: "#1A3C34", color: "#fff",
+              fontWeight: 700, fontSize: 14, textDecoration: "none",
+            }}>
               Lihat Detail Pesanan
             </Link>
-            <Link href="/orders"
-              style={{
-                padding: "12px 24px", borderRadius: 12,
-                border: "1.5px solid #E5E7EB", color: "#374151",
-                fontWeight: 600, fontSize: 14, textDecoration: "none",
-              }}>
+            <Link href="/orders" style={{
+              padding: "12px 24px", borderRadius: 12,
+              border: "1.5px solid #E5E7EB", color: "#374151",
+              fontWeight: 600, fontSize: 14, textDecoration: "none",
+            }}>
               Semua Pesanan
             </Link>
           </div>
@@ -130,16 +162,16 @@ export default function PaymentPage() {
     );
   }
 
-  // Main
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       <Navbar />
 
-      {/* ── Konfirmasi Modal ── */}
+      {/* Konfirmasi Modal */}
       {payState === "confirm" && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 999,
@@ -155,18 +187,15 @@ export default function PaymentPage() {
             <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0A0A0A", margin: "0 0 8px" }}>
               Konfirmasi Pembayaran
             </h2>
-            <p style={{ fontSize: 13, color: "#6B7280", margin: "0 0 4px", lineHeight: 1.6 }}>
-              Total yang akan dibayar:
-            </p>
+            <p style={{ fontSize: 13, color: "#6B7280", margin: "0 0 4px" }}>Total yang akan dibayar:</p>
             <p style={{ fontSize: 28, fontWeight: 800, color: "#1A3C34", margin: "0 0 4px" }}>
-              {fmt(order.total)}
+              {fmt(order.amount)}
             </p>
             <p style={{ fontSize: 12, color: "#9CA3AF", margin: "0 0 24px" }}>
-              Saldo setelah bayar: {fmt(WALLET_BALANCE - order.total)}
+              Saldo setelah bayar: {fmt(balance - order.amount)}
             </p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setPayState("idle")}
+              <button onClick={() => setPayState("idle")}
                 style={{
                   flex: 1, height: 46, borderRadius: 12,
                   border: "1.5px solid #E5E7EB", background: "#fff",
@@ -175,20 +204,11 @@ export default function PaymentPage() {
                 }}>
                 Batal
               </button>
-              <button
-                onClick={() => {
-                  // nanti: POST /payments { order_id } → POST /payments/{id}/pay
-                  setPayState("processing");
-                  setTimeout(() => {
-                    setWalletAfter(WALLET_BALANCE - order.total);
-                    setPayState("success");
-                  }, 1500);
-                }}
+              <button onClick={handlePay}
                 style={{
-                  flex: 1, height: 46, borderRadius: 12,
-                  border: "none", background: "#1A3C34",
-                  fontFamily: "inherit", fontWeight: 700, fontSize: 14,
-                  cursor: "pointer", color: "#fff",
+                  flex: 1, height: 46, borderRadius: 12, border: "none",
+                  background: "#1A3C34", fontFamily: "inherit",
+                  fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#fff",
                 }}>
                 Bayar Sekarang
               </button>
@@ -211,7 +231,6 @@ export default function PaymentPage() {
             animation: "spin 0.8s linear infinite",
           }} />
           <p style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>Memproses pembayaran...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 
@@ -229,54 +248,33 @@ export default function PaymentPage() {
           Konfirmasi Pembayaran
         </h1>
 
-        {/* Order summary */}
+        {/* Pay error */}
+        {payState === "failed" && payError && (
+          <div style={{
+            marginBottom: 16, padding: "12px 16px", borderRadius: 12,
+            background: "#FEF2F2", border: "1px solid #FECACA",
+            color: "#DC2626", fontSize: 13, fontWeight: 500,
+          }}>
+           {payError}
+          </div>
+        )}
+
+        {/* Order summary — dari API: order.order_id, order.amount, order.method, order.status */}
         <div style={{
           background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
           boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16, overflow: "hidden",
         }}>
           <div style={{ padding: "14px 20px", borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>🛍 Ringkasan Pesanan</span>
-            <span style={{ marginLeft: 8, fontSize: 12, color: "#9CA3AF" }}>· {order.store}</span>
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#9CA3AF" }}>· #{order.order_id}</span>
           </div>
           <div style={{ padding: "16px 20px" }}>
-            {order.items.map((item, i) => (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                paddingBottom: i < order.items.length - 1 ? 12 : 0,
-                marginBottom: i < order.items.length - 1 ? 12 : 0,
-                borderBottom: i < order.items.length - 1 ? "1px solid #F9FAFB" : "none",
-              }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: 10, flexShrink: 0,
-                  background: "linear-gradient(135deg,#E0F2F1,#B2DFDB)",
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
-                }}>
-                  {item.emoji}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: "#0A0A0A" }}>{item.name}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9CA3AF" }}>{item.variant} · x{item.qty}</p>
-                </div>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#1A3C34" }}>
-                  {fmt(item.price * item.qty)}
-                </span>
-              </div>
-            ))}
-
-            {/* Price breakdown */}
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #F3F4F6" }}>
-              <RowDetail label="Subtotal"      value={fmt(order.subtotal)} />
-              <RowDetail label="Ongkos Kirim"  value={fmt(order.shipping)} />
-              {order.discount > 0 && (
-                <RowDetail label="Diskon" value={`- ${fmt(order.discount)}`} valueColor="#16A34A" />
-              )}
-              <div style={{
-                marginTop: 10, paddingTop: 10, borderTop: "1px solid #F3F4F6",
-                display: "flex", justifyContent: "space-between",
-              }}>
-                <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Total</span>
-                <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>{fmt(order.total)}</span>
-              </div>
+            <RowDetail label="ID Pesanan"       value={`#${order.order_id}`} />
+            <RowDetail label="Metode Pembayaran" value={order.method ?? "E-Wallet"} />
+            <RowDetail label="Status"           value={order.status} />
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #F3F4F6", display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Total</span>
+              <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>{fmt(order.amount)}</span>
             </div>
           </div>
         </div>
@@ -287,7 +285,7 @@ export default function PaymentPage() {
           boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 20, padding: "18px 20px",
         }}>
           <p style={{ margin: "0 0 14px", fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>
-         Metode Pembayaran
+           Metode Pembayaran
           </p>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -297,16 +295,14 @@ export default function PaymentPage() {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 10,
+                width: 40, height: 40, borderRadius: 10, fontSize: 20,
                 background: isInsufficient ? "#FEE2E2" : "#E0F2F1",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-              }}>
-                
-              </div>
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}></div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>E-Wallet</p>
-                <p style={{ margin: "2px 0 0", fontSize: 13, color: isInsufficient ? "#EF4444" : "#1A3C34", fontWeight: 600 }}>
-                  Saldo: {fmt(WALLET_BALANCE)}
+                <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 600, color: isInsufficient ? "#EF4444" : "#1A3C34" }}>
+                  Saldo: {fmt(balance ?? 0)}
                 </p>
               </div>
             </div>
@@ -322,8 +318,8 @@ export default function PaymentPage() {
               background: "#FEF2F2", border: "1px solid #FECACA",
             }}>
               <p style={{ margin: 0, fontSize: 13, color: "#EF4444", fontWeight: 500 }}>
-                Saldo tidak mencukupi. Kekurangan: <strong>{fmt(order.total - WALLET_BALANCE)}</strong>.
-                Silakan top up terlebih dahulu.
+                Saldo tidak mencukupi. Kekurangan:{" "}
+                <strong>{fmt(order.amount - balance)}</strong>. Silakan top up terlebih dahulu.
               </p>
             </div>
           )}
@@ -331,28 +327,26 @@ export default function PaymentPage() {
 
         {/* CTA */}
         <div style={{ display: "flex", gap: 10 }}>
-          <Link href={`/orders/${order.order_id}`}
-            style={{
-              flex: 1, height: 52, borderRadius: 14,
-              border: "1.5px solid #E5E7EB", background: "#fff",
-              fontFamily: "inherit", fontWeight: 600, fontSize: 14,
-              color: "#374151", textDecoration: "none",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
+          <Link href={`/orders/${order.order_id}`} style={{
+            flex: 1, height: 52, borderRadius: 14,
+            border: "1.5px solid #E5E7EB", background: "#fff",
+            fontFamily: "inherit", fontWeight: 600, fontSize: 14,
+            color: "#374151", textDecoration: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
             Kembali
           </Link>
           <button
-            disabled={isInsufficient}
-            onClick={() => setPayState("confirm")}
+            disabled={isInsufficient || payState === "processing"}
+            onClick={() => { setPayState("confirm"); setPayError(""); }}
             style={{
               flex: 2, height: 52, borderRadius: 14, border: "none",
               background: isInsufficient ? "#E5E7EB" : "#1A3C34",
               fontFamily: "inherit", fontWeight: 700, fontSize: 15,
               color: isInsufficient ? "#9CA3AF" : "#fff",
               cursor: isInsufficient ? "not-allowed" : "pointer",
-              transition: "background 0.15s",
             }}>
-            {isInsufficient ? "Saldo Tidak Cukup" : `Bayar ${fmt(order.total)}`}
+            {isInsufficient ? "Saldo Tidak Cukup" : `Bayar ${fmt(order.amount)}`}
           </button>
         </div>
       </div>
