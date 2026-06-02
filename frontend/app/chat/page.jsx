@@ -56,11 +56,12 @@ function ProductCard({ product, onAddToCart, addingToCart }) {
   );
 }
 
-function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, addingToCart }) {
+function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart }) {
   const isUser = role === "user";
   const showCartButton = intent === "add_to_cart" && products && products.length > 0;
   const showCheckoutButton = intent === "checkout_order" || (intent === "search_product" && products && products.length > 0);
   const showTrackButton = intent === "track_order" && entities?.order_id;
+  const showClearCartButton = intent === "clear_cart";
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -116,6 +117,18 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
               >
                 <span>📦</span>
                 <span>Lacak Pesanan #{entities.order_id}</span>
+              </button>
+            </div>
+          )}
+
+          {!isUser && showClearCartButton && (
+            <div className="mt-2">
+              <button
+                onClick={() => onClearCart && onClearCart()}
+                className="w-full bg-red-600 text-white text-[13px] font-semibold py-2.5 px-4 rounded-xl hover:bg-red-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>🗑️</span>
+                <span>Kosongkan Keranjang</span>
               </button>
             </div>
           )}
@@ -353,6 +366,17 @@ export default function ChatPage() {
     router.push(`/orders/${orderId}`);
   }, [router]);
 
+  const handleClearCart = useCallback(async () => {
+    setCartFeedback(null);
+    try {
+      await cartService.clearCart();
+      await refreshCartCount();
+      setCartFeedback({ type: "success", message: "✅ Keranjang berhasil dikosongkan!" });
+    } catch (err) {
+      setCartFeedback({ type: "error", message: `❌ Gagal mengosongkan keranjang: ${err.message}` });
+    }
+  }, [refreshCartCount]);
+
   const handleFollowUp = useCallback((suggestion) => {
     setInput("");
     // Send the suggestion as a new message immediately
@@ -421,6 +445,17 @@ export default function ChatPage() {
           } finally {
             setAddingToCart(false);
           }
+        }
+      }
+
+      // Auto-execute clear_cart
+      if (result.intent === "clear_cart") {
+        try {
+          await cartService.clearCart();
+          await refreshCartCount();
+          setCartFeedback({ type: "success", message: "✅ Keranjang berhasil dikosongkan!" });
+        } catch (err) {
+          setCartFeedback({ type: "error", message: `❌ Gagal mengosongkan keranjang: ${err.message}` });
         }
       }
     } catch (err) {
@@ -612,6 +647,7 @@ export default function ChatPage() {
               onAddToCart={handleAddToCart}
               onCheckout={handleCheckout}
               onTrackOrder={handleTrackOrder}
+              onClearCart={handleClearCart}
               addingToCart={addingToCart}
             />
           ))}
