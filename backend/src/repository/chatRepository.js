@@ -68,6 +68,20 @@ const touchSession = async (sessionId) => {
   });
 };
 
+const countSessionsByUser = async (userId) => {
+  return prisma.chatSession.count({ where: { userId } });
+};
+
+const deleteOldestSession = async (userId) => {
+  const oldest = await prisma.chatSession.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: "asc" },
+  });
+  if (oldest) {
+    await prisma.chatSession.deleteMany({ where: { id: oldest.id, userId } });
+  }
+};
+
 const deleteSession = async (id, userId) => {
   return prisma.chatSession.deleteMany({
     where: { id, userId },
@@ -79,6 +93,8 @@ module.exports = {
   findSessionById,
   findSessionByIdForUser,
   findSessionsByUser,
+  countSessionsByUser,
+  deleteOldestSession,
   addMessage,
   getRecentMessages,
   getSessionMessages,

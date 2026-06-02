@@ -5,6 +5,7 @@ const llmService = require("./llmService");
 
 const CATALOG_SNAPSHOT_SIZE = 30;
 const HISTORY_SIZE = 10;
+const MAX_SESSIONS_PER_USER = 5;
 
 const formatMessage = (msg, hydratedProducts, entities) => ({
   id: msg.id,
@@ -49,6 +50,13 @@ const messagesToHistory = (messages) =>
     content: m.content,
   }));
 
+const enforceSessionLimit = async (userId) => {
+  const count = await chatRepository.countSessionsByUser(Number(userId));
+  if (count >= MAX_SESSIONS_PER_USER) {
+    await chatRepository.deleteOldestSession(Number(userId));
+  }
+};
+
 const runLlmChat = async ({ userId, message, history, sessionId }) => {
   if (!message || !message.trim()) {
     throw new Error("Pesan tidak boleh kosong");
@@ -63,6 +71,8 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
     convo = messagesToHistory(recent);
   } else {
+    // Enforce max sessions: auto-delete oldest if at limit
+    await enforceSessionLimit(userId);
     // Create a new session so the frontend can maintain continuity
     session = await chatRepository.createSession({
       userId: Number(userId),
@@ -129,6 +139,8 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
     if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
   } else {
+    // Enforce max sessions: auto-delete oldest if at limit
+    await enforceSessionLimit(userId);
     session = await chatRepository.createSession({
       userId: Number(userId),
       title: message.slice(0, 80),
