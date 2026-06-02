@@ -31,6 +31,18 @@ const hydrateProducts = (products, ids) => {
   return ids.map((id) => byId.get(id)).filter(Boolean).map(productService.formatProductByIdResponse);
 };
 
+/**
+ * Fallback: when add_to_cart has entities.product but LLM returned no suggested_product_ids,
+ * search catalog by name match.
+ */
+const findProductIdsByEntityName = (products, productName) => {
+  if (!productName || !products || products.length === 0) return [];
+  const name = productName.toLowerCase().trim();
+  const matched = products.filter((p) => p.name?.toLowerCase().includes(name) || name.includes(p.name?.toLowerCase()));
+  // Limit to top 1-2 most relevant
+  return matched.slice(0, 2).map((p) => p.id);
+};
+
 const messagesToHistory = (messages) =>
   messages.map((m) => ({
     role: m.role === "assistant" ? "assistant" : "user",
@@ -66,6 +78,14 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     productsContext,
   });
 
+  // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
+  if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {
+    const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
+    if (fallbackIds.length > 0) {
+      llmResult.suggested_product_ids = fallbackIds;
+    }
+  }
+
   // Store the user message and assistant message for server-side history
   await chatRepository.addMessage({
     sessionId: session.id,
@@ -89,6 +109,7 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     intent: llmResult.intent,
     reply: llmResult.reply,
     entities: llmResult.entities,
+    follow_up_suggestions: llmResult.follow_up_suggestions || [],
     suggested_products: hydrateProducts(productsContext, llmResult.suggested_product_ids),
   };
 };
@@ -126,6 +147,14 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     productsContext,
   });
 
+  // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
+  if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {
+    const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
+    if (fallbackIds.length > 0) {
+      llmResult.suggested_product_ids = fallbackIds;
+    }
+  }
+
   const assistantMessage = await chatRepository.addMessage({
     sessionId: session.id,
     role: "assistant",
@@ -142,7 +171,10 @@ const sendMessage = async ({ userId, sessionId, message }) => {
   return {
     session_id: session.id,
     user_message: formatMessage(userMessage, []),
-    assistant_message: formatMessage(assistantMessage, hydrated, llmResult.entities),
+    assistant_message: {
+      ...formatMessage(assistantMessage, hydrated, llmResult.entities),
+      follow_up_suggestions: llmResult.follow_up_suggestions || [],
+    },
   };
 };
 
@@ -163,15 +195,25 @@ const getSessionMessages = async (userId, sessionId) => {
   if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
 
   const messages = await chatRepository.getSessionMessages(session.id, 100);
+  const productsContext = await fetchProductsContext();
+
   return messages.map((msg) => ({
     id: msg.id,
     role: msg.role,
     content: msg.content,
     intent: msg.intent || null,
     entities: msg.entities || null,
-    suggested_product_ids: msg.suggestedProductIds || [],
+    suggested_products: hydrateProducts(productsContext, msg.suggestedProductIds || []),
     created_at: msg.createdAt,
   }));
+};
+
+const deleteSession = async (userId, sessionId) => {
+  const session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
+  if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
+
+  await chatRepository.deleteSession(session.id, Number(userId));
+  return { deleted: true };
 };
 
 module.exports = {
@@ -179,4 +221,5 @@ module.exports = {
   sendMessage,
   getUserSessions,
   getSessionMessages,
+  deleteSession,
 };

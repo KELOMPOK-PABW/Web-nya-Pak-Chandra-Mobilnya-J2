@@ -39,9 +39,11 @@ const buildSystemInstruction = (productsContext) => {
 
 2. Tulis "reply": balasan singkat ramah dalam Bahasa Indonesia (1-3 kalimat) yang sesuai dengan intent.
 
-3. "suggested_product_ids": jika intent search_product, pilih hingga 5 produk paling relevan DARI katalog. Jika tidak relevan, kembalikan array kosong []. JANGAN mengarang id — hanya gunakan id yang ada di katalog.
+3. "suggested_product_ids": jika intent search_product ATAU add_to_cart, pilih hingga 5 produk paling relevan DARI katalog. Untuk add_to_cart, cocokkan nama produk dari entities.product dengan nama produk di katalog. Jika tidak relevan, kembalikan array kosong []. JANGAN mengarang id — hanya gunakan id yang ada di katalog.
 
-4. "entities": ekstrak entitas dari pesan pengguna. Hanya isi field yang benar-benar ditemukan; field lain boleh null atau tidak disertakan.
+4. "follow_up_suggestions": 2-4 saran pertanyaan lanjutan dalam Bahasa Indonesia yang bisa diklik pengguna untuk mempersempit pencarian atau melanjutkan aksi. Contoh untuk search_product: ["Yang di bawah 100rb", "Warna hitam saja", "Urutkan dari termurah"]. Untuk add_to_cart: ["Lihat keranjang saya", "Checkout sekarang"]. Untuk checkout_order: ["Lanjut bayar", "Kembali belanja"]. Untuk intent lain, berikan saran yang relevan atau array kosong [].
+45
+46	5. "entities": ekstrak entitas dari pesan pengguna. Hanya isi field yang benar-benar ditemukan; field lain boleh null atau tidak disertakan.
    - "product": nama produk/kategori (string)
    - "color": warna (string)
    - "price": harga dalam IDR (number)
@@ -72,6 +74,7 @@ PENTING: Jawaban WAJIB berupa JSON mentah (raw JSON) tanpa markdown fences, tanp
   "intent": "<salah satu intent di atas>",
   "reply": "<balasan singkat ramah dalam Bahasa Indonesia>",
   "suggested_product_ids": [<id produk dari katalog, maksimal 5>],
+  "follow_up_suggestions": [<string saran pertanyaan lanjutan, 2-4 item, atau array kosong>],
   "entities": {
     "product": "<string atau null>",
     "color": "<string atau null>",
@@ -150,10 +153,17 @@ const validateAndNormalizeResponse = (parsed, productsContext) => {
 
   const entities = sanitizeEntities(parsed.entities);
 
+  const followUpSuggestions = Array.isArray(parsed.follow_up_suggestions)
+    ? parsed.follow_up_suggestions
+        .filter((s) => typeof s === "string" && s.trim().length > 0)
+        .slice(0, 4)
+    : [];
+
   return {
     intent: INTENTS.includes(parsed.intent) ? parsed.intent : "search_product",
     reply: typeof parsed.reply === "string" ? parsed.reply : "",
     suggested_product_ids: suggested,
+    follow_up_suggestions: followUpSuggestions,
     entities,
   };
 };
