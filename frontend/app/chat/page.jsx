@@ -58,10 +58,13 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
   );
 }
 
+const PRODUCT_INTENTS = ["search_product", "add_to_cart"];
+
 function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart, sessionId }) {
   const isUser = role === "user";
+  const isProductRelated = PRODUCT_INTENTS.includes(intent);
   const showCartButton = intent === "add_to_cart" && products && products.length > 0;
-  const showCheckoutButton = intent === "checkout_order" || (intent === "search_product" && products && products.length > 0);
+  const showCheckoutButton = intent === "checkout_order";
   const showTrackButton = intent === "track_order" && entities?.order_id;
   const showClearCartButton = intent === "clear_cart";
 
@@ -135,8 +138,8 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
             </div>
           )}
 
-          {/* Product cards */}
-          {products && products.length > 0 && (
+          {/* Product cards — only show when intent is product-related */}
+          {isProductRelated && products && products.length > 0 && (
             <div className="mt-3 max-w-full">
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {products.map((p, i) => (
@@ -329,6 +332,8 @@ export default function ChatPage() {
               role: m.role,
               content: m.content,
               products: m.suggested_products || [],
+              intent: m.intent,
+              entities: m.entities || {},
             }))
           );
         }
@@ -489,7 +494,9 @@ export default function ChatPage() {
         msgs.map((m) => ({
           role: m.role,
           content: m.content,
-	          products: m.suggested_products || [],
+          products: m.suggested_products || [],
+          intent: m.intent,
+          entities: m.entities || {},
         }))
       );
       setError(null);
@@ -528,6 +535,8 @@ export default function ChatPage() {
                   role: m.role,
                   content: m.content,
                   products: m.suggested_products || [],
+                  intent: m.intent,
+                  entities: m.entities || {},
                 }))
               );
             }).catch(() => {});

@@ -44,6 +44,8 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
             role: m.role,
             content: m.content,
             products: m.suggested_products || [],
+            intent: m.intent,
+            entities: m.entities || {},
           }))
         );
       })
@@ -280,9 +282,12 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
 }
 
 /* ─── Mini Chat Bubble ─── */
+const PRODUCT_INTENTS = ["search_product", "add_to_cart"];
+
 function ChatBubble({ msg, onAddToCart, addingToCart }) {
   const isUser = msg.role === "user";
   const isNotification = msg.isNotification;
+  const isProductRelated = PRODUCT_INTENTS.includes(msg.intent);
   const showCartButton = msg.intent === "add_to_cart" && msg.products && msg.products.length > 0;
 
   if (isNotification) {
@@ -325,7 +330,7 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
           </div>
         )}
 
-        {!isUser && msg.products && msg.products.length > 0 && (
+        {!isUser && isProductRelated && msg.products && msg.products.length > 0 && (
           <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
             {msg.products.map((p, i) => (
               <a
