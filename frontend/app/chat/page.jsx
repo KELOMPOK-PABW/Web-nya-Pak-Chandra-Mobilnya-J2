@@ -128,7 +128,7 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
                   <ProductCard
                     key={p.product_id ?? p.id ?? i}
                     product={p}
-                    onAddToCart={intent === "add_to_cart" ? onAddToCart : null}
+                    onAddToCart={onAddToCart}
                     addingToCart={addingToCart}
                   />
                 ))}
