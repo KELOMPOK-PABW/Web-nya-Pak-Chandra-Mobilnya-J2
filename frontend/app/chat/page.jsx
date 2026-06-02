@@ -429,35 +429,6 @@ export default function ChatPage() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-
-      // Auto-execute add_to_cart if intent matches and products available
-      if (result.intent === "add_to_cart" && result.suggested_products?.length > 0) {
-        const firstProduct = result.suggested_products[0];
-        const pid = firstProduct.product_id ?? firstProduct.id;
-        if (pid) {
-          setAddingToCart(true);
-          try {
-            await cartService.addItem({ product_id: pid, qty: 1 });
-            await refreshCartCount();
-            setCartFeedback({ type: "success", message: `✅ "${firstProduct.name ?? firstProduct.product_name}" otomatis ditambahkan ke keranjang!` });
-          } catch (err) {
-            setCartFeedback({ type: "error", message: `❌ Gagal menambahkan ke keranjang: ${err.message}` });
-          } finally {
-            setAddingToCart(false);
-          }
-        }
-      }
-
-      // Auto-execute clear_cart
-      if (result.intent === "clear_cart") {
-        try {
-          await cartService.clearCart();
-          await refreshCartCount();
-          setCartFeedback({ type: "success", message: "✅ Keranjang berhasil dikosongkan!" });
-        } catch (err) {
-          setCartFeedback({ type: "error", message: `❌ Gagal mengosongkan keranjang: ${err.message}` });
-        }
-      }
     } catch (err) {
       setMessages((prev) => prev.slice(0, -1));
       setError(err.message || "Gagal mendapatkan respons dari AI");
