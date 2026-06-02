@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
@@ -22,14 +23,15 @@ function fmt(n) {
   return "Rp " + Number(n).toLocaleString("id-ID");
 }
 
-function ProductCard({ product, onAddToCart, addingToCart }) {
+function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
   const pid = product.product_id ?? product.id;
   const name = product.name ?? product.product_name;
   const price = product.price ?? product.product_price;
   const sellerName = product.store?.store_name ?? product.seller?.name ?? "";
+  const productHref = `/product/${pid}?chat=1${sessionId ? `&sid=${sessionId}` : ""}`;
   return (
     <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[180px]">
-      <Link href={`/product/${pid}`} style={{ textDecoration: "none" }}>
+      <Link href={productHref} style={{ textDecoration: "none" }}>
         <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A5D6D0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
@@ -56,7 +58,7 @@ function ProductCard({ product, onAddToCart, addingToCart }) {
   );
 }
 
-function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart }) {
+function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart, sessionId }) {
   const isUser = role === "user";
   const showCartButton = intent === "add_to_cart" && products && products.length > 0;
   const showCheckoutButton = intent === "checkout_order" || (intent === "search_product" && products && products.length > 0);
@@ -143,6 +145,7 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
                     product={p}
                     onAddToCart={onAddToCart}
                     addingToCart={addingToCart}
+                    sessionId={sessionId}
                   />
                 ))}
               </div>
@@ -266,6 +269,7 @@ export default function ChatPage() {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartFeedback, setCartFeedback] = useState(null); // { type: 'success'|'error', message }
+  const [confirmAction, setConfirmAction] = useState(null); // { action: 'clear_cart' } | null
   const sessionIdRef = useRef(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -366,7 +370,13 @@ export default function ChatPage() {
     router.push(`/orders/${orderId}`);
   }, [router]);
 
-  const handleClearCart = useCallback(async () => {
+  const handleClearCart = useCallback(() => {
+    // Show confirmation first
+    setConfirmAction({ action: "clear_cart" });
+  }, []);
+
+  const executeClearCart = useCallback(async () => {
+    setConfirmAction(null);
     setCartFeedback(null);
     try {
       await cartService.clearCart();
@@ -563,18 +573,22 @@ export default function ChatPage() {
         )}
 
         {/* ── CART FEEDBACK BANNER ── */}
-        {cartFeedback && (
-          <div className={`mb-3 rounded-xl px-4 py-2.5 text-[13px] font-medium flex items-center gap-2 ${
-            cartFeedback.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {cartFeedback.message}
-            <button onClick={() => setCartFeedback(null)} className="ml-auto text-current opacity-50 hover:opacity-100 cursor-pointer">
-              ✕
-            </button>
-          </div>
-        )}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          cartFeedback ? "max-h-20 opacity-100 mb-3" : "max-h-0 opacity-0 mb-0"
+        }`}>
+          {cartFeedback && (
+            <div className={`rounded-xl px-4 py-2.5 text-[13px] font-medium flex items-center gap-2 ${
+              cartFeedback.type === "success"
+                ? "bg-green-50 border border-green-200 text-green-700"
+                : "bg-red-50 border border-red-200 text-red-700"
+            }`}>
+              {cartFeedback.message}
+              <button onClick={() => setCartFeedback(null)} className="ml-auto text-current opacity-50 hover:opacity-100 cursor-pointer">
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ── CHAT AREA ── */}
         <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-4 mb-4 overflow-y-auto overflow-x-hidden min-h-[400px] max-h-[600px] shadow-sm">
@@ -620,6 +634,7 @@ export default function ChatPage() {
               onTrackOrder={handleTrackOrder}
               onClearCart={handleClearCart}
               addingToCart={addingToCart}
+              sessionId={sessionIdRef.current}
             />
           ))}
 
@@ -695,6 +710,51 @@ export default function ChatPage() {
           </div>
         )}
       </main>
+
+      {/* ── CONFIRMATION MODAL ── */}
+      {confirmAction && (
+        <Modal
+          isOpen={true}
+          onClose={() => setConfirmAction(null)}
+          title="Konfirmasi Tindakan"
+          footer={
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="px-5 py-2.5 rounded-xl border border-[#EBEBEB] text-[13px] font-semibold text-[#666] hover:bg-[#F5F5F5] transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={
+                  confirmAction.action === "clear_cart" ? executeClearCart : undefined
+                }
+                className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                {confirmAction.action === "clear_cart" ? "Ya, Kosongkan" : "Konfirmasi"}
+              </button>
+            </div>
+          }
+        >
+          <div className="text-center py-2">
+            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </div>
+            <p className="text-[15px] font-semibold text-[#1A1A1A] mb-2">
+              {confirmAction.action === "clear_cart"
+                ? "Kosongkan Keranjang?"
+                : "Konfirmasi tindakan ini"}
+            </p>
+            <p className="text-[13px] text-gray-500">
+              {confirmAction.action === "clear_cart"
+                ? "Semua item di keranjang belanja akan dihapus. Tindakan ini tidak dapat dibatalkan."
+                : "Apakah Anda yakin ingin melanjutkan?"}
+            </p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -2,18 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
+import ChatPopup from "@/components/chat/ChatPopup";
 
 const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
 
 export default function ProductDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
@@ -21,6 +23,10 @@ export default function ProductDetailPage() {
   // Cart state
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMessage, setCartMessage] = useState(null);
+
+  // Chat popup state
+  const [showChat, setShowChat] = useState(false);
+  const [chatSessionId, setChatSessionId] = useState(null);
 
   const { refreshCartCount } = useCartContext();
 
@@ -43,6 +49,17 @@ export default function ProductDetailPage() {
     if (id) load();
     return () => { mounted = false; };
   }, [id]);
+
+  // Auto-open chat sidebar when navigated from /chat (?chat=1)
+  useEffect(() => {
+    if (searchParams.get("chat") === "1") {
+      const sid = searchParams.get("sid");
+      if (sid) setChatSessionId(sid);
+      setShowChat(true);
+      // Clean up URL — remove query params without full page reload
+      window.history.replaceState({}, "", `/product/${id}`);
+    }
+  }, [searchParams, id]);
 
   const addToCart = async () => {
     const user = authService.getUser();
@@ -71,7 +88,10 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
       <Navbar />
 
-      <main className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className={`flex ${showChat ? "" : ""}`}>
+      <main className={`flex-1 min-w-0 px-6 py-8 transition-all duration-250 ease-out ${
+        showChat ? "" : "max-w-[1280px] mx-auto"
+      }`}>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/products"
@@ -199,12 +219,32 @@ export default function ProductDetailPage() {
                   >
                     Lanjut Belanja
                   </Link>
+                  <button
+                    onClick={() => setShowChat(true)}
+                    className="rounded-xl border border-[#1A3C34] bg-[#F0FBF8] text-[#1A3C34] text-sm font-semibold py-3 text-center hover:bg-[#D8F5F0] transition-colors w-full cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
+                      <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
+                    </svg>
+                    Chat dengan AI
+                  </button>
                 </div>
               </div>
             </aside>
           </div>
         )}
       </main>
+
+        {/* ── CHAT SIDEBAR ── */}
+        {showChat && product && (
+          <ChatPopup
+            product={product}
+            onClose={() => setShowChat(false)}
+            initialSessionId={chatSessionId}
+          />
+        )}
+      </div>
     </div>
   );
 }
