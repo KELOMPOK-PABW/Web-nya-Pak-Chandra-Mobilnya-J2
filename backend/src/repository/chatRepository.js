@@ -14,7 +14,7 @@ const findSessionByIdForUser = async (id, userId) => {
   return prisma.chatSession.findFirst({ where: { id, userId } });
 };
 
-const addMessage = async ({ sessionId, role, content, intent, suggestedProductIds }) => {
+const addMessage = async ({ sessionId, role, content, intent, suggestedProductIds, entities }) => {
   return prisma.chatMessage.create({
     data: {
       sessionId,
@@ -22,6 +22,7 @@ const addMessage = async ({ sessionId, role, content, intent, suggestedProductId
       content,
       intent: intent || null,
       suggestedProductIds: suggestedProductIds || null,
+      entities: entities || null,
     },
   });
 };

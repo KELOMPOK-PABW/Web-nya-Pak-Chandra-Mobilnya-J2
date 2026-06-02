@@ -6,12 +6,13 @@ const llmService = require("./llmService");
 const CATALOG_SNAPSHOT_SIZE = 30;
 const HISTORY_SIZE = 10;
 
-const formatMessage = (msg, hydratedProducts) => ({
+const formatMessage = (msg, hydratedProducts, entities) => ({
   id: msg.id,
   session_id: msg.sessionId,
   role: msg.role,
   content: msg.content,
   intent: msg.intent || null,
+  entities: entities || msg.entities || null,
   suggested_products: hydratedProducts || [],
   created_at: msg.createdAt,
 });
@@ -61,6 +62,7 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
   return {
     intent: llmResult.intent,
     reply: llmResult.reply,
+    entities: llmResult.entities,
     suggested_products: hydrateProducts(productsContext, llmResult.suggested_product_ids),
   };
 };
@@ -104,6 +106,7 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     content: llmResult.reply,
     intent: llmResult.intent,
     suggestedProductIds: llmResult.suggested_product_ids,
+    entities: llmResult.entities,
   });
 
   await chatRepository.touchSession(session.id);
@@ -113,7 +116,7 @@ const sendMessage = async ({ userId, sessionId, message }) => {
   return {
     session_id: session.id,
     user_message: formatMessage(userMessage, []),
-    assistant_message: formatMessage(assistantMessage, hydrated),
+    assistant_message: formatMessage(assistantMessage, hydrated, llmResult.entities),
   };
 };
 

@@ -3,145 +3,91 @@
     {
       "intent": "search_product",
       "description": "User wants to search or browse everyday products",
-      "examples": [
-        "Cari baju putih",
-        "Ada sepatu murah?",
-        "Tampilkan produk sabun mandi"
-      ],
+      "examples": ["Cari baju putih", "Ada sepatu murah?", "Tampilkan produk sabun mandi"],
       "entities": [
-        {
-          "name": "product",
-          "type": "string",
-          "description": "Name or category of the everyday item being searched",
-          "example": "baju, sepatu, sabun, tas"
-        },
-        {
-          "name": "color",
-          "type": "string",
-          "description": "Color filter for the product",
-          "example": "putih, hitam, biru"
-        },
-        {
-          "name": "price",
-          "type": "number",
-          "description": "Price filter or range in IDR",
-          "example": "50000, 100 ribu"
-        },
-        {
-          "name": "action",
-          "type": "string",
-          "enum": ["search", "filter", "sort"],
-          "description": "Action to perform on product list"
-        }
+        { "name": "product", "type": "string", "description": "Name or category of the everyday item being searched", "example": "baju, sepatu, sabun, tas" },
+        { "name": "color", "type": "string", "description": "Color filter for the product", "example": "putih, hitam, biru" },
+        { "name": "price", "type": "number", "description": "Price filter or range in IDR", "example": "50000, 100 ribu" },
+        { "name": "action", "type": "string", "enum": ["search", "filter", "sort"], "description": "Action to perform on product list" }
       ]
     },
     {
       "intent": "add_to_cart",
       "description": "User wants to add an item to their cart",
-      "examples": [
-        "Tambahkan sabun ini ke keranjang",
-        "Masukkan 2 baju ke cart"
-      ],
+      "examples": ["Tambahkan sabun ini ke keranjang", "Masukkan 2 baju ke cart"],
       "entities": [
-        {
-          "name": "product",
-          "type": "string",
-          "description": "Name of the item to add",
-          "example": "sabun mandi, kaos polos"
-        },
-        {
-          "name": "action",
-          "type": "string",
-          "enum": ["add", "remove", "update_quantity"],
-          "description": "Cart action to perform"
-        }
+        { "name": "product", "type": "string", "description": "Name of the item to add", "example": "sabun mandi, kaos polos" },
+        { "name": "action", "type": "string", "enum": ["add", "remove", "update_quantity"], "description": "Cart action to perform" }
       ]
     },
     {
-      "intent": "checkout",
+      "intent": "checkout_order",
       "description": "User wants to proceed to checkout from their cart",
-      "examples": [
-        "Checkout sekarang",
-        "Lanjut ke pembayaran",
-        "Beli semua item di keranjang"
-      ],
+      "examples": ["Checkout sekarang", "Lanjut ke pembayaran", "Beli semua item di keranjang"],
       "entities": [
-        {
-          "name": "action",
-          "type": "string",
-          "enum": ["checkout"],
-          "description": "Trigger checkout flow"
-        },
-        {
-          "name": "address",
-          "type": "string",
-          "description": "Delivery address selected by user",
-          "example": "Jl. Merdeka No.1, Balikpapan"
-        }
+        { "name": "action", "type": "string", "enum": ["checkout"], "description": "Trigger checkout flow" },
+        { "name": "address", "type": "string", "description": "Delivery address selected by user", "example": "Jl. Merdeka No.1, Balikpapan" }
       ]
     },
     {
-      "intent": "payment",
+      "intent": "make_payment",
       "description": "User wants to complete or inquire about payment",
-      "examples": [
-        "Bayar pakai ewallet",
-        "Konfirmasi pembayaran order saya",
-        "Status pembayaran order #12"
-      ],
+      "examples": ["Bayar pakai ewallet", "Konfirmasi pembayaran order saya", "Status pembayaran order #12"],
       "entities": [
-        {
-          "name": "action",
-          "type": "string",
-          "enum": ["pay", "check_status", "cancel"],
-          "description": "Payment action to perform"
-        },
-        {
-          "name": "payment_method",
-          "type": "string",
-          "enum": ["ewallet"],
-          "description": "Payment method chosen by user"
-        },
-        {
-          "name": "order_id",
-          "type": "number",
-          "description": "Order ID related to the payment",
-          "example": 12
-        },
-        {
-          "name": "price",
-          "type": "number",
-          "description": "Amount to be paid in IDR",
-          "example": 75000
-        }
+        { "name": "action", "type": "string", "enum": ["pay", "check_status", "cancel"], "description": "Payment action to perform" },
+        { "name": "payment_method", "type": "string", "enum": ["ewallet"], "description": "Payment method chosen by user" },
+        { "name": "order_id", "type": "number", "description": "Order ID related to the payment", "example": 12 },
+        { "name": "price", "type": "number", "description": "Amount to be paid in IDR", "example": 75000 }
       ]
     },
     {
       "intent": "track_order",
       "description": "User wants to track the delivery status of their order",
-      "examples": [
-        "Dimana pesanan saya?",
-        "Status pengiriman order #7",
-        "Sudah sampai mana kurirnya?"
-      ],
+      "examples": ["Dimana pesanan saya?", "Status pengiriman order #7", "Sudah sampai mana kurirnya?"],
       "entities": [
-        {
-          "name": "order_id",
-          "type": "number",
-          "description": "Order or order item ID to track",
-          "example": 7
-        },
-        {
-          "name": "action",
-          "type": "string",
-          "enum": ["track", "check_status"],
-          "description": "Tracking action"
-        },
-        {
-          "name": "product",
-          "type": "string",
-          "description": "Product name to identify the order item",
-          "example": "kaos polos, sepatu kets"
-        }
+        { "name": "order_id", "type": "number", "description": "Order or order item ID to track", "example": 7 },
+        { "name": "action", "type": "string", "enum": ["track", "check_status"], "description": "Tracking action" },
+        { "name": "product", "type": "string", "description": "Product name to identify the order item", "example": "kaos polos, sepatu kets" }
+      ]
+    },
+    {
+      "intent": "manage_product",
+      "description": "Seller or admin wants to manage products in their store",
+      "examples": ["Tambah produk baru", "Update stok kaos polos", "Hapus produk sabun", "Ubah harga sepatu jadi 100rb"],
+      "entities": [
+        { "name": "product", "type": "string", "description": "Name of the product being managed", "example": "kaos polos, sabun mandi" },
+        { "name": "action", "type": "string", "enum": ["add_product", "update_product", "delete_product", "update_stock"], "description": "Product management action" },
+        { "name": "price", "type": "number", "description": "New price for the product in IDR", "example": 100000 },
+        { "name": "stock", "type": "number", "description": "New stock quantity for the product", "example": 50 }
+      ]
+    },
+    {
+      "intent": "process_order",
+      "description": "Seller or admin processes an incoming order",
+      "examples": ["Proses order #5", "Konfirmasi pesanan #3", "Tolak pesanan #8", "Kirim pesanan #4"],
+      "entities": [
+        { "name": "order_id", "type": "number", "description": "Order ID to process", "example": 5 },
+        { "name": "action", "type": "string", "enum": ["confirm_order", "reject_order", "process_order", "ship_order"], "description": "Order processing action" },
+        { "name": "product", "type": "string", "description": "Product name in the order for context", "example": "kaos polos" }
+      ]
+    },
+    {
+      "intent": "update_shipping",
+      "description": "Courier updates the shipping/delivery status of an order",
+      "examples": ["Pickup order #5", "Pesanan #3 dalam perjalanan", "Order #7 sudah sampai tujuan", "Update status pengiriman #2"],
+      "entities": [
+        { "name": "order_id", "type": "number", "description": "Order ID being updated by courier", "example": 5 },
+        { "name": "action", "type": "string", "enum": ["pickup", "in_transit", "delivered", "update_status"], "description": "Shipping status update action" }
+      ]
+    },
+    {
+      "intent": "manage_user_admin",
+      "description": "Admin manages user accounts (ban, unban, change role, list)",
+      "examples": ["Ban user #42", "Aktifkan akun user #15", "Ubah role user #10 jadi seller", "Daftar semua buyer", "Lihat detail user #7"],
+      "entities": [
+        { "name": "action", "type": "string", "enum": ["ban_user", "unban_user", "change_role", "list_users", "view_user"], "description": "Admin user management action" },
+        { "name": "user_id", "type": "number", "description": "User ID being managed", "example": 42 },
+        { "name": "role", "type": "string", "enum": ["buyer", "seller", "kurir"], "description": "Target role for change_role action" }
       ]
     }
   ]

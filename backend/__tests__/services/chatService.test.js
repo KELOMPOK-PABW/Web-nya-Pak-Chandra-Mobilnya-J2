@@ -38,7 +38,7 @@ describe("chatService.sendMessage", () => {
     chatRepository.touchSession.mockResolvedValue({});
   });
 
-  it("creates a new session when sessionId is missing and persists both messages", async () => {
+  it("creates a new session when sessionId is missing and persists both messages with entities", async () => {
     chatRepository.createSession.mockResolvedValue({ id: 10, userId: 1, title: "halo" });
     chatRepository.addMessage
       .mockResolvedValueOnce({ id: 100, sessionId: 10, role: "user", content: "halo", createdAt: new Date() })
@@ -47,23 +47,33 @@ describe("chatService.sendMessage", () => {
         sessionId: 10,
         role: "assistant",
         content: "Hai!",
-        intent: "general_chat",
+        intent: "search_product",
         createdAt: new Date(),
       });
 
     llmService.classifyAndSuggest.mockResolvedValue({
-      intent: "general_chat",
+      intent: "search_product",
       reply: "Hai!",
       suggested_product_ids: [],
+      entities: { action: "search", product: "baju" },
     });
 
     const result = await chatService.sendMessage({ userId: 1, message: "halo" });
 
     expect(chatRepository.createSession).toHaveBeenCalledWith({ userId: 1, title: "halo" });
     expect(chatRepository.addMessage).toHaveBeenCalledTimes(2);
+    expect(chatRepository.addMessage).toHaveBeenNthCalledWith(2, {
+      sessionId: 10,
+      role: "assistant",
+      content: "Hai!",
+      intent: "search_product",
+      suggestedProductIds: [],
+      entities: { action: "search", product: "baju" },
+    });
     expect(result.session_id).toBe(10);
     expect(result.user_message.content).toBe("halo");
-    expect(result.assistant_message.intent).toBe("general_chat");
+    expect(result.assistant_message.intent).toBe("search_product");
+    expect(result.assistant_message.entities).toEqual({ action: "search", product: "baju" });
     expect(result.assistant_message.suggested_products).toEqual([]);
   });
 
@@ -85,14 +95,15 @@ describe("chatService.sendMessage", () => {
         sessionId: 5,
         role: "assistant",
         content: "Coba ini",
-        intent: "product_recommendation",
+        intent: "search_product",
         createdAt: new Date(),
       });
 
     llmService.classifyAndSuggest.mockResolvedValue({
-      intent: "product_recommendation",
+      intent: "search_product",
       reply: "Coba ini",
       suggested_product_ids: [1],
+      entities: { product: "laptop", action: "search" },
     });
 
     const result = await chatService.sendMessage({
@@ -104,9 +115,10 @@ describe("chatService.sendMessage", () => {
     expect(result.assistant_message.suggested_products).toHaveLength(1);
     expect(result.assistant_message.suggested_products[0].id).toBe(1);
     expect(result.assistant_message.suggested_products[0].category.category_name).toBe("Elektronik");
+    expect(result.assistant_message.entities).toEqual({ product: "laptop", action: "search" });
   });
 
-  it("persists assistant message with intent and suggestedProductIds", async () => {
+  it("persists assistant message with intent, suggestedProductIds, and entities", async () => {
     chatRepository.findSessionByIdForUser.mockResolvedValue({ id: 5, userId: 1 });
     chatRepository.addMessage
       .mockResolvedValueOnce({ id: 300, sessionId: 5, role: "user", content: "x", createdAt: new Date() })
@@ -115,14 +127,15 @@ describe("chatService.sendMessage", () => {
         sessionId: 5,
         role: "assistant",
         content: "y",
-        intent: "product_search",
+        intent: "search_product",
         createdAt: new Date(),
       });
 
     llmService.classifyAndSuggest.mockResolvedValue({
-      intent: "product_search",
+      intent: "search_product",
       reply: "y",
       suggested_product_ids: [2],
+      entities: { product: "hp", action: "search" },
     });
 
     await chatService.sendMessage({ userId: 1, sessionId: 5, message: "x" });
@@ -131,8 +144,9 @@ describe("chatService.sendMessage", () => {
       sessionId: 5,
       role: "assistant",
       content: "y",
-      intent: "product_search",
+      intent: "search_product",
       suggestedProductIds: [2],
+      entities: { product: "hp", action: "search" },
     });
   });
 
@@ -149,11 +163,12 @@ describe("chatService.runLlmChat", () => {
     productRepository.getAllProducts.mockResolvedValue(catalog);
   });
 
-  it("returns intent + hydrated products without persisting", async () => {
+  it("returns intent + entities + hydrated products without persisting", async () => {
     llmService.classifyAndSuggest.mockResolvedValue({
-      intent: "product_search",
+      intent: "search_product",
       reply: "ok",
       suggested_product_ids: [2],
+      entities: { product: "hp", action: "search" },
     });
 
     const result = await chatService.runLlmChat({
@@ -162,7 +177,8 @@ describe("chatService.runLlmChat", () => {
       history: [{ role: "user", content: "halo" }],
     });
 
-    expect(result.intent).toBe("product_search");
+    expect(result.intent).toBe("search_product");
+    expect(result.entities).toEqual({ product: "hp", action: "search" });
     expect(result.suggested_products).toHaveLength(1);
     expect(result.suggested_products[0].id).toBe(2);
     expect(chatRepository.addMessage).not.toHaveBeenCalled();
@@ -175,9 +191,10 @@ describe("chatService.runLlmChat", () => {
       { id: 2, role: "assistant", content: "hai" },
     ]);
     llmService.classifyAndSuggest.mockResolvedValue({
-      intent: "general_chat",
+      intent: "search_product",
       reply: "ok",
       suggested_product_ids: [],
+      entities: {},
     });
 
     await chatService.runLlmChat({ userId: 1, sessionId: 7, message: "lagi" });
@@ -195,5 +212,26 @@ describe("chatService.runLlmChat", () => {
     await expect(
       chatService.runLlmChat({ userId: 1, sessionId: 99, message: "x" })
     ).rejects.toThrow("Akses ditolak: sesi bukan milik Anda");
+  });
+
+  it("returns make_payment intent with entities", async () => {
+    llmService.classifyAndSuggest.mockResolvedValue({
+      intent: "make_payment",
+      reply: "Silakan lanjutkan pembayaran.",
+      suggested_product_ids: [],
+      entities: { action: "pay", payment_method: "ewallet", order_id: 12 },
+    });
+
+    const result = await chatService.runLlmChat({
+      userId: 1,
+      message: "bayar order 12 pakai ewallet",
+    });
+
+    expect(result.intent).toBe("make_payment");
+    expect(result.entities).toEqual({
+      action: "pay",
+      payment_method: "ewallet",
+      order_id: 12,
+    });
   });
 });
