@@ -71,9 +71,19 @@ const getMessages = async (req, res) => {
   }
 };
 
+const deleteSession = async (req, res) => {
+  try {
+    const result = await chatService.deleteSession(req.user.id, req.params.sessionId);
+    return res.status(200).json({ success: true, data: result });
+  } catch (e) {
+    return res.status(errorStatus(e.message)).json({ success: false, message: e.message });
+  }
+};
+
 module.exports = {
   sendMessage,
   llmChat,
   getSessions,
   getMessages,
+  deleteSession,
 };

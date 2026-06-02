@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { chatService } from "@/services/chatService";
+import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
+import { useCartContext } from "@/components/CartContext";
 
 const STORAGE_KEY = "chat_session_id";
 
@@ -20,32 +22,46 @@ function fmt(n) {
   return "Rp " + Number(n).toLocaleString("id-ID");
 }
 
-function ProductCard({ product }) {
+function ProductCard({ product, onAddToCart, addingToCart }) {
   const pid = product.product_id ?? product.id;
   const name = product.name ?? product.product_name;
   const price = product.price ?? product.product_price;
   const sellerName = product.store?.store_name ?? product.seller?.name ?? "";
   return (
-    <Link href={`/product/${pid}`} style={{ textDecoration: "none" }}
-      className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[180px]">
-      <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A5D6D0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-          <line x1="12" y1="22.08" x2="12" y2="12"/>
-        </svg>
-      </div>
-      <div className="p-3">
-        <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1 line-clamp-2">{name}</p>
-        {sellerName && <p className="text-[10px] text-gray-400 mb-1">{sellerName}</p>}
-        <p className="text-[13px] font-bold text-[#1A3C34]">{fmt(price)}</p>
-      </div>
-    </Link>
+    <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[180px]">
+      <Link href={`/product/${pid}`} style={{ textDecoration: "none" }}>
+        <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A5D6D0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </div>
+        <div className="p-3">
+          <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1 line-clamp-2">{name}</p>
+          {sellerName && <p className="text-[10px] text-gray-400 mb-1">{sellerName}</p>}
+          <p className="text-[13px] font-bold text-[#1A3C34]">{fmt(price)}</p>
+        </div>
+      </Link>
+      {onAddToCart && (
+        <button
+          onClick={(e) => { e.preventDefault(); onAddToCart(pid); }}
+          disabled={addingToCart}
+          className="w-full bg-[#1A3C34] text-white text-[11px] font-semibold py-2 hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50"
+        >
+          {addingToCart ? "Menambahkan..." : "🛒 Tambah ke Keranjang"}
+        </button>
+      )}
+    </div>
   );
 }
 
-function ChatBubble({ role, content, products }) {
+function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, addingToCart }) {
   const isUser = role === "user";
+  const showCartButton = intent === "add_to_cart" && products && products.length > 0;
+  const showCheckoutButton = intent === "checkout_order";
+  const showTrackButton = intent === "track_order" && entities?.order_id;
+
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       <div className="flex gap-2 max-w-[85%]">
@@ -57,21 +73,81 @@ function ChatBubble({ role, content, products }) {
             </svg>
           </div>
         )}
-        <div>
-          <div className={`rounded-2xl px-4 py-3 text-[14px] leading-relaxed ${
+        <div className="min-w-0">
+          <div className={`rounded-2xl px-4 py-3 text-[14px] leading-relaxed break-words whitespace-pre-wrap ${
             isUser
               ? "bg-[#1A3C34] text-white rounded-br-md"
               : "bg-white border border-[#EBEBEB] text-[#1A1A1A] rounded-bl-md shadow-sm"
           }`}>
             {content}
           </div>
+
+          {/* Intent action buttons */}
+          {!isUser && showCartButton && (
+            <div className="mt-2">
+              <button
+                onClick={() => onAddToCart && onAddToCart(products[0].product_id ?? products[0].id)}
+                disabled={addingToCart}
+                className="w-full bg-[#1A3C34] text-white text-[13px] font-semibold py-2.5 px-4 rounded-xl hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <span>🛒</span>
+                <span>{addingToCart ? "Menambahkan..." : `Tambahkan "${products[0].name ?? products[0].product_name}" ke Keranjang`}</span>
+              </button>
+            </div>
+          )}
+
+          {!isUser && showCheckoutButton && (
+            <div className="mt-2">
+              <button
+                onClick={onCheckout}
+                className="w-full bg-[#E8A838] text-white text-[13px] font-semibold py-2.5 px-4 rounded-xl hover:bg-[#D09828] transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>💳</span>
+                <span>Lanjut ke Checkout</span>
+              </button>
+            </div>
+          )}
+
+          {!isUser && showTrackButton && (
+            <div className="mt-2">
+              <button
+                onClick={() => onTrackOrder && onTrackOrder(entities.order_id)}
+                className="w-full bg-[#2563EB] text-white text-[13px] font-semibold py-2.5 px-4 rounded-xl hover:bg-[#1D4ED8] transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>📦</span>
+                <span>Lacak Pesanan #{entities.order_id}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Product cards */}
           {products && products.length > 0 && (
-            <div className="mt-3">
+            <div className="mt-3 max-w-full">
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {products.map((p, i) => (
-                  <ProductCard key={p.product_id ?? p.id ?? i} product={p} />
+                  <ProductCard
+                    key={p.product_id ?? p.id ?? i}
+                    product={p}
+                    onAddToCart={intent === "add_to_cart" ? onAddToCart : null}
+                    addingToCart={addingToCart}
+                  />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Follow-up suggestion chips (recommendation bubbles) */}
+          {!isUser && followUpSuggestions && followUpSuggestions.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {followUpSuggestions.map((suggestion, i) => (
+                <button
+                  key={i}
+                  onClick={() => onFollowUp && onFollowUp(suggestion)}
+                  className="bg-[#F0FBF8] border border-[#C8EDE8] rounded-full px-3 py-1.5 text-[12px] font-medium text-[#1A3C34] hover:bg-[#D8F5F0] hover:border-[#1A3C34] transition-colors cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -80,10 +156,22 @@ function ChatBubble({ role, content, products }) {
   );
 }
 
-function SessionList({ sessions, activeId, onSelect, onNew }) {
+function SessionList({ sessions, activeId, onSelect, onNew, onDelete }) {
   const [collapsed, setCollapsed] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   const active = sessions.find((s) => s.id === activeId);
+
+  const handleDelete = async (e, sessionId) => {
+    e.stopPropagation();
+    if (deletingId) return;
+    setDeletingId(sessionId);
+    try {
+      await onDelete(sessionId);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="mb-4">
@@ -110,19 +198,43 @@ function SessionList({ sessions, activeId, onSelect, onNew }) {
       {!collapsed && sessions.length > 0 && (
         <div className="mt-2 bg-white border border-[#EBEBEB] rounded-xl overflow-hidden shadow-sm">
           {sessions.map((s) => (
-            <button key={s.id}
-              onClick={() => onSelect(s.id)}
-              className={`w-full text-left px-4 py-3 text-[13px] border-b border-[#F0F0F0] last:border-b-0 hover:bg-[#F0FBF8] transition-colors cursor-pointer ${
-                s.id === activeId ? "bg-[#F0FBF8] font-semibold text-[#1A3C34]" : "text-[#1A1A1A]"
+            <div key={s.id}
+              className={`flex items-center border-b border-[#F0F0F0] last:border-b-0 ${
+                s.id === activeId ? "bg-[#F0FBF8]" : ""
               }`}>
-              <div className="flex items-center justify-between">
-                <span className="truncate mr-2">{s.title}</span>
-                <span className="text-[10px] text-gray-400 flex-shrink-0">{s.message_count} pesan</span>
-              </div>
-              {s.last_message && (
-                <p className="text-[11px] text-gray-400 truncate mt-0.5">{s.last_message}</p>
-              )}
-            </button>
+              <button
+                onClick={() => onSelect(s.id)}
+                className={`flex-1 text-left px-4 py-3 text-[13px] hover:bg-[#F0FBF8] transition-colors cursor-pointer ${
+                  s.id === activeId ? "font-semibold text-[#1A3C34]" : "text-[#1A1A1A]"
+                }`}>
+                <div className="flex items-center justify-between">
+                  <span className="truncate mr-2">{s.title}</span>
+                  <span className="text-[10px] text-gray-400 flex-shrink-0">{s.message_count} pesan</span>
+                </div>
+                {s.last_message && (
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5">{s.last_message}</p>
+                )}
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, s.id)}
+                disabled={deletingId === s.id}
+                className="px-3 py-3 text-gray-300 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0 disabled:opacity-30"
+                title="Hapus sesi"
+              >
+                {deletingId === s.id ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                )}
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -132,13 +244,15 @@ function SessionList({ sessions, activeId, onSelect, onNew }) {
 
 export default function ChatPage() {
   const router = useRouter();
+  const { refreshCartCount } = useCartContext();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
-  const [hydratedProducts, setHydratedProducts] = useState({}); // msg index -> products[]
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartFeedback, setCartFeedback] = useState(null); // { type: 'success'|'error', message }
   const sessionIdRef = useRef(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -152,12 +266,19 @@ export default function ChatPage() {
   // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, cartFeedback]);
 
   // Focus input after loading finishes
   useEffect(() => {
     if (!loading) inputRef.current?.focus();
   }, [loading]);
+
+  // Clear cart feedback after 5 seconds
+  useEffect(() => {
+    if (!cartFeedback) return;
+    const t = setTimeout(() => setCartFeedback(null), 5000);
+    return () => clearTimeout(t);
+  }, [cartFeedback]);
 
   // --- Load sessions and restore last active session on mount ---
   useEffect(() => {
@@ -170,7 +291,6 @@ export default function ChatPage() {
         if (cancelled) return;
         setSessions(sess);
 
-        // Determine which session to restore
         const storedId = sessionStorage.getItem(STORAGE_KEY);
         let targetId = null;
 
@@ -191,8 +311,7 @@ export default function ChatPage() {
             msgs.map((m) => ({
               role: m.role,
               content: m.content,
-              // suggested_product_ids are IDs – products will be hydrated on-demand
-              productIds: m.suggested_product_ids || [],
+              products: m.suggested_products || [],
             }))
           );
         }
@@ -209,15 +328,52 @@ export default function ChatPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // --- Intent action handlers ---
+
+  const handleAddToCart = useCallback(async (productId) => {
+    if (addingToCart) return;
+    setAddingToCart(true);
+    setCartFeedback(null);
+    try {
+      await cartService.addItem({ product_id: productId, qty: 1 });
+      await refreshCartCount();
+      setCartFeedback({ type: "success", message: "✅ Produk berhasil ditambahkan ke keranjang!" });
+    } catch (err) {
+      setCartFeedback({ type: "error", message: `❌ Gagal menambahkan: ${err.message}` });
+    } finally {
+      setAddingToCart(false);
+    }
+  }, [addingToCart, refreshCartCount]);
+
+  const handleCheckout = useCallback(() => {
+    router.push("/checkout");
+  }, [router]);
+
+  const handleTrackOrder = useCallback((orderId) => {
+    router.push(`/orders/${orderId}`);
+  }, [router]);
+
+  const handleFollowUp = useCallback((suggestion) => {
+    setInput("");
+    // Send the suggestion as a new message immediately
+    const msg = suggestion;
+    // Use a timeout to let React process setInput first
+    setTimeout(() => {
+      sendMessageRef.current(msg);
+    }, 0);
+  }, []);
+
+  // We need a ref to sendMessage to avoid dependency cycles in handleFollowUp
+  const sendMessageRef = useRef(null);
+
   const sendMessage = useCallback(async (msg) => {
     if (!msg.trim() || loading) return;
 
     setError(null);
+    setCartFeedback(null);
 
-    // Add user bubble immediately
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
 
-    // Build history from current messages for context continuity
     const history = messages.map((m) => ({
       role: m.role,
       content: m.content,
@@ -232,34 +388,52 @@ export default function ChatPage() {
         session_id: sessionIdRef.current,
       });
 
-      // Persist session_id for multi-turn continuity
       if (result.session_id) {
         sessionIdRef.current = result.session_id;
         sessionStorage.setItem(STORAGE_KEY, String(result.session_id));
-
-        // Refresh the sessions list (new session may have been created)
         chatService.getSessions().then((sess) => setSessions(sess)).catch(() => {});
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: result.reply,
-          products: result.suggested_products || [],
-          intent: result.intent,
-        },
-      ]);
+      // Build assistant message with all metadata
+      const assistantMsg = {
+        role: "assistant",
+        content: result.reply,
+        products: result.suggested_products || [],
+        intent: result.intent,
+        entities: result.entities || {},
+        followUpSuggestions: result.follow_up_suggestions || [],
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      // Auto-execute add_to_cart if intent matches and products available
+      if (result.intent === "add_to_cart" && result.suggested_products?.length > 0) {
+        const firstProduct = result.suggested_products[0];
+        const pid = firstProduct.product_id ?? firstProduct.id;
+        if (pid) {
+          setAddingToCart(true);
+          try {
+            await cartService.addItem({ product_id: pid, qty: 1 });
+            await refreshCartCount();
+            setCartFeedback({ type: "success", message: `✅ "${firstProduct.name ?? firstProduct.product_name}" otomatis ditambahkan ke keranjang!` });
+          } catch (err) {
+            setCartFeedback({ type: "error", message: `❌ Gagal menambahkan ke keranjang: ${err.message}` });
+          } finally {
+            setAddingToCart(false);
+          }
+        }
+      }
     } catch (err) {
-      // Remove the user bubble on failure so the user can retry
       setMessages((prev) => prev.slice(0, -1));
       setError(err.message || "Gagal mendapatkan respons dari AI");
     } finally {
       setLoading(false);
     }
-  }, [loading, messages]);
+  }, [loading, messages, refreshCartCount]);
 
-  // Send from input field
+  // Keep ref in sync
+  sendMessageRef.current = sendMessage;
+
   const handleSend = () => {
     const msg = input.trim();
     if (!msg) return;
@@ -267,7 +441,6 @@ export default function ChatPage() {
     sendMessage(msg);
   };
 
-  // Send a quick-prompt (or any pre-filled message) immediately
   const handleQuickSend = (msg) => {
     setInput("");
     sendMessage(msg);
@@ -283,6 +456,7 @@ export default function ChatPage() {
   const handleReset = () => {
     setMessages([]);
     setError(null);
+    setCartFeedback(null);
     setInput("");
     sessionIdRef.current = null;
     sessionStorage.removeItem(STORAGE_KEY);
@@ -299,14 +473,54 @@ export default function ChatPage() {
         msgs.map((m) => ({
           role: m.role,
           content: m.content,
-          productIds: m.suggested_product_ids || [],
+	          products: m.suggested_products || [],
         }))
       );
       setError(null);
+      setCartFeedback(null);
     } catch (e) {
       setError(e.message || "Gagal memuat riwayat chat");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      await chatService.deleteSession(sessionId);
+
+      // Remove from local sessions list
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+
+      // If we deleted the active session, reset to empty or switch to another
+      if (sessionId === sessionIdRef.current) {
+        sessionIdRef.current = null;
+        sessionStorage.removeItem(STORAGE_KEY);
+        setMessages([]);
+        setError(null);
+        setCartFeedback(null);
+
+        // Auto-switch to the newest remaining session
+        setSessions((prev) => {
+          if (prev.length > 0) {
+            const nextId = prev[0].id;
+            sessionIdRef.current = nextId;
+            sessionStorage.setItem(STORAGE_KEY, String(nextId));
+            chatService.getSessionMessages(nextId).then((msgs) => {
+              setMessages(
+                msgs.map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                  products: m.suggested_products || [],
+                }))
+              );
+            }).catch(() => {});
+          }
+          return prev;
+        });
+      }
+    } catch (e) {
+      setError(e.message || "Gagal menghapus sesi chat");
     }
   };
 
@@ -338,11 +552,26 @@ export default function ChatPage() {
             activeId={sessionIdRef.current}
             onSelect={handleSelectSession}
             onNew={handleReset}
+            onDelete={handleDeleteSession}
           />
         )}
 
+        {/* ── CART FEEDBACK BANNER ── */}
+        {cartFeedback && (
+          <div className={`mb-3 rounded-xl px-4 py-2.5 text-[13px] font-medium flex items-center gap-2 ${
+            cartFeedback.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
+          }`}>
+            {cartFeedback.message}
+            <button onClick={() => setCartFeedback(null)} className="ml-auto text-current opacity-50 hover:opacity-100 cursor-pointer">
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* ── CHAT AREA ── */}
-        <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-4 mb-4 overflow-y-auto min-h-[400px] max-h-[600px] shadow-sm">
+        <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-4 mb-4 overflow-y-auto overflow-x-hidden min-h-[400px] max-h-[600px] shadow-sm">
 
           {/* Empty state */}
           {messages.length === 0 && !loading && (
@@ -371,7 +600,20 @@ export default function ChatPage() {
 
           {/* Message bubbles */}
           {messages.map((msg, i) => (
-            <ChatBubble key={i} role={msg.role} content={msg.content} products={msg.products} />
+            <ChatBubble
+              key={i}
+              role={msg.role}
+              content={msg.content}
+              products={msg.products}
+              intent={msg.intent}
+              entities={msg.entities}
+              followUpSuggestions={msg.followUpSuggestions}
+              onFollowUp={handleFollowUp}
+              onAddToCart={handleAddToCart}
+              onCheckout={handleCheckout}
+              onTrackOrder={handleTrackOrder}
+              addingToCart={addingToCart}
+            />
           ))}
 
           {/* Loading dots */}

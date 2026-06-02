@@ -78,6 +78,11 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     productsContext,
   });
 
+  // Safety: add_to_cart without specific product entity → clear suggested IDs (prevent wrong auto-add)
+  if (llmResult.intent === "add_to_cart" && !llmResult.entities?.product) {
+    llmResult.suggested_product_ids = [];
+  }
+
   // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
   if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {
     const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
@@ -146,6 +151,11 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     history,
     productsContext,
   });
+
+  // Safety: add_to_cart without specific product entity → clear suggested IDs
+  if (llmResult.intent === "add_to_cart" && !llmResult.entities?.product) {
+    llmResult.suggested_product_ids = [];
+  }
 
   // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
   if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {

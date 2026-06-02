@@ -163,11 +163,12 @@ describe("chatService.runLlmChat", () => {
     productRepository.getAllProducts.mockResolvedValue(catalog);
   });
 
-  it("returns intent + entities + hydrated products without persisting", async () => {
+  it("returns intent + entities + hydrated products with follow_up_suggestions", async () => {
     llmService.classifyAndSuggest.mockResolvedValue({
       intent: "search_product",
       reply: "ok",
       suggested_product_ids: [2],
+      follow_up_suggestions: ["Di bawah 100rb", "Warna hitam"],
       entities: { product: "hp", action: "search" },
     });
 
@@ -181,7 +182,9 @@ describe("chatService.runLlmChat", () => {
     expect(result.entities).toEqual({ product: "hp", action: "search" });
     expect(result.suggested_products).toHaveLength(1);
     expect(result.suggested_products[0].id).toBe(2);
-    expect(chatRepository.addMessage).not.toHaveBeenCalled();
+    expect(result.follow_up_suggestions).toEqual(["Di bawah 100rb", "Warna hitam"]);
+    // runLlmChat persists messages for session continuity
+    expect(chatRepository.addMessage).toHaveBeenCalledTimes(2);
   });
 
   it("loads history from session when sessionId provided", async () => {

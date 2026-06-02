@@ -28,7 +28,7 @@ const buildSystemInstruction = (productsContext) => {
 
 1. Tentukan INTENT dari pesan pengguna. Pilih SATU dari:
    - "search_product" — mencari atau menelusuri produk (contoh: "Cari baju putih", "Ada sepatu murah?")
-   - "add_to_cart" — menambahkan item ke keranjang (contoh: "Tambahkan sabun ini ke keranjang", "Masukkan 2 baju ke cart")
+   - "add_to_cart" — menambahkan item ke keranjang (contoh: "Tambahkan sabun ini ke keranjang", "Masukkan 2 baju ke cart"). PERHATIKAN konteks percakapan: jika pengguna sebelumnya ingin menambah ke keranjang lalu menyebut nama produk, intent tetap add_to_cart, BUKAN search_product.
    - "checkout_order" — checkout dari keranjang (contoh: "Checkout sekarang", "Lanjut ke pembayaran", "Beli semua item di keranjang")
    - "make_payment" — membayar atau menanyakan status pembayaran (contoh: "Bayar pakai ewallet", "Status pembayaran order #12")
    - "track_order" — melacak status pengiriman (contoh: "Dimana pesanan saya?", "Status pengiriman order #7")

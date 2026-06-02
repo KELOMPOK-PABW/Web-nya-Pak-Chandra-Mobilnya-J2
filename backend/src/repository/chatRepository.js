@@ -68,6 +68,12 @@ const touchSession = async (sessionId) => {
   });
 };
 
+const deleteSession = async (id, userId) => {
+  return prisma.chatSession.deleteMany({
+    where: { id, userId },
+  });
+};
+
 module.exports = {
   createSession,
   findSessionById,
@@ -77,4 +83,5 @@ module.exports = {
   getRecentMessages,
   getSessionMessages,
   touchSession,
+  deleteSession,
 };

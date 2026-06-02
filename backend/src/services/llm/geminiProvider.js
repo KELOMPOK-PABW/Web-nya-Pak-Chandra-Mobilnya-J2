@@ -23,6 +23,12 @@ const RESPONSE_SCHEMA = {
       description:
         "Hingga 5 ID produk paling relevan dari katalog. Kosongkan [] jika intent bukan product search atau tidak ada yang cocok.",
     },
+    follow_up_suggestions: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description:
+        "2-4 saran pertanyaan lanjutan dalam Bahasa Indonesia yang bisa diklik pengguna. Contoh: ['Yang di bawah 100rb', 'Warna hitam saja']. Kosongkan [] jika tidak relevan.",
+    },
     entities: {
       type: Type.OBJECT,
       properties: {
@@ -71,7 +77,7 @@ const RESPONSE_SCHEMA = {
         "Entitas yang diekstrak dari pesan pengguna. Hanya isi field yang benar-benar ditemukan; field yang tidak relevan boleh diisi null atau dikosongkan.",
     },
   },
-  required: ["intent", "reply", "suggested_product_ids", "entities"],
+  required: ["intent", "reply", "suggested_product_ids", "follow_up_suggestions", "entities"],
 };
 
 const classifyAndSuggest = async ({ message, history = [], productsContext = [] }) => {

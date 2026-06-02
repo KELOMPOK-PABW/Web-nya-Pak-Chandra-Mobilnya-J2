@@ -67,4 +67,21 @@ export const chatService = {
     const result = await handleResponse(res);
     return result.data;
   },
+
+  /**
+   * Delete a chat session and all its messages.
+   * @param {number} sessionId
+   * @returns {Promise<{deleted: boolean}>}
+   */
+  async deleteSession(sessionId) {
+    const token = authService.getToken();
+    const res = await fetch(`${BASE_URL}/chat/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+    });
+    const result = await handleResponse(res);
+    return result.data;
+  },
 };
