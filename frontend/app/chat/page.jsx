@@ -59,7 +59,7 @@ function ProductCard({ product, onAddToCart, addingToCart }) {
 function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, addingToCart }) {
   const isUser = role === "user";
   const showCartButton = intent === "add_to_cart" && products && products.length > 0;
-  const showCheckoutButton = intent === "checkout_order";
+  const showCheckoutButton = intent === "checkout_order" || (intent === "search_product" && products && products.length > 0);
   const showTrackButton = intent === "track_order" && entities?.order_id;
 
   return (
