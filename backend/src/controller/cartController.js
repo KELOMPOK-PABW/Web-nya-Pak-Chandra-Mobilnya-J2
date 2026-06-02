@@ -124,7 +124,8 @@ const clearCart = async (req, res) => {
 
 const validateCart = async(req,res) => {
   try {
-    const results = await cartService.validateCart(req)
+    const userId = req.user.id;
+    const results = await cartService.validateCart({ userId })
     return res.status(results.statusCode).json({
       message : results.message,
       success : results.success,
@@ -141,7 +142,8 @@ const validateCart = async(req,res) => {
 
 const countCartItems = async (req, res) => {
   try {
-    const result = await cartService.countCartItems(req);
+    const userId = req.user.id;
+    const result = await cartService.countCartItems({ userId });
 
     return res.status(result.statusCode).json({
       success: result.success,

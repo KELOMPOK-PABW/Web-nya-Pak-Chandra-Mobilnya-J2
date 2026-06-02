@@ -12,6 +12,9 @@ const OPTIONAL_WITH_DEFAULTS = {
   AUTH_RATE_LIMIT_MAX: "10",
   JWT_EXPIRES_IN: "1d",
   BCRYPT_SALT_ROUNDS: "12",
+  LLM_PROVIDER: "gemini",
+  OLLAMA_BASE_URL: "http://localhost:11434",
+  OLLAMA_MODEL: "qwen2.5:7b",
 };
 
 const missing = REQUIRED.filter((k) => !process.env[k] || process.env[k].trim() === "");
@@ -54,4 +57,7 @@ module.exports = {
   AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX, 10),
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMINI_MODEL: process.env.GEMINI_MODEL,
+  LLM_PROVIDER: process.env.LLM_PROVIDER,
+  OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
+  OLLAMA_MODEL: process.env.OLLAMA_MODEL,
 };

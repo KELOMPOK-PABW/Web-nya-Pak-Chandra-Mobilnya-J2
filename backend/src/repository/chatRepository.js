@@ -36,6 +36,31 @@ const getRecentMessages = async (sessionId, limit = 10) => {
   return rows.reverse();
 };
 
+const findSessionsByUser = async (userId, limit = 20) => {
+  return prisma.chatSession.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    include: {
+      _count: { select: { messages: true } },
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { content: true },
+      },
+    },
+  });
+};
+
+const getSessionMessages = async (sessionId, limit = 50) => {
+  const rows = await prisma.chatMessage.findMany({
+    where: { sessionId },
+    orderBy: { id: "desc" },
+    take: limit,
+  });
+  return rows.reverse();
+};
+
 const touchSession = async (sessionId) => {
   return prisma.chatSession.update({
     where: { id: sessionId },
@@ -47,7 +72,9 @@ module.exports = {
   createSession,
   findSessionById,
   findSessionByIdForUser,
+  findSessionsByUser,
   addMessage,
   getRecentMessages,
+  getSessionMessages,
   touchSession,
 };

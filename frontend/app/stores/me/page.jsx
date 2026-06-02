@@ -3,125 +3,118 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { sellerService } from "@/services/sellerService";
+import { productService } from "@/services/productService";
 
 const sellerMenus = [
-  { label: "Dashboard", href: "/seller/dashboard", icon: "📊" },
-  { label: "Produk", href: "/seller/products", icon: "📦" },
-  { label: "Pesanan", href: "/seller/orders", icon: "🛒" },
-  { label: "Toko Saya", href: "/stores/me", icon: "🏬" },
-  { label: "Status Pengajuan", href: "/seller/application", icon: "📄" },
+  { label: "Dashboard", href: "/seller/dashboard" },
+  { label: "Produk", href: "/seller/products" },
+  { label: "Pesanan", href: "/seller/orders" },
+  { label: "Toko Saya", href: "/stores/me" },
+  { label: "Status Pengajuan", href: "/seller/application" },
 ];
 
 export default function MyStorePage() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
-  const [form, setForm] = useState({
-    storeName: "",
-    slogan: "",
-    city: "",
-    address: "",
-    phone: "",
-    description: "",
-  });
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const store = sellerService.getMyStore();
-    setForm({
-      storeName: store.storeName || "",
-      slogan: store.slogan || "",
-      city: store.city || "",
-      address: store.address || "",
-      phone: store.phone || "",
-      description: store.description || "",
-    });
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await productService.getSellerProducts();
+        setProducts(res.data || []);
+      } catch (err) {
+        setError(err.message || "Gagal memuat data toko");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, []);
 
-  const onChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onSave = async (event) => {
-    event.preventDefault();
-    setIsSaving(true);
-    setSaveMessage("");
-    try {
-      sellerService.updateMyStore(form);
-      setSaveMessage("Informasi toko berhasil diperbarui.");
-      setIsEditing(false);
-    } catch {
-      setSaveMessage("Gagal menyimpan perubahan. Silakan coba lagi.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const activeProducts = products.filter(p => p.stock > 0);
+  const totalValue = products.reduce((s, p) => s + Number(p.price || 0) * Number(p.stock || 0), 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
       <Navbar />
-      <div className="flex flex-1 max-w-7xl w-full mx-auto">
-        <Sidebar menus={sellerMenus} />
-        <main className="flex-1 p-6 sm:p-8 space-y-6">
-          <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-[#1A1A1A]">Toko Saya</h1>
-              <p className="text-gray-600 mt-1">Lihat dan edit profil toko yang tampil ke pembeli.</p>
+      <div className="flex flex-1 max-w-[1280px] w-full mx-auto">
+        <Sidebar title="Toko Saya" subtitle="Seller Center" menus={sellerMenus} />
+
+        <main className="flex-1 p-8">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-[#1A1A1A]">Toko Saya</h1>
+            <p className="text-sm text-[#777]">Ringkasan toko dan produk Anda.</p>
+          </div>
+
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+          )}
+
+          {/* Store Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
+              <p className="text-xs text-[#888] font-semibold tracking-wide">Total Produk</p>
+              <p className="text-xl font-bold text-[#1A1A1A] mt-1">
+                {loading ? "..." : products.length}
+              </p>
             </div>
-            <Badge variant="success" className="w-fit">Status: Aktif</Badge>
-          </section>
+            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
+              <p className="text-xs text-[#888] font-semibold tracking-wide">Produk Aktif</p>
+              <p className="text-xl font-bold text-[#1A3C34] mt-1">
+                {loading ? "..." : activeProducts.length}
+              </p>
+            </div>
+            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
+              <p className="text-xs text-[#888] font-semibold tracking-wide">Nilai Stok</p>
+              <p className="text-xl font-bold text-[#1A1A1A] mt-1">
+                {loading ? "..." : `Rp ${(totalValue / 1000000).toFixed(1)} jt`}
+              </p>
+            </div>
+          </div>
 
-          <Card>
-            <form onSubmit={onSave} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-sm font-semibold text-[#374151] block mb-2">Nama Toko</label>
-                  <input name="storeName" value={form.storeName} onChange={onChange} disabled={!isEditing} className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-[#374151] block mb-2">Slogan</label>
-                  <input name="slogan" value={form.slogan} onChange={onChange} disabled={!isEditing} className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-[#374151] block mb-2">Kota</label>
-                  <input name="city" value={form.city} onChange={onChange} disabled={!isEditing} className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-[#374151] block mb-2">No. HP</label>
-                  <input name="phone" value={form.phone} onChange={onChange} disabled={!isEditing} className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                </div>
+          {/* Products List */}
+          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-[#1A1A1A]">Produk</h2>
+            </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+                ))}
               </div>
-
-              <div>
-                <label className="text-sm font-semibold text-[#374151] block mb-2">Alamat Toko</label>
-                <textarea name="address" value={form.address} onChange={onChange} disabled={!isEditing} rows={3} className="w-full rounded-xl border border-[#E5E7EB] px-3 py-2.5 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 resize-none" />
+            ) : products.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-[#888]">Belum ada produk.</p>
               </div>
-
-              <div>
-                <label className="text-sm font-semibold text-[#374151] block mb-2">Deskripsi Toko</label>
-                <textarea name="description" value={form.description} onChange={onChange} disabled={!isEditing} rows={4} className="w-full rounded-xl border border-[#E5E7EB] px-3 py-2.5 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 resize-none" />
+            ) : (
+              <div className="space-y-3">
+                {products.map(p => (
+                  <div key={p.id} className="flex items-center justify-between py-3 border-b border-[#F3F4F6] last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#F0FBF8] flex items-center justify-center text-lg">
+                        📦
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A1A1A]">{p.name}</p>
+                        <p className="text-xs text-[#888]">
+                          Rp {Number(p.price).toLocaleString("id-ID")} · Stok: {p.stock}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${p.stock > 0 ? "bg-[#D1FAE5] text-[#059669]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
+                      {p.stock > 0 ? "Tersedia" : "Habis"}
+                    </span>
+                  </div>
+                ))}
               </div>
-
-              {saveMessage && (
-                <p className="text-sm text-[#166534]">{saveMessage}</p>
-              )}
-
-              <div className="flex flex-wrap gap-3">
-                {!isEditing ? (
-                  <Button type="button" onClick={() => setIsEditing(true)}>Edit Informasi Toko</Button>
-                ) : (
-                  <>
-                    <Button type="submit" loading={isSaving}>Simpan Perubahan</Button>
-                    <Button type="button" variant="secondary" onClick={() => setIsEditing(false)}>Batal</Button>
-                  </>
-                )}
-              </div>
-            </form>
-          </Card>
+            )}
+          </div>
         </main>
       </div>
     </div>

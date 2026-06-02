@@ -42,13 +42,20 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     throw new Error("Pesan tidak boleh kosong");
   }
 
+  let session;
   let convo = Array.isArray(history) ? history.slice(-HISTORY_SIZE) : [];
 
   if (sessionId) {
-    const session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
+    session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
     if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
     const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
     convo = messagesToHistory(recent);
+  } else {
+    // Create a new session so the frontend can maintain continuity
+    session = await chatRepository.createSession({
+      userId: Number(userId),
+      title: message.slice(0, 80),
+    });
   }
 
   const productsContext = await fetchProductsContext();
@@ -59,7 +66,26 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     productsContext,
   });
 
+  // Store the user message and assistant message for server-side history
+  await chatRepository.addMessage({
+    sessionId: session.id,
+    role: "user",
+    content: message,
+  });
+
+  await chatRepository.addMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: llmResult.reply,
+    intent: llmResult.intent,
+    suggestedProductIds: llmResult.suggested_product_ids,
+    entities: llmResult.entities,
+  });
+
+  await chatRepository.touchSession(session.id);
+
   return {
+    session_id: session.id,
     intent: llmResult.intent,
     reply: llmResult.reply,
     entities: llmResult.entities,
@@ -120,7 +146,37 @@ const sendMessage = async ({ userId, sessionId, message }) => {
   };
 };
 
+const getUserSessions = async (userId) => {
+  const rows = await chatRepository.findSessionsByUser(Number(userId));
+  return rows.map((s) => ({
+    id: s.id,
+    title: s.title || "Percakapan baru",
+    message_count: s._count?.messages ?? 0,
+    last_message: s.messages?.[0]?.content?.slice(0, 80) || null,
+    created_at: s.createdAt,
+    updated_at: s.updatedAt,
+  }));
+};
+
+const getSessionMessages = async (userId, sessionId) => {
+  const session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
+  if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
+
+  const messages = await chatRepository.getSessionMessages(session.id, 100);
+  return messages.map((msg) => ({
+    id: msg.id,
+    role: msg.role,
+    content: msg.content,
+    intent: msg.intent || null,
+    entities: msg.entities || null,
+    suggested_product_ids: msg.suggestedProductIds || [],
+    created_at: msg.createdAt,
+  }));
+};
+
 module.exports = {
   runLlmChat,
   sendMessage,
+  getUserSessions,
+  getSessionMessages,
 };

@@ -8,7 +8,9 @@ export const authService = {
       body: JSON.stringify({ full_name, email, password, role }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Register gagal");
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || "Register gagal");
+    }
     return data;
   },
 
@@ -19,21 +21,35 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login gagal");
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || "Login gagal");
+    }
+
+    // Save session with correct field mapping
+    const d = data.data;
+    this.saveSession(d);
+
     return data;
   },
 
   saveSession(data) {
     if (typeof window === "undefined") return;
-    if (data.token) localStorage.setItem("token", data.token);
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: data.user_id,
-        full_name: data.full_name,
-        role: data.role,
-      })
-    );
+
+    // Backend returns: { access_token, user: { id, full_name, email, roles, is_active } }
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+    }
+    if (data.user) {
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data.user.id,
+          full_name: data.user.full_name,
+          email: data.user.email,
+          role: data.user.roles?.[0] || "buyer",
+        })
+      );
+    }
   },
 
   getToken() {

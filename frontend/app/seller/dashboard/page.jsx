@@ -1,97 +1,133 @@
-import React from 'react';
-import { Navbar } from '@/components/layout/Navbar';
-import { Sidebar } from '@/components/layout/Sidebar';
+"use client";
 
-// Data dummy untuk development
-const STATS = [
-  { label: "Pesanan Hari Ini", value: "Rp 0", sub: "Januari 2025 · Rp 4.351.693"},
-  { label: "Pembayaran Gift Card", value: "Rp 0", sub: "Januari 2025 · Rp 4.351.693"},
-  { label: "Stok Produk", value: "6.262", sub: "Stok saat ini"},
-  { label: "Nilai Stok", value: "Rp 4,3 jt", sub: "Ekskl. PPN"},
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/layout/Navbar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { productService } from "@/services/productService";
+import { authService } from "@/services/authService";
+
+const sellerMenus = [
+  { label: "Dashboard", href: "/seller/dashboard" },
+  { label: "Produk", href: "/seller/products" },
+  { label: "Pesanan", href: "/seller/orders" },
+  { label: "Toko Saya", href: "/stores/me" },
+  { label: "Status Pengajuan", href: "/seller/application" },
 ];
-
-const ORDERS = [
-  { id: "#ORD-0021", buyer: "Andi S.", product: "Sneaker Pro", total: "Rp 249.000", status: "Selesai" },
-  { id: "#ORD-0020", buyer: "Budi R.", product: "Tas Kulit", total: "Rp 389.000", status: "Diproses" },
-  { id: "#ORD-0019", buyer: "Citra M.", product: "Jaket Hoodie", total: "Rp 185.000", status: "Selesai" },
-  { id: "#ORD-0018", buyer: "Dian P.", product: "Sepatu Slip", total: "Rp 210.000", status: "Dikirim" },
-  { id: "#ORD-0017", buyer: "Eko W.", product: "Kaos Polos", total: "Rp 79.000", status: "Dibatalkan" },
-];
-
-const statusStyle = {
-  Selesai:    "bg-[#E0F2F1] text-[#0F6E56]",
-  Diproses:   "bg-[#FFF3E0] text-[#E65100]",
-  Dikirim:    "bg-[#FFF3E0] text-[#E65100]",
-  Dibatalkan: "bg-[#FEF2F2] text-[#DC2626]",
-};
 
 export default function SellerDashboardPage() {
+  const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Auth guard: redirect to login if not authenticated
+    const token = authService.getToken();
+    if (!token) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await productService.getSellerProducts();
+        setProducts(res.data || []);
+      } catch (err) {
+        setError(err.message || "Gagal memuat data");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [router]);
+
+  const activeProducts = products.filter(p => p.stock > 0);
+  const totalStock = products.reduce((s, p) => s + Number(p.stock || 0), 0);
+  const totalValue = products.reduce((s, p) => s + Number(p.price || 0) * Number(p.stock || 0), 0);
+
+  const STATS = [
+    { label: "Total Produk", value: products.length.toString(), sub: "Semua produk" },
+    { label: "Produk Aktif", value: activeProducts.length.toString(), sub: "Tersedia" },
+    { label: "Total Stok", value: totalStock.toString(), sub: "Unit" },
+    { label: "Nilai Stok", value: `Rp ${(totalValue / 1000000).toFixed(1)} jt`, sub: "Ekskl. PPN" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
       <Navbar />
       <div className="flex flex-1 max-w-[1280px] w-full mx-auto">
-
-        <Sidebar
-            title="Toko Saya"
-            subtitle="Seller Center"
-            menus={[
-              { label: "Dashboard", href: "/seller/dashboard",  },
-              { label: "Produk", href: "/seller/products",  },
-              { label: "Pesanan", href: "/seller/orders",  },
-              { label: "Toko Saya", href: "/stores/me" },
-              { label: "Status Pengajuan", href: "/seller/application", },
-            ]}
-          />
-        
+        <Sidebar title="Toko Saya" subtitle="Seller Center" menus={sellerMenus} />
 
         <main className="flex-1 p-8">
-          {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-1">Halo Dev Seller, selamat datang kembali!</p>
+            <p className="text-sm text-[#777]">Ringkasan toko Anda.</p>
           </div>
 
-          {/* Stat Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            {STATS.map((s) => (
-              <div key={s.label} className="bg-white rounded-xl p-4 border border-[#EBEBEB]">
-                <p className="text-sm font-bold text-[#1A3C34] mb-1">
-                  {s.label}
+          {error && (
+            <div className="mb-4 text-red-600 text-sm">{error}</div>
+          )}
+
+          {/* Stats cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {STATS.map((stat, i) => (
+              <div key={i} className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
+                <p className="text-xs text-[#888] font-semibold tracking-wide">{stat.label}</p>
+                <p className="text-xl font-bold text-[#1A1A1A] mt-1">
+                  {loading ? "..." : stat.value}
                 </p>
-                
-                <p className="text-xl font-bold text-[#1A1A1A]">{s.value}</p>
-                <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
+                <p className="text-xs text-[#999] mt-1">{stat.sub}</p>
               </div>
             ))}
           </div>
 
-          {/* Tabel Pesanan */}
-          <div className="bg-white rounded-xl border border-[#EBEBEB] p-5">
-            <h3 className="text-sm font-semibold text-[#1A1A1A] mb-4">Pesanan Terbaru</h3>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[#F3F4F6]">
-                  {["ID Pesanan","Pembeli","Produk","Total","Status"].map(h => (
-                    <th key={h} className="text-left text-gray-400 font-medium pb-2 px-2">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ORDERS.map((o) => (
-                  <tr key={o.id} className="border-b border-[#F9FAFB]">
-                    <td className="py-2.5 px-2 text-[#1A3C34] font-medium">{o.id}</td>
-                    <td className="py-2.5 px-2 text-gray-600">{o.buyer}</td>
-                    <td className="py-2.5 px-2 text-gray-600">{o.product}</td>
-                    <td className="py-2.5 px-2 font-semibold text-[#1A1A1A]">{o.total}</td>
-                    <td className="py-2.5 px-2">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyle[o.status]}`}>
-                        {o.status}
-                      </span>
-                    </td>
-                  </tr>
+          {/* Recent products */}
+          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-[#1A1A1A]">Produk Terbaru</h2>
+              <Link href="/seller/products" className="text-sm font-semibold text-[#1A3C34]">
+                Kelola Produk
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-[#888]">Belum ada produk.</p>
+                <Link href="/seller/products" className="text-sm font-semibold text-[#1A3C34] mt-2 inline-block">
+                  Tambah Produk
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {products.slice(0, 5).map(p => (
+                  <div key={p.id} className="flex items-center justify-between py-2 border-b border-[#F3F4F6] last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#F0FBF8] flex items-center justify-center text-lg">
+                        📦
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A1A1A]">{p.name}</p>
+                        <p className="text-xs text-[#888]">Stok: {p.stock}</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-[#1A3C34]">
+                      Rp {Number(p.price).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

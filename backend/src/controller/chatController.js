@@ -53,7 +53,27 @@ const llmChat = async (req, res) => {
   }
 };
 
+const getSessions = async (req, res) => {
+  try {
+    const sessions = await chatService.getUserSessions(req.user.id);
+    return res.status(200).json({ success: true, data: sessions });
+  } catch (e) {
+    return res.status(errorStatus(e.message)).json({ success: false, message: e.message });
+  }
+};
+
+const getMessages = async (req, res) => {
+  try {
+    const messages = await chatService.getSessionMessages(req.user.id, req.params.sessionId);
+    return res.status(200).json({ success: true, data: messages });
+  } catch (e) {
+    return res.status(errorStatus(e.message)).json({ success: false, message: e.message });
+  }
+};
+
 module.exports = {
   sendMessage,
   llmChat,
+  getSessions,
+  getMessages,
 };

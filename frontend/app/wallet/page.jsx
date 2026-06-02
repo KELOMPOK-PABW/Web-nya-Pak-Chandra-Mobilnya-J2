@@ -183,7 +183,7 @@ export default function WalletPage() {
               const cfg = TYPE_CONFIG[t.type] ?? { label: t.type, color: "#6B7280", bg: "#F5F5F5", sign: "", icon: "💳" };
               const isDebit = t.type === "payment";
               return (
-                <div key={t.id} className="txn-row"
+                <div key={i} className="txn-row"
                   style={{
                     display: "flex", alignItems: "center", gap: 14,
                     padding: "14px 20px",

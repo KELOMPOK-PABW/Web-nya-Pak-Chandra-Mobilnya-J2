@@ -1,92 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-
-// ── Static mock data ──────────────────────────────────────────────
-const ADDRESSES = [
-  {
-    id: "addr-1",
-    label: "Rumah",
-    name: "Budi Santoso",
-    phone: "0812-3456-7890",
-    detail: "Jl. Merpati No. 12, RT 03/RW 05",
-    city: "Kota Bandung",
-    province: "Jawa Barat",
-    zip: "40132",
-    isDefault: true,
-  },
-  {
-    id: "addr-2",
-    label: "Kantor",
-    name: "Budi Santoso",
-    phone: "0812-3456-7890",
-    detail: "Jl. Asia Afrika No. 55, Lantai 3",
-    city: "Kota Bandung",
-    province: "Jawa Barat",
-    zip: "40111",
-    isDefault: false,
-  },
-];
-
-const CART_ITEMS = [
-  {
-    id: "item-1",
-    name: "Sepatu Sneaker Urban X1",
-    variant: "Hitam / 42",
-    qty: 1,
-    price: 249000,
-    imageEmoji: "👟",
-    store: "Urban Kicks Store",
-  },
-  {
-    id: "item-2",
-    name: "Tas Kulit Premium Casual",
-    variant: "Coklat Tua",
-    qty: 2,
-    price: 389000,
-    imageEmoji: "👜",
-    store: "Leather House ID",
-  },
-];
-
-const SHIPPING_OPTIONS = [
-  { id: "reg", label: "Regular", eta: "3-5 hari", price: 15000 },
-  { id: "exp", label: "Express", eta: "1-2 hari", price: 30000 },
-  { id: "same", label: "Same Day", eta: "Hari ini", price: 55000 },
-];
-
-const PAYMENT_METHODS = [
-  { id: "transfer", label: "Transfer Bank", icon: "🏦" },
-  { id: "ewallet", label: "E-Wallet (GoPay / OVO)", icon: "📱" },
-  { id: "cod", label: "Bayar di Tempat (COD)", icon: "💵" },
-  { id: "cc", label: "Kartu Kredit / Debit", icon: "💳" },
-];
+import { cartService } from "@/services/cartService";
+import { authService } from "@/services/authService";
 
 function fmt(n) {
-  return "Rp " + n.toLocaleString("id-ID");
+  return "Rp " + Number(n).toLocaleString("id-ID");
 }
 
-// ── Sub-components ────────────────────────────────────────────────
 function SectionCard({ title, children }) {
   return (
     <div style={{
-      background: "#fff",
-      borderRadius: 16,
-      border: "1px solid #EBEBEB",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-      marginBottom: 16,
-      overflow: "hidden",
+      background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 16, overflow: "hidden",
     }}>
-      <div style={{
-        padding: "16px 20px",
-        borderBottom: "1px solid #F3F4F6",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-      }}>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>{title}</span>
       </div>
       <div style={{ padding: "18px 20px" }}>{children}</div>
@@ -94,269 +25,320 @@ function SectionCard({ title, children }) {
   );
 }
 
-function AddressCard({ addr, selected, onSelect }) {
-  return (
-    <div
-      onClick={() => onSelect(addr.id)}
-      style={{
-        border: selected ? "2px solid #1A3C34" : "1.5px solid #E5E7EB",
-        borderRadius: 12,
-        padding: "14px 16px",
-        cursor: "pointer",
-        marginBottom: 10,
-        background: selected ? "#F0FAF8" : "#FAFAFA",
-        transition: "all 0.15s",
-        position: "relative",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 16, height: 16, borderRadius: "50%",
-            border: selected ? "none" : "1.5px solid #D1D5DB",
-            background: selected ? "#1A3C34" : "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 2,
-          }}>
-            {selected && (
-              <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>{addr.label}</span>
-              {addr.isDefault && (
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: "#1A3C34",
-                  background: "#D1FAE5", borderRadius: 99, padding: "2px 7px",
-                }}>Utama</span>
-              )}
-            </div>
-            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#374151" }}>
-              {addr.name} · {addr.phone}
-            </p>
-            <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
-              {addr.detail}, {addr.city}, {addr.province} {addr.zip}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            fontSize: 12, fontWeight: 600, color: "#1A3C34",
-            background: "none", border: "none", cursor: "pointer", padding: 0,
-          }}
-        >
-          Ubah
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────
 export default function CheckoutPage() {
   const router = useRouter();
-  const [selectedAddr, setSelectedAddr] = useState("addr-1");
-  const [selectedShipping, setSelectedShipping] = useState("reg");
-  const [selectedPayment, setSelectedPayment] = useState("transfer");
-  const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [voucherCode, setVoucherCode] = useState("");
-  const [voucherApplied, setVoucherApplied] = useState(false);
+  const [cartItems, setCartItems] = useState([]);
+  const [loadingCart, setLoadingCart] = useState(true);
+  const [error, setError] = useState("");
 
-  const shipping = SHIPPING_OPTIONS.find((s) => s.id === selectedShipping);
-  const subtotal = CART_ITEMS.reduce((s, i) => s + i.price * i.qty, 0);
-  const discount = voucherApplied ? 25000 : 0;
-  const shippingCost = shipping?.price ?? 0;
-  const total = subtotal - discount + shippingCost;
+  // Address form (no backend API for addresses yet)
+  const [address, setAddress] = useState({
+    detail: "",
+    city: "",
+    province: "",
+    zip: "",
+    name: "",
+    phone: "",
+  });
+  const [addressError, setAddressError] = useState("");
 
-  const handlePlaceOrder = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/orders");
-    }, 1800);
+  // State
+  const [submitting, setSubmitting] = useState(false);
+  const isLoggedIn = Boolean(authService.getToken());
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setLoadingCart(false);
+      setError("Silakan login terlebih dahulu untuk checkout.");
+      return;
+    }
+
+    async function loadCart() {
+      setLoadingCart(true);
+      setError("");
+      try {
+        const items = await cartService.getCart();
+        setCartItems(Array.isArray(items) ? items : []);
+      } catch (err) {
+        setError(err.message || "Gagal memuat cart");
+        setCartItems([]);
+      } finally {
+        setLoadingCart(false);
+      }
+    }
+    loadCart();
+  }, [isLoggedIn]);
+
+  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.subtotal || item.product?.price || 0) * Number(item.qty || 1), 0);
+  const shipping = 15000;
+  const total = subtotal + shipping;
+
+  const handlePlaceOrder = async () => {
+    // Validate address
+    if (!address.detail.trim() || !address.city.trim() || !address.name.trim()) {
+      setAddressError("Lengkapi alamat pengiriman (nama, detail, dan kota).");
+      return;
+    }
+    setAddressError("");
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const token = authService.getToken();
+      // Step 1: Find or use a default cart_id from cart items (the cart itself)
+      // The cart endpoint returns items, but we need the cart_id
+      // Let's call the count endpoint which returns cart metadata
+      const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/count`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      });
+
+      if (!countRes.ok) {
+        const errData = await countRes.json().catch(() => ({}));
+        throw new Error(errData.message || "Gagal mendapatkan informasi cart");
+      }
+
+      // We need the cart_id. The cart endpoints return items that have a cart_id field.
+      // Let's get it from the first cart item
+      if (cartItems.length === 0) {
+        throw new Error("Keranjang kosong");
+      }
+
+      const cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
+      if (!cartId) {
+        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
+      }
+
+      // Step 2: Create checkout
+      const checkoutPayload = {
+        cart_id: cartId,
+        address_id: 1, // Default address - backend needs this
+        payment_method: "ewallet",
+      };
+
+      const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify(checkoutPayload),
+      });
+
+      const checkoutData = await checkoutRes.json();
+
+      if (!checkoutRes.ok || checkoutData.success === false) {
+        throw new Error(checkoutData.message || "Checkout gagal");
+      }
+
+      const orderId = checkoutData.data?.order_id;
+
+      if (orderId) {
+        router.push(`/payment/${orderId}`);
+      } else {
+        router.push("/orders");
+      }
+    } catch (err) {
+      setError(err.message || "Gagal melakukan checkout. Coba lagi.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleApplyVoucher = () => {
-    if (voucherCode.toUpperCase() === "HEMAT25") setVoucherApplied(true);
-  };
+  if (!isLoggedIn) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+        <Navbar />
+        <div style={{ maxWidth: 500, margin: "80px auto", textAlign: "center", padding: "0 24px" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0A0A0A", marginBottom: 8 }}>Login Diperlukan</h1>
+          <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 24 }}>Silakan login untuk melanjutkan checkout.</p>
+          <Link href="/auth/login" style={{
+            padding: "12px 28px", borderRadius: 12, background: "#1A3C34", color: "#fff",
+            fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-block",
+          }}>
+            Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spin { animation: spin 0.9s linear infinite; }
-        .hover-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .hover-btn { transition: all 0.15s; }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       <Navbar />
 
-      {/* Breadcrumb */}
       <div style={{ background: "#fff", borderBottom: "1px solid #EBEBEB" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 24px", display: "flex", alignItems: "center", gap: 6 }}>
           <Link href="/cart" style={{ fontSize: 13, color: "#6B7280", textDecoration: "none" }}>Keranjang</Link>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
           <span style={{ fontSize: 13, color: "#1A3C34", fontWeight: 600 }}>Checkout</span>
         </div>
       </div>
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 48px" }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0A0A0A", marginBottom: 24, letterSpacing: "-0.5px" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0A0A0A", marginBottom: 24 }}>
           Checkout
         </h1>
+
+        {error && (
+          <div style={{
+            marginBottom: 16, padding: "12px 16px", borderRadius: 12,
+            background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {addressError && (
+          <div style={{
+            marginBottom: 16, padding: "12px 16px", borderRadius: 12,
+            background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13,
+          }}>
+            {addressError}
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20, alignItems: "start" }}>
 
           {/* ── LEFT COLUMN ── */}
           <div>
-
             {/* 1. Alamat Pengiriman */}
             <SectionCard title="📍 Alamat Pengiriman">
-              {ADDRESSES.map((addr) => (
-                <AddressCard
-                  key={addr.id}
-                  addr={addr}
-                  selected={selectedAddr === addr.id}
-                  onSelect={setSelectedAddr}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <input
+                  placeholder="Nama penerima"
+                  value={address.name}
+                  onChange={e => setAddress(a => ({ ...a, name: e.target.value }))}
+                  style={{
+                    padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+                    background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                  }}
                 />
-              ))}
-              <button style={{
-                width: "100%", padding: "10px", borderRadius: 10,
-                border: "1.5px dashed #1A3C34", background: "none",
-                color: "#1A3C34", fontWeight: 600, fontSize: 13,
-                cursor: "pointer", fontFamily: "inherit",
-              }}>
-                + Tambah Alamat Baru
-              </button>
+                <input
+                  placeholder="No. telepon"
+                  value={address.phone}
+                  onChange={e => setAddress(a => ({ ...a, phone: e.target.value }))}
+                  style={{
+                    padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+                    background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                  }}
+                />
+                <textarea
+                  placeholder="Alamat lengkap (jalan, RT/RW, kelurahan)"
+                  value={address.detail}
+                  onChange={e => setAddress(a => ({ ...a, detail: e.target.value }))}
+                  rows={2}
+                  style={{
+                    width: "100%", padding: "10px 12px", borderRadius: 10,
+                    border: "1.5px solid #E5E7EB", background: "#FAFAF8", fontSize: 13,
+                    fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    placeholder="Kota"
+                    value={address.city}
+                    onChange={e => setAddress(a => ({ ...a, city: e.target.value }))}
+                    style={{
+                      flex: 1, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                    }}
+                  />
+                  <input
+                    placeholder="Provinsi"
+                    value={address.province}
+                    onChange={e => setAddress(a => ({ ...a, province: e.target.value }))}
+                    style={{
+                      flex: 1, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                    }}
+                  />
+                  <input
+                    placeholder="Kode pos"
+                    value={address.zip}
+                    onChange={e => setAddress(a => ({ ...a, zip: e.target.value }))}
+                    style={{
+                      width: 100, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
+                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
             </SectionCard>
 
-            {/* 2. Detail Produk */}
+            {/* 2. Produk yang Dipesan */}
             <SectionCard title="🛍 Produk yang Dipesan">
-              {CART_ITEMS.map((item) => (
-                <div key={item.id} style={{
-                  display: "flex", gap: 14, padding: "12px 0",
-                  borderBottom: "1px solid #F3F4F6",
-                }}>
-                  {/* Product image placeholder */}
-                  <div style={{
-                    width: 72, height: 72, borderRadius: 10,
-                    background: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 30, flexShrink: 0,
+              {loadingCart ? (
+                <p style={{ color: "#9CA3AF", fontSize: 13 }}>Memuat produk...</p>
+              ) : cartItems.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <p style={{ color: "#9CA3AF", fontSize: 13 }}>Tidak ada produk di keranjang.</p>
+                  <Link href="/products" style={{ fontSize: 13, fontWeight: 600, color: "#1A3C34" }}>
+                    Lihat produk
+                  </Link>
+                </div>
+              ) : (
+                cartItems.map((item) => (
+                  <div key={item.id} style={{
+                    display: "flex", gap: 14, padding: "12px 0",
+                    borderBottom: "1px solid #F3F4F6",
                   }}>
-                    {item.imageEmoji}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>{item.store}</p>
-                    <p style={{ margin: "2px 0 3px", fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>{item.name}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: "#9CA3AF" }}>Varian: {item.variant}</p>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>x{item.qty}</span>
-                      <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>{fmt(item.price * item.qty)}</span>
+                    <div style={{
+                      width: 72, height: 72, borderRadius: 10,
+                      background: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 30, flexShrink: 0,
+                    }}>
+                      📦
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>
+                        {item.product?.store?.store_name || item.store_name || "Toko"}
+                      </p>
+                      <p style={{ margin: "2px 0 3px", fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>
+                        {item.product?.name || item.name}
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                        <span style={{ fontSize: 12, color: "#6B7280" }}>x{item.qty}</span>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>
+                          {fmt(Number(item.subtotal || (item.product?.price || 0) * item.qty))}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
 
-              {/* Note */}
               <div style={{ marginTop: 14 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
                   Catatan untuk Penjual (opsional)
                 </label>
                 <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
                   placeholder="Contoh: tolong bungkus rapi ya..."
                   rows={2}
                   style={{
-                    width: "100%", padding: "10px 12px",
-                    borderRadius: 10, border: "1.5px solid #E5E7EB",
-                    background: "#FAFAF8", fontSize: 13, color: "#374151",
-                    fontFamily: "inherit", resize: "vertical",
-                    outline: "none", boxSizing: "border-box",
+                    width: "100%", padding: "10px 12px", borderRadius: 10,
+                    border: "1.5px solid #E5E7EB", background: "#FAFAF8", fontSize: 13,
+                    fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box",
                   }}
                 />
               </div>
             </SectionCard>
 
-            {/* 3. Opsi Pengiriman */}
-            <SectionCard title="🚚 Opsi Pengiriman">
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {SHIPPING_OPTIONS.map((opt) => (
-                  <div
-                    key={opt.id}
-                    onClick={() => setSelectedShipping(opt.id)}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "12px 14px", borderRadius: 10, cursor: "pointer",
-                      border: selectedShipping === opt.id ? "2px solid #1A3C34" : "1.5px solid #E5E7EB",
-                      background: selectedShipping === opt.id ? "#F0FAF8" : "#FAFAFA",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 16, height: 16, borderRadius: "50%",
-                        border: selectedShipping === opt.id ? "none" : "1.5px solid #D1D5DB",
-                        background: selectedShipping === opt.id ? "#1A3C34" : "#fff",
-                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      }}>
-                        {selectedShipping === opt.id && (
-                          <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                            <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <span style={{ fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>{opt.label}</span>
-                        <span style={{ fontSize: 12, color: "#9CA3AF", marginLeft: 6 }}>Estimasi {opt.eta}</span>
-                      </div>
-                    </div>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>{fmt(opt.price)}</span>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-
-            {/* 4. Metode Pembayaran */}
+            {/* 3. Metode Pembayaran */}
             <SectionCard title="💳 Metode Pembayaran">
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {PAYMENT_METHODS.map((pm) => (
-                  <div
-                    key={pm.id}
-                    onClick={() => setSelectedPayment(pm.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 14px", borderRadius: 10, cursor: "pointer",
-                      border: selectedPayment === pm.id ? "2px solid #1A3C34" : "1.5px solid #E5E7EB",
-                      background: selectedPayment === pm.id ? "#F0FAF8" : "#FAFAFA",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <div style={{
-                      width: 16, height: 16, borderRadius: "50%",
-                      border: selectedPayment === pm.id ? "none" : "1.5px solid #D1D5DB",
-                      background: selectedPayment === pm.id ? "#1A3C34" : "#fff",
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      {selectedPayment === pm.id && (
-                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 18 }}>{pm.icon}</span>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>{pm.label}</span>
-                  </div>
-                ))}
+              <div style={{
+                padding: "14px 16px", borderRadius: 12,
+                border: "2px solid #1A3C34", background: "#F0FBF8",
+                display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <span style={{ fontSize: 20 }}>💳</span>
+                <span style={{ fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>E-Wallet</span>
               </div>
+              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
+                Pembayaran dilakukan melalui E-Wallet internal.
+              </p>
             </SectionCard>
 
           </div>
@@ -364,81 +346,22 @@ export default function CheckoutPage() {
           {/* ── RIGHT COLUMN: Order Summary ── */}
           <div style={{ position: "sticky", top: 72 }}>
             <div style={{
-              background: "#fff", borderRadius: 16,
-              border: "1px solid #EBEBEB",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-              overflow: "hidden",
+              background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.05)", overflow: "hidden",
             }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6" }}>
                 <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Ringkasan Pesanan</span>
               </div>
               <div style={{ padding: "18px 20px" }}>
-
-                {/* Items summary */}
-                {CART_ITEMS.map((item) => (
-                  <div key={item.id} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                    marginBottom: 10, gap: 8,
-                  }}>
-                    <span style={{ fontSize: 13, color: "#374151", flex: 1 }}>
-                      {item.name} <span style={{ color: "#9CA3AF" }}>x{item.qty}</span>
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A", flexShrink: 0 }}>
-                      {fmt(item.price * item.qty)}
-                    </span>
-                  </div>
-                ))}
-
-                <div style={{ height: 1, background: "#F3F4F6", margin: "12px 0" }} />
-
-                {/* Voucher */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
-                    Kode Voucher
-                  </label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input
-                      value={voucherCode}
-                      onChange={(e) => { setVoucherCode(e.target.value); setVoucherApplied(false); }}
-                      placeholder="Cth: HEMAT25"
-                      style={{
-                        flex: 1, padding: "8px 10px", borderRadius: 8,
-                        border: "1.5px solid #E5E7EB", fontSize: 12,
-                        fontFamily: "inherit", outline: "none",
-                        background: "#FAFAF8",
-                      }}
-                    />
-                    <button
-                      onClick={handleApplyVoucher}
-                      style={{
-                        padding: "8px 14px", borderRadius: 8,
-                        background: "#1A3C34", color: "#fff",
-                        border: "none", fontSize: 12, fontWeight: 700,
-                        cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-                      }}
-                    >
-                      Pakai
-                    </button>
-                  </div>
-                  {voucherApplied && (
-                    <p style={{ margin: "5px 0 0", fontSize: 11, color: "#16A34A", fontWeight: 600 }}>
-                      ✅ Voucher berhasil! Hemat {fmt(25000)}
-                    </p>
-                  )}
-                  {!voucherApplied && voucherCode && (
-                    <p style={{ margin: "5px 0 0", fontSize: 11, color: "#DC2626" }}>
-                      Kode tidak valid. Coba HEMAT25 😊
-                    </p>
-                  )}
-                </div>
-
-                <div style={{ height: 1, background: "#F3F4F6", marginBottom: 12 }} />
-
-                {/* Price breakdown */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <Row label="Subtotal" value={fmt(subtotal)} />
-                  <Row label={`Ongkir (${shipping?.label})`} value={fmt(shippingCost)} />
-                  {voucherApplied && <Row label="Diskon Voucher" value={`-${fmt(discount)}`} valueColor="#16A34A" />}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "#6B7280" }}>Subtotal ({cartItems.length} item)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A" }}>{fmt(subtotal)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "#6B7280" }}>Ongkos Kirim</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A" }}>{fmt(shipping)}</span>
+                  </div>
                 </div>
 
                 <div style={{ height: 1, background: "#F3F4F6", margin: "12px 0" }} />
@@ -448,40 +371,22 @@ export default function CheckoutPage() {
                   <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>{fmt(total)}</span>
                 </div>
 
-                {/* CTA */}
                 <button
                   onClick={handlePlaceOrder}
-                  disabled={loading}
-                  className="hover-btn"
+                  disabled={submitting || loadingCart || cartItems.length === 0}
                   style={{
                     width: "100%", marginTop: 18, height: 52, borderRadius: 14,
-                    background: loading ? "#4DB6AC" : "#1A3C34",
+                    background: submitting || loadingCart || cartItems.length === 0 ? "#4DB6AC" : "#1A3C34",
                     color: "#fff", fontWeight: 700, fontSize: 16,
-                    border: "none", cursor: loading ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", display: "flex", alignItems: "center",
-                    justifyContent: "center", gap: 8,
+                    border: "none", cursor: submitting || loadingCart || cartItems.length === 0 ? "not-allowed" : "pointer",
+                    fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   }}
                 >
-                  {loading ? (
-                    <>
-                      <svg className="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-                        <path d="M12 2a10 10 0 0110 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
-                      </svg>
-                      Memproses...
-                    </>
-                  ) : (
-                    <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                      Buat Pesanan
-                    </>
-                  )}
+                  {submitting ? "Memproses..." : "Buat Pesanan"}
                 </button>
 
                 <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 11, color: "#9CA3AF", lineHeight: 1.6 }}>
-                  Dengan menekan tombol di atas, kamu menyetujui<br/>
+                  Dengan menekan tombol di atas, kamu menyetujui<br />
                   <span style={{ color: "#1A3C34", fontWeight: 500, cursor: "pointer" }}>Syarat & Ketentuan</span> PABW Shop.
                 </p>
               </div>
@@ -490,15 +395,6 @@ export default function CheckoutPage() {
 
         </div>
       </main>
-    </div>
-  );
-}
-
-function Row({ label, value, valueColor }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ fontSize: 13, color: "#6B7280" }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: valueColor ?? "#0A0A0A" }}>{value}</span>
     </div>
   );
 }
