@@ -7,11 +7,13 @@ import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
 
+const STORAGE_KEY = "chat_session_id";
 const fmt = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
 /**
  * Slide-in chat sidebar rendered as a block element in the document flow.
  * Sits to the right of the product content — pushes it aside instead of overlaying.
+ * Sessions are linked with /chat page via sessionStorage.
  */
 export default function ChatPopup({ product, onClose, initialSessionId }) {
   const router = useRouter();
@@ -22,35 +24,56 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
   const [loading, setLoading] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [sessionId, setSessionId] = useState(initialSessionId || null);
+  const [sessionId, setSessionId] = useState(null);
   const [visible, setVisible] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const hasExistingSessionRef = useRef(!!(initialSessionId || sessionStorage.getItem(STORAGE_KEY)));
 
   // Slide-in animation on mount
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
-  // Load existing messages when resuming a session
+  // On mount: pick up initialSessionId OR stored session from /chat page, fetch sessions
   useEffect(() => {
-    if (!initialSessionId) return;
+    const storedId = sessionStorage.getItem(STORAGE_KEY);
+    const sid = initialSessionId || (storedId ? Number(storedId) : null);
+    if (sid) {
+      setSessionId(sid);
+      chatService
+        .getSessionMessages(sid)
+        .then((msgs) => {
+          setMessages(
+            msgs.map((m) => ({
+              role: m.role,
+              content: m.content,
+              products: m.suggested_products || [],
+              intent: m.intent,
+              entities: m.entities || {},
+            }))
+          );
+        })
+        .catch(() => {});
+    }
+
+    // Fetch recent sessions list (linked with /chat page)
     chatService
-      .getSessionMessages(initialSessionId)
-      .then((msgs) => {
-        setMessages(
-          msgs.map((m) => ({
-            role: m.role,
-            content: m.content,
-            products: m.suggested_products || [],
-            intent: m.intent,
-            entities: m.entities || {},
-          }))
-        );
-      })
+      .getSessions()
+      .then((sess) => setSessions(sess))
       .catch(() => {});
   }, [initialSessionId]);
+
+  // Sync sessionId to sessionStorage so /chat page can pick it up
+  useEffect(() => {
+    if (sessionId) {
+      sessionStorage.setItem(STORAGE_KEY, String(sessionId));
+    }
+  }, [sessionId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -67,12 +90,21 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
     if (initialized || !product) return;
     setInitialized(true);
 
-    if (initialSessionId) return; // resuming existing chat — don't re-seed
+    // Don't re-seed if resuming an existing session from /chat page
+    if (hasExistingSessionRef.current) return;
 
     const seedMsg = `Halo! Saya sedang melihat produk "${product.name}" (${fmt(product.price)}). Bisakah kamu kasih info lebih detail tentang produk ini?`;
     sendMessage(seedMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, initialized, initialSessionId]);
+  }, [product, initialized]);
+
+  // Refresh sessions list in background
+  const refreshSessions = useCallback(() => {
+    chatService
+      .getSessions()
+      .then((sess) => setSessions(sess))
+      .catch(() => {});
+  }, []);
 
   const handleAddToCart = useCallback(async (productId) => {
     if (addingToCart) return;
@@ -112,7 +144,11 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
         history: messages.map((m) => ({ role: m.role, content: m.content })),
       });
 
-      if (result.session_id) setSessionId(result.session_id);
+      if (result.session_id) {
+        setSessionId(result.session_id);
+        // Refresh sessions list so /chat page sees the new session
+        refreshSessions();
+      }
 
       const assistantMsg = {
         role: "assistant",
@@ -132,7 +168,67 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, sessionId]);
+  }, [input, loading, messages, sessionId, refreshSessions]);
+
+  const handleSelectSession = useCallback(async (id) => {
+    if (id === sessionId) return;
+    setSessionsOpen(false);
+    setLoading(true);
+    try {
+      const msgs = await chatService.getSessionMessages(id);
+      setSessionId(id);
+      sessionStorage.setItem(STORAGE_KEY, String(id));
+      setMessages(
+        msgs.map((m) => ({
+          role: m.role,
+          content: m.content,
+          products: m.suggested_products || [],
+          intent: m.intent,
+          entities: m.entities || {},
+        }))
+      );
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `❌ Gagal memuat sesi: ${e.message}`, isNotification: true },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  const handleNewChat = useCallback(() => {
+    setMessages([]);
+    setSessionId(null);
+    sessionStorage.removeItem(STORAGE_KEY);
+    setSessionsOpen(false);
+    setInitialized(false);
+    setInput("");
+  }, []);
+
+  const handleDeleteSession = useCallback(async (sid) => {
+    if (deletingId) return;
+    setDeletingId(sid);
+    try {
+      await chatService.deleteSession(sid);
+      setSessions((prev) => {
+        const remaining = prev.filter((s) => s.id !== sid);
+        if (sid === sessionId) {
+          // If deleted the active session, switch to newest or reset
+          if (remaining.length > 0) {
+            handleSelectSession(remaining[0].id);
+          } else {
+            handleNewChat();
+          }
+        }
+        return remaining;
+      });
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setDeletingId(null);
+    }
+  }, [deletingId, sessionId, handleSelectSession, handleNewChat]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -153,31 +249,89 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
           ? "w-[420px] max-w-[95vw] opacity-100"
           : "w-0 max-w-0 opacity-0"
       }`}
-      style={{ minHeight: "calc(100vh - 56px)" }} // full height below sticky navbar (56px)
+      style={{ minHeight: "calc(100vh - 56px)" }}
     >
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#F0F0F0] flex-shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-[#1A3C34] flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
-              <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-            </svg>
+      {/* ── Header with session picker ── */}
+      <div className="border-b border-[#F0F0F0] flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#1A3C34] flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
+                <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-[#1A1A1A] truncate">AI Assistant</p>
+              <p className="text-[10px] text-gray-400 truncate">{product?.name}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[#1A1A1A] truncate">AI Assistant</p>
-            <p className="text-[10px] text-gray-400 truncate">{product?.name}</p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSessionsOpen(!sessionsOpen)}
+              className="flex items-center gap-1 bg-[#F5F5F5] rounded-lg px-2 py-1.5 text-[11px] font-semibold text-[#555] hover:bg-[#EBEBEB] transition-colors cursor-pointer"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              Riwayat
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={`transition-transform ${sessionsOpen ? "rotate-180" : ""}`}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <button
+              onClick={handleNewChat}
+              className="bg-[#1A3C34] text-white rounded-lg px-2 py-1.5 text-[11px] font-semibold hover:bg-[#2D6A5E] transition-colors cursor-pointer"
+            >
+              + Baru
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleClose}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5F5F5] transition-colors text-gray-400 hover:text-gray-600 cursor-pointer flex-shrink-0"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+
+        {/* ── Collapsible recent sessions list ── */}
+        {sessionsOpen && (
+          <div className="border-t border-[#F0F0F0] max-h-[240px] overflow-y-auto">
+            {sessions.length === 0 ? (
+              <div className="px-4 py-3 text-[12px] text-gray-400 text-center">Belum ada percakapan</div>
+            ) : (
+              sessions.slice(0, 5).map((s) => (
+                <div key={s.id}
+                  className={`flex items-center border-b border-[#F5F5F5] last:border-b-0 ${
+                    s.id === sessionId ? "bg-[#F0FBF8]" : ""
+                  }`}>
+                  <button
+                    onClick={() => handleSelectSession(s.id)}
+                    className="flex-1 text-left px-4 py-2.5 hover:bg-[#F0FBF8] transition-colors cursor-pointer min-w-0"
+                  >
+                    <p className="text-[12px] font-semibold text-[#1A1A1A] truncate">{s.title}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{s.message_count} pesan</p>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+                    disabled={deletingId === s.id}
+                    className="px-3 py-2.5 text-gray-300 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0 disabled:opacity-30"
+                    title="Hapus sesi"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Message list ── */}
@@ -194,6 +348,20 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
                 <div className="w-1.5 h-1.5 rounded-full bg-[#1A3C34] animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
+          </div>
+        )}
+
+        {messages.length === 0 && !loading && (
+          <div className="h-full flex flex-col items-center justify-center text-center py-12">
+            <div className="w-12 h-12 rounded-2xl bg-[#F0FBF8] flex items-center justify-center mb-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A3C34" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h10a2 2 0 012 2v8"/>
+              </svg>
+            </div>
+            <p className="text-[13px] font-semibold text-[#1A1A1A] mb-1">Tanya tentang produk ini</p>
+            <p className="text-[11px] text-gray-400 max-w-[220px]">
+              Ketik pertanyaan atau klik saran di bawah untuk memulai
+            </p>
           </div>
         )}
 
@@ -268,7 +436,7 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
         <div className="mt-2 text-center">
           <button
             onClick={() => {
-              if (sessionId) sessionStorage.setItem("chat_session_id", String(sessionId));
+              if (sessionId) sessionStorage.setItem(STORAGE_KEY, String(sessionId));
               router.push("/chat");
             }}
             className="text-[11px] text-gray-400 hover:text-[#1A3C34] transition-colors cursor-pointer"
