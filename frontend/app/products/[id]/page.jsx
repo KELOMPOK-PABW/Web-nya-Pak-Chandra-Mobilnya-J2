@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
+import { ReviewList } from "@/components/reviews/ReviewList";
 
 const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
 
@@ -76,8 +77,9 @@ export default function ProductDetailPage() {
             <p className="text-sm text-[#777] mt-2">Coba kembali ke halaman daftar produk.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="space-y-6">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="space-y-6">
               <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
                 <div
                   className="rounded-3xl h-72 flex items-center justify-center text-6xl bg-[#F3F4F6]"
@@ -116,9 +118,9 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
 
-            <aside className="space-y-6">
+              <aside className="space-y-6">
               <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
                 <h2 className="text-base font-semibold text-[#1A1A1A]">Ringkasan Pembelian</h2>
                 <div className="mt-4 space-y-3 text-sm">
@@ -136,7 +138,19 @@ export default function ProductDetailPage() {
                   </Link>
                 </div>
               </div>
+
+              <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
+                <h3 className="text-base font-semibold text-[#1A1A1A]">Highlight</h3>
+                <ul className="mt-3 space-y-2 text-sm text-[#777]">
+                  <li>• Garansi 7 hari pengembalian</li>
+                  <li>• Pengiriman cepat seluruh Indonesia</li>
+                  <li>• Produk asli dari seller terverifikasi</li>
+                </ul>
+              </div>
             </aside>
+            </div>
+
+            <ReviewList title={`Ulasan ${product.name}`} />
           </div>
         )}
       </main>

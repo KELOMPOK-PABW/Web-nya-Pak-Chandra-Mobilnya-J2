@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
@@ -24,8 +24,25 @@ export default function SellerApplyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [existingApplication, setExistingApplication] = useState(null);
 
-  const existingApplication = useMemo(() => sellerService.getApplicationStatus(), []);
+  useEffect(() => {
+    let active = true;
+
+    async function loadApplication() {
+      try {
+        const data = await sellerService.getApplicationStatus();
+        if (active) setExistingApplication(data);
+      } catch {
+        if (active) setExistingApplication(null);
+      }
+    }
+
+    loadApplication();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const onChange = (event) => {
     const { name, value } = event.target;
@@ -56,11 +73,12 @@ export default function SellerApplyPage() {
 
     setIsSubmitting(true);
     try {
-      sellerService.submitApplication(form);
+      const application = await sellerService.submitApplication(form);
+      setExistingApplication(application);
       setSuccessMsg("Pengajuan seller berhasil dikirim. Silakan cek status pengajuan.");
       setForm(initialForm);
-    } catch {
-      setError("Terjadi kesalahan saat mengirim pengajuan. Coba lagi.");
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan saat mengirim pengajuan. Coba lagi.");
     } finally {
       setIsSubmitting(false);
     }

@@ -9,6 +9,7 @@ import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
 import ChatPopup from "@/components/chat/ChatPopup";
+import { ReviewList } from "@/components/reviews/ReviewList";
 
 const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
 
@@ -177,6 +178,9 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Reviews */}
+              <ReviewList title={`Ulasan ${product.name}`} />
             </div>
 
             {/* Sidebar */}
