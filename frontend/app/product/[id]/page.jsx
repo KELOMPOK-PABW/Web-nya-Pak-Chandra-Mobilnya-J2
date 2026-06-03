@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
+import { ReviewList } from "@/components/reviews/ReviewList";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -39,7 +40,7 @@ export default function ProductDetail() {
         ) : error ? (
           <div className="text-red-600">Error: {error}</div>
         ) : product ? (
-          <div>
+          <div className="space-y-6">
             <h1 className="text-2xl font-bold text-[#1A1A1A] mb-4">{product.name}</h1>
             <div className="mb-4 text-sm text-[#777]">{product.desc}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -53,6 +54,7 @@ export default function ProductDetail() {
                 <div className="mt-2">Kategori: {product.category?.category_name}</div>
               </div>
             </div>
+            <ReviewList title={`Ulasan ${product.name}`} />
           </div>
         ) : (
           <div>Produk tidak ditemukan</div>
