@@ -83,9 +83,27 @@ const updateCategory = async (req, res) => {
   }
 };
 
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await categoryService.deleteCategory(id);
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    const statusCode = error.message === "Kategori tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllCategories,
   getCategoryById,
   createCategory,
   updateCategory,
+  deleteCategory,
 };

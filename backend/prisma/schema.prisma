@@ -32,6 +32,7 @@ model User {
   wallets              Wallet[]
   reviews              Review[]
   chatSessions         ChatSession[]
+  sellerApplications   SellerApplication[]
 
   @@map("users")
 }
@@ -145,6 +146,25 @@ model CartItem {
   @@index([cartId])
   @@index([productId])
   @@map("cart_items")
+}
+
+model SellerApplication {
+  id             Int      @id @default(autoincrement()) @map("application_id")
+  userId         Int      @map("user_id")
+  storeName      String   @map("store_name")
+  phone          String?
+  address        String?
+  city           String?
+  status         String   @default("pending") // pending | approved | rejected
+  reviewerNote   String?  @map("reviewer_note")
+  reviewedAt     DateTime? @map("reviewed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId])
+  @@map("seller_applications")
 }
 
 model Order {

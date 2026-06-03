@@ -3,9 +3,28 @@ const productRepository = require("../repository/productRepository");
 const productService = require("./productService");
 const llmService = require("./llmService");
 
-const CATALOG_SNAPSHOT_SIZE = 30;
+const CATALOG_SNAPSHOT_SIZE = 50;
+const CATALOG_FILTERED_SIZE = 100;
 const HISTORY_SIZE = 10;
 const MAX_SESSIONS_PER_USER = 5;
+
+// Common product keywords to detect in user messages for catalog filtering
+const PRODUCT_KEYWORDS = [
+  "laptop", "smartphone", "hp", "sepatu", "baju", "kaos", "kemeja", "dress",
+  "tas", "jam", "parfum", "fragrance", "furniture", "meja", "kursi",
+  "makeup", "skincare", "kecantikan", "motor", "mobil", "aksesoris",
+  "olahraga", "sports", "elektronik", "komputer", "tablet", "iphone",
+  "samsung", "xiaomi", "macbook", "asus", "lenovo", "acer", "gaming",
+];
+
+const detectKeyword = (message) => {
+  if (!message) return null;
+  const msg = message.toLowerCase();
+  for (const kw of PRODUCT_KEYWORDS) {
+    if (msg.includes(kw)) return kw;
+  }
+  return null;
+};
 
 const formatMessage = (msg, hydratedProducts, entities) => ({
   id: msg.id,
@@ -18,9 +37,15 @@ const formatMessage = (msg, hydratedProducts, entities) => ({
   created_at: msg.createdAt,
 });
 
-const fetchProductsContext = async () => {
+const fetchProductsContext = async (message) => {
   try {
-    return await productRepository.getAllProducts({ skip: 0, take: CATALOG_SNAPSHOT_SIZE });
+    const keyword = detectKeyword(message);
+    const opts = { skip: 0, take: CATALOG_SNAPSHOT_SIZE };
+    if (keyword) {
+      opts.keyword = keyword;
+      opts.take = CATALOG_FILTERED_SIZE;
+    }
+    return await productRepository.getAllProducts(opts);
   } catch (e) {
     return [];
   }
@@ -80,7 +105,7 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     });
   }
 
-  const productsContext = await fetchProductsContext();
+  const productsContext = await fetchProductsContext(message);
 
   const llmResult = await llmService.classifyAndSuggest({
     message,
@@ -156,7 +181,7 @@ const sendMessage = async ({ userId, sessionId, message }) => {
   const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
   const history = messagesToHistory(recent.filter((m) => m.id !== userMessage.id));
 
-  const productsContext = await fetchProductsContext();
+  const productsContext = await fetchProductsContext(message);
 
   const llmResult = await llmService.classifyAndSuggest({
     message,

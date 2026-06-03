@@ -34,10 +34,17 @@ const findByName = async (name) => {
   });
 };
 
+const deleteById = async (id) => {
+  return prisma.category.delete({
+    where: { id: Number(id) },
+  });
+};
+
 module.exports = {
   findAll,
   findById,
   create,
   update,
   findByName,
+  deleteById,
 };
