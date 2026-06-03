@@ -17,9 +17,11 @@ const sellerMenus = [
 ];
 
 export default function MyStorePage() {
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     storeName: "",
     slogan: "",
@@ -30,15 +32,33 @@ export default function MyStorePage() {
   });
 
   useEffect(() => {
-    const store = sellerService.getMyStore();
-    setForm({
-      storeName: store.storeName || "",
-      slogan: store.slogan || "",
-      city: store.city || "",
-      address: store.address || "",
-      phone: store.phone || "",
-      description: store.description || "",
-    });
+    let active = true;
+
+    async function loadStore() {
+      setIsLoading(true);
+      setError("");
+      try {
+        const store = await sellerService.getMyStore();
+        if (!active) return;
+        setForm({
+          storeName: store.storeName || "",
+          slogan: store.slogan || "",
+          city: store.city || "",
+          address: store.address || "",
+          phone: store.phone || "",
+          description: store.description || "",
+        });
+      } catch (err) {
+        if (active) setError(err.message || "Gagal mengambil data toko.");
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    loadStore();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const onChange = (event) => {
@@ -50,12 +70,18 @@ export default function MyStorePage() {
     event.preventDefault();
     setIsSaving(true);
     setSaveMessage("");
+    setError("");
     try {
-      sellerService.updateMyStore(form);
+      const store = await sellerService.updateMyStore(form);
+      setForm((prev) => ({
+        ...prev,
+        storeName: store.storeName || prev.storeName,
+        phone: store.phone || prev.phone,
+      }));
       setSaveMessage("Informasi toko berhasil diperbarui.");
       setIsEditing(false);
-    } catch {
-      setSaveMessage("Gagal menyimpan perubahan. Silakan coba lagi.");
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan perubahan. Silakan coba lagi.");
     } finally {
       setIsSaving(false);
     }
@@ -76,6 +102,9 @@ export default function MyStorePage() {
           </section>
 
           <Card>
+            {isLoading ? (
+              <div className="py-12 text-center text-gray-500">Memuat data toko...</div>
+            ) : (
             <form onSubmit={onSave} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
@@ -110,6 +139,10 @@ export default function MyStorePage() {
                 <p className="text-sm text-[#166534]">{saveMessage}</p>
               )}
 
+              {error && (
+                <p className="text-sm text-[#B91C1C]">{error}</p>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 {!isEditing ? (
                   <Button type="button" onClick={() => setIsEditing(true)}>Edit Informasi Toko</Button>
@@ -121,6 +154,7 @@ export default function MyStorePage() {
                 )}
               </div>
             </form>
+            )}
           </Card>
         </main>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
@@ -35,7 +35,44 @@ function formatDate(isoDate) {
 }
 
 export default function SellerApplicationStatusPage() {
-  const application = useMemo(() => sellerService.getApplicationStatus(), []);
+  const [application, setApplication] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadApplication() {
+      setIsLoading(true);
+      setError("");
+      try {
+        const data = await sellerService.getApplicationStatus();
+        if (active) setApplication(data);
+      } catch (err) {
+        if (active) setError(err.message || "Gagal mengambil status pengajuan.");
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    loadApplication();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+        <Navbar />
+        <main className="max-w-[1280px] mx-auto px-6 py-8">
+          <Card className="text-center py-12">
+            <p className="text-gray-600">Memuat status pengajuan...</p>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   if (!application) {
     return (
@@ -44,7 +81,9 @@ export default function SellerApplicationStatusPage() {
         <main className="max-w-[1280px] mx-auto px-6 py-8">
           <Card className="text-center py-12">
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Belum Ada Pengajuan Seller</h1>
-            <p className="text-gray-600 mt-2">Kamu belum mengirim pengajuan. Isi formulir dulu agar bisa diproses admin.</p>
+            <p className="text-gray-600 mt-2">
+              {error || "Kamu belum mengirim pengajuan. Isi formulir dulu agar bisa diproses admin."}
+            </p>
             <div className="mt-6">
               <Link href="/seller/apply">
                 <Button>Ajukan Menjadi Seller</Button>
