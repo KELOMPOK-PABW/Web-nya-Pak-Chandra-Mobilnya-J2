@@ -1,8 +1,6 @@
 import { authService } from "./authService";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-// Use relative /api path in frontend to avoid CORS (rewrites or same-origin)
-const API_PREFIX = "/api";
 
 async function handleResponse(res) {
   const data = await res.json().catch(() => ({}));
@@ -23,7 +21,7 @@ function authHeaders() {
 export const paymentService = {
   // GET /payments/{order_id}
   async getPaymentByOrderId(orderId) {
-    const res = await fetch(`${API_PREFIX}/payments/${orderId}`, {
+    const res = await fetch(`${BASE_URL}/payments/${orderId}`, {
       headers: authHeaders(),
     });
     const data = await handleResponse(res);
@@ -32,7 +30,7 @@ export const paymentService = {
 
   // POST /payments → { data: { payment_id, status } }
   async createPayment(orderId) {
-    const res = await fetch(`${API_PREFIX}/payments`, {
+    const res = await fetch(`${BASE_URL}/payments`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({ order_id: orderId }),
@@ -43,7 +41,7 @@ export const paymentService = {
 
   // POST /payments/{id}/pay → { data: { status, balance_after } }
   async pay(paymentId) {
-    const res = await fetch(`${API_PREFIX}/payments/${paymentId}/pay`, {
+    const res = await fetch(`${BASE_URL}/payments/${paymentId}/pay`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({ payment_id: paymentId }),

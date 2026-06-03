@@ -28,6 +28,24 @@ const authController = require("./controller/authController")
 const reviewController = require("./controller/reviewController")
 const { authenticate } = require("./middleware/authMiddleware")
 
+// Middleware
+app.use(cors({
+  origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN,
+  credentials: true,
+}));
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for Tailwind inline styles
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(compression());
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { success: false, message: "Terlalu banyak permintaan, coba lagi nanti" },
+  })
+);
+app.use(pinoHttp({ logger }));
 app.use(express.json());
 
 // Public routes
@@ -49,6 +67,10 @@ app.use("/api/llm", authenticate, llmRoutes)
 app.get("/api/my/reviews", authenticate, reviewController.getMyReviews)
 app.get("/api/me", authenticate, authController.getMe)
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+// Error handling
+app.use(notFound);
+app.use(errorHandler);
+
+app.listen(env.PORT, () => {
+  console.log(`Server running on port ${env.PORT}`);
 });

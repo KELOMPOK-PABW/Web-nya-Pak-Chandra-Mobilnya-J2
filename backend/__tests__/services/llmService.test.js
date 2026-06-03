@@ -1,3 +1,4 @@
+// ── Gemini mocks (used by geminiProvider.js) ──
 const mockGenerateContent = jest.fn();
 
 jest.mock("@google/genai", () => {
@@ -9,6 +10,11 @@ jest.mock("@google/genai", () => {
   };
 });
 
+// ── Ollama mocks (used by ollamaProvider.js) ──
+// We mock global fetch; Node 18+ has it, but we want deterministic tests.
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
 const llmService = require("../../src/services/llmService");
 
 const sampleCatalog = [
@@ -16,11 +22,15 @@ const sampleCatalog = [
   { id: 2, name: "HP Murah", price: 1500000, stock: 10, description: "" },
 ];
 
-describe("llmService.classifyAndSuggest", () => {
+// ─────────────────────────────────────────────
+// Gemini provider tests
+// ─────────────────────────────────────────────
+describe("llmService.classifyAndSuggest (gemini provider)", () => {
   const ORIGINAL_KEY = process.env.GEMINI_API_KEY;
 
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.LLM_PROVIDER; // default → gemini
     mockGenerateContent.mockReset();
   });
 
@@ -359,5 +369,246 @@ describe("llmService.classifyAndSuggest", () => {
     expect(result.intent).toBe("manage_user_admin");
     expect(result.entities.action).toBe("list_users");
     expect(result.entities.role).toBe("buyer");
+  });
+});
+
+// ─────────────────────────────────────────────
+// Ollama provider tests
+// ─────────────────────────────────────────────
+describe("llmService.classifyAndSuggest (ollama provider)", () => {
+  const ollamaPayload = (content) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ message: { role: "assistant", content } }),
+  });
+
+  beforeEach(() => {
+    process.env.LLM_PROVIDER = "ollama";
+    process.env.OLLAMA_BASE_URL = "http://localhost:11434";
+    process.env.OLLAMA_MODEL = "qwen2.5:7b";
+    mockFetch.mockReset();
+  });
+
+  afterAll(() => {
+    delete process.env.LLM_PROVIDER;
+  });
+
+  it("calls Ollama /api/chat and returns structured result", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "search_product",
+          reply: "Berikut hasil pencarian:",
+          suggested_product_ids: [1, 999],
+          entities: { product: "laptop", action: "search" },
+        })
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "cari laptop",
+      history: [],
+      productsContext: sampleCatalog,
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const callArgs = mockFetch.mock.calls[0];
+    expect(callArgs[0]).toBe("http://localhost:11434/api/chat");
+    expect(callArgs[1].method).toBe("POST");
+
+    const body = JSON.parse(callArgs[1].body);
+    expect(body.model).toBe("qwen2.5:7b");
+    expect(body.stream).toBe(false);
+    expect(body.messages[0].role).toBe("system");
+    expect(body.messages[body.messages.length - 1].role).toBe("user");
+
+    expect(result.intent).toBe("search_product");
+    expect(result.reply).toBe("Berikut hasil pencarian:");
+    expect(result.suggested_product_ids).toEqual([1]); // 999 filtered out
+    expect(result.entities).toEqual({ product: "laptop", action: "search" });
+  });
+
+  it("extracts JSON from markdown fenced response", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        '```json\n{"intent":"track_order","reply":"Pesanan #7 sedang dikirim.","suggested_product_ids":[],"entities":{"order_id":7,"action":"track"}}\n```'
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "lacak order #7",
+      productsContext: sampleCatalog,
+    });
+
+    expect(result.intent).toBe("track_order");
+    expect(result.entities.order_id).toBe(7);
+    expect(result.entities.action).toBe("track");
+  });
+
+  it("extracts JSON from response with surrounding prose", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        'Baik, berikut hasilnya:\n\n{"intent":"add_to_cart","reply":"Sabun ditambahkan.","suggested_product_ids":[],"entities":{"product":"sabun","action":"add"}}'
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "tambah sabun ke keranjang",
+      productsContext: sampleCatalog,
+    });
+
+    expect(result.intent).toBe("add_to_cart");
+    expect(result.entities.product).toBe("sabun");
+    expect(result.entities.action).toBe("add");
+  });
+
+  it("throws when Ollama returns empty content", async () => {
+    mockFetch.mockResolvedValue(ollamaPayload(""));
+
+    await expect(
+      llmService.classifyAndSuggest({ message: "x", productsContext: sampleCatalog })
+    ).rejects.toThrow("Layanan AI lokal tidak mengembalikan jawaban");
+  });
+
+  it("throws when Ollama is unreachable (fetch rejects)", async () => {
+    mockFetch.mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    await expect(
+      llmService.classifyAndSuggest({ message: "x", productsContext: sampleCatalog })
+    ).rejects.toThrow("Layanan AI lokal tidak dapat dijangkau");
+  });
+
+  it("throws when Ollama returns a non-200 status", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => "Internal Server Error",
+    });
+
+    await expect(
+      llmService.classifyAndSuggest({ message: "x", productsContext: sampleCatalog })
+    ).rejects.toThrow("Layanan AI lokal mengembalikan error HTTP 500");
+  });
+
+  it("falls back to search_product when Ollama returns unknown intent", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "unknown_intent",
+          reply: "Halo!",
+          suggested_product_ids: [],
+          entities: {},
+        })
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "halo",
+      productsContext: sampleCatalog,
+    });
+
+    expect(result.intent).toBe("search_product");
+  });
+
+  it("handles manage_product intent from Ollama", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "manage_product",
+          reply: "Stok kaos polos berhasil diperbarui menjadi 50.",
+          suggested_product_ids: [],
+          entities: { product: "kaos polos", action: "update_stock", stock: 50 },
+        })
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "update stok kaos polos jadi 50",
+      productsContext: sampleCatalog,
+    });
+
+    expect(result.intent).toBe("manage_product");
+    expect(result.entities.product).toBe("kaos polos");
+    expect(result.entities.action).toBe("update_stock");
+    expect(result.entities.stock).toBe(50);
+  });
+
+  it("handles manage_user_admin intent from Ollama", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "manage_user_admin",
+          reply: "User #42 telah dibanned.",
+          suggested_product_ids: [],
+          entities: { action: "ban_user", user_id: 42 },
+        })
+      )
+    );
+
+    const result = await llmService.classifyAndSuggest({
+      message: "ban user #42",
+      productsContext: sampleCatalog,
+    });
+
+    expect(result.intent).toBe("manage_user_admin");
+    expect(result.entities.action).toBe("ban_user");
+    expect(result.entities.user_id).toBe(42);
+  });
+
+  it("uses custom OLLAMA_BASE_URL and OLLAMA_MODEL from env", async () => {
+    process.env.OLLAMA_BASE_URL = "http://192.168.1.100:11434";
+    process.env.OLLAMA_MODEL = "llama3:8b";
+
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "search_product",
+          reply: "Hasil pencarian.",
+          suggested_product_ids: [],
+          entities: {},
+        })
+      )
+    );
+
+    await llmService.classifyAndSuggest({
+      message: "cari sesuatu",
+      productsContext: sampleCatalog,
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(mockFetch.mock.calls[0][0]).toBe("http://192.168.1.100:11434/api/chat");
+    expect(body.model).toBe("llama3:8b");
+  });
+
+  it("includes conversation history in Ollama messages", async () => {
+    mockFetch.mockResolvedValue(
+      ollamaPayload(
+        JSON.stringify({
+          intent: "search_product",
+          reply: "OK.",
+          suggested_product_ids: [],
+          entities: {},
+        })
+      )
+    );
+
+    await llmService.classifyAndSuggest({
+      message: "lanjutkan",
+      history: [
+        { role: "user", content: "cari baju" },
+        { role: "assistant", content: "Ini hasilnya..." },
+      ],
+      productsContext: sampleCatalog,
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.messages).toHaveLength(4); // system + 2 history + user
+    expect(body.messages[0].role).toBe("system");
+    expect(body.messages[1].role).toBe("user");
+    expect(body.messages[1].content).toBe("cari baju");
+    expect(body.messages[2].role).toBe("assistant");
+    expect(body.messages[2].content).toBe("Ini hasilnya...");
+    expect(body.messages[3].role).toBe("user");
+    expect(body.messages[3].content).toBe("lanjutkan");
   });
 });

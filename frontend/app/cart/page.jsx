@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
+import { useCartContext } from "@/components/CartContext";
 
 const formatRupiah = (value) =>
   new Intl.NumberFormat("id-ID", {
@@ -30,6 +31,7 @@ export default function CartPage() {
   const [success, setSuccess] = useState("");
 
   const isLoggedIn = Boolean(authService.getToken());
+  const { refreshCartCount } = useCartContext();
 
   const getDerivedCount = (cartItems) => ({
     total_items: cartItems.length,
@@ -47,6 +49,8 @@ export default function CartPage() {
       try {
         const count = await cartService.countCartItems();
         setCountInfo(count || getDerivedCount(normalizedItems));
+        // Refresh global cart context so Navbar badge stays in sync
+        refreshCartCount();
       } catch {
         setCountInfo(getDerivedCount(normalizedItems));
       }

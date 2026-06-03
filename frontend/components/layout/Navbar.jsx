@@ -4,12 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authService } from "../../services/authService";
-import { cartService } from "@/services/cartService";
+import { useCartContext } from "../CartContext";
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount } = useCartContext();
   const pathname = usePathname();
 
   const isSeller    = pathname.startsWith("/seller");
@@ -21,30 +21,6 @@ export function Navbar() {
     const u = authService.getUser();
     if (u) setUser(u);
   }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadCartCount() {
-      try {
-        const count = await cartService.countCartItems();
-        if (!active) return;
-        setCartCount(Number(count?.total_quantity || 0));
-      } catch {
-        if (active) setCartCount(0);
-      }
-    }
-
-    if (mounted && user && !isDashboard) {
-      loadCartCount();
-    } else if (mounted) {
-      setCartCount(0);
-    }
-
-    return () => {
-      active = false;
-    };
-  }, [mounted, user, isDashboard]);
 
   const initials = user?.full_name
     ? user.full_name
@@ -101,18 +77,29 @@ export function Navbar() {
       {/* Right: actions (cart for buyer, notifications, avatar) */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {!isDashboard && (
+          <Link href="/chat" title="AI Shopping Assistant" style={{ padding: 6, color: "rgba(255,255,255,0.9)", display: "flex", borderRadius: 8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8V4m0 0L8 8m4-4l4 4"/>
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h10a2 2 0 012 2v8"/>
+            </svg>
+          </Link>
+        )}
+
+        {!isDashboard && (
           <Link href="/cart" style={{ position: "relative", padding: 6, color: "rgba(255,255,255,0.9)", display: "flex", borderRadius: 8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
-            <span style={{
-              position: "absolute", top: 4, right: 0,
-              background: "#FF6B6B", color: "#fff",
-              fontSize: 9, fontWeight: 800,
-              width: 14, height: 14,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "50%", border: "1.5px solid #1A3C34",
-            }}>{cartCount}</span>
+            {cartCount > 0 && (
+              <span style={{
+                position: "absolute", top: 4, right: 0,
+                background: "#FF6B6B", color: "#fff",
+                fontSize: 9, fontWeight: 800,
+                width: 14, height: 14,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: "50%", border: "1.5px solid #1A3C34",
+              }}>{cartCount}</span>
+            )}
           </Link>
         )}
 

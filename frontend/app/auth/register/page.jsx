@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 
 const ROLES = [
-  { value: "user",   label: "Pembeli", desc: "Cari & beli produk" },
+  { value: "buyer",  label: "Pembeli", desc: "Cari & beli produk" },
   { value: "seller", label: "Penjual", desc: "Jual produk kamu" },
   { value: "kurir",  label: "Kurir",   desc: "Antar pesanan" },
 ];
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "user" });
+  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "buyer" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

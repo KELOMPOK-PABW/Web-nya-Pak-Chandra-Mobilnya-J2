@@ -1,8 +1,6 @@
 import { authService } from "./authService";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-// Use relative /api path in frontend to avoid CORS (rewrites or same-origin)
-const API_PREFIX = "/api";
 
 async function handleResponse(res) {
   const data = await res.json().catch(() => ({}));
@@ -23,7 +21,7 @@ function authHeaders() {
 export const walletService = {
   // GET /wallet → { data: { balance } }
   async getBalance() {
-    const res = await fetch(`${API_PREFIX}/wallet`, {
+    const res = await fetch(`${BASE_URL}/wallet`, {
       headers: authHeaders(),
     });
     const data = await handleResponse(res);
@@ -33,13 +31,12 @@ export const walletService = {
   // GET /wallet/transactions → { data: [...] }
   async getTransactions() {
     try {
-      const res = await fetch(`${API_PREFIX}/wallet/transactions`, {
+      const res = await fetch(`${BASE_URL}/wallet/transactions`, {
         headers: authHeaders(),
       });
       const data = await handleResponse(res);
       return data.data;
     } catch (err) {
-      // Jika gagal ambil transaksi, fallback ke array kosong
       return [];
     }
   },

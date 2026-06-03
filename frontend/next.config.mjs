@@ -1,11 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: import.meta.dirname,
+  },
   // Proxy API calls to backend during development to avoid CORS
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8081/api/:path*',
+        destination: 'http://localhost:3000/api/:path*',
       },
     ];
   },

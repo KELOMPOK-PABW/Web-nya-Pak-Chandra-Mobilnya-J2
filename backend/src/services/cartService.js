@@ -126,8 +126,7 @@ const getUserIdFromRequest = (req) => {
 };
 
 
-const validateCart = async (req) => {
-  const userId = getUserIdFromRequest(req);
+const validateCart = async ({ userId }) => {
 
   if (!userId) {
     return {
@@ -200,8 +199,7 @@ const validateCart = async (req) => {
   };
 };
 
-const countCartItems = async (req) => {
-  const userId = getUserIdFromRequest(req);
+const countCartItems = async ({ userId }) => {
 
   if (!userId) {
     return {

@@ -32,7 +32,9 @@ Proyek ini dikerjakan sebagai tugas mata kuliah **PABW (Perancangan dan Analisis
 - Tailwind CSS v4
 
 **LLM / AI**
-- Google Gemini API (digunakan pada branch `feat/chat-llm-gemini` untuk fitur chat)
+- Google Gemini API (default) — branch `feat/chat-llm-gemini`
+- Ollama (lokal) — mendukung model seperti Qwen2.5:7b, Llama 3, dsb.
+- Provider dapat diganti melalui environment variable `LLM_PROVIDER`
 
 ---
 
@@ -128,9 +130,17 @@ Buat file `.env` di dalam folder `backend/` dengan isi:
 # Koneksi database MySQL untuk Prisma
 DATABASE_URL="mysql://<user>:<password>@localhost:3306/pabw"
 
-# Kunci API Google Gemini — hanya diperlukan untuk fitur chat LLM
-# (branch feat/chat-llm-gemini)
+# ── LLM Provider (pilih salah satu: gemini | ollama) ──
+LLM_PROVIDER=gemini
+
+# Jika memakai Gemini (default):
 GEMINI_API_KEY="<masukkan-api-key-gemini>"
+# GEMINI_MODEL=gemini-2.5-flash   # opsional, ini default
+
+# Jika memakai Ollama (lokal):
+# LLM_PROVIDER=ollama
+# OLLAMA_BASE_URL=http://localhost:11434   # default
+# OLLAMA_MODEL=qwen2.5:7b                  # default, bisa diganti ke llama3:8b, mistral, dll.
 ```
 
 > Pastikan database `pabw` sudah dibuat di MySQL sebelum menjalankan migrasi Prisma.

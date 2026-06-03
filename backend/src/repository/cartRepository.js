@@ -135,20 +135,18 @@ const getCartByUserId = async(userID) => {
   })
 }
 
-const getCartItemByCartId = async (cartId) => {
-  return prisma.cartItem.findUnique({
-    where: {
-      cartId: {
-        cartId,
-      },
+const getCartItemsByCartId = async (cartId) => {
+  return prisma.cartItem.findMany({
+    where: { cartId: Number(cartId) },
+    include: {
+      product: true,
     },
-    include: {product: true}
   });
 };
 
 const getCartCountByCartId = async (cartId) => {
   const items = await prisma.cartItem.findMany({
-    where: { cart_id: Number(cartId) },
+    where: { cartId: Number(cartId) },
     select: {
       quantity: true,
     },
@@ -177,5 +175,5 @@ module.exports = {
   findCartItemByIdAndUser,
   getCartByUserId,
   getCartCountByCartId,
-  getCartItemByCartId
+  getCartItemsByCartId
 };
