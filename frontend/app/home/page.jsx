@@ -39,8 +39,14 @@ function ProductCard({ product }) {
   return (
     <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}
       className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors">
-      <div className="h-28 flex items-center justify-center bg-[#F0FBF8]">
-        <Package size={40} strokeWidth={1} color="#A5D6D0" />
+      <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name}
+            className="w-full h-full object-cover"
+            onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+        ) : (
+          <Package size={40} strokeWidth={1} color="#A5D6D0" />
+        )}
       </div>
       <div className="p-3">
         <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1">{product.name}</p>
@@ -331,8 +337,14 @@ export default function HomePage() {
                       <Link key={p.id} href={`/product/${p.id}`}
                         style={{ textDecoration: "none" }}
                         className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors">
-                        <div className="h-28 flex items-center justify-center bg-[#F0FBF8]">
-                          <Package size={40} strokeWidth={1} color="#A5D6D0" />
+                        <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
+                          {p.image_url ? (
+                            <img src={p.image_url} alt={p.name}
+                              className="w-full h-full object-cover"
+                              onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+                          ) : (
+                            <Package size={40} strokeWidth={1} color="#A5D6D0" />
+                          )}
                         </div>
                         <div className="p-3">
                           <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1">{p.name}</p>

@@ -85,8 +85,14 @@ export default function ProductsListPage() {
           ) : (
             products.map((product) => (
               <div key={product.id} className="bg-white border border-[#E8E8E8] rounded-2xl p-5 flex flex-col">
-                <div className="rounded-2xl h-40 flex items-center justify-center text-3xl bg-[#F3F4F6]">
-                  📦
+                <div className="rounded-2xl h-40 flex items-center justify-center bg-[#F3F4F6] overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name}
+                      className="w-full h-full object-cover"
+                      onError={e => { e.target.style.display = "none"; e.target.parentElement.innerText = "📦"; }} />
+                  ) : (
+                    <span className="text-3xl">📦</span>
+                  )}
                 </div>
                 <div className="mt-4 flex-1">
                   <div className="flex items-center justify-between text-xs text-[#888]">

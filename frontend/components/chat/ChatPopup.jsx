@@ -506,7 +506,15 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
                 href={`/product/${p.product_id ?? p.id}`}
                 className="block bg-white rounded-lg border border-[#EBEBEB] overflow-hidden flex-shrink-0 w-[130px] hover:border-[#1A3C34] transition-colors"
               >
-                <div className="h-14 flex items-center justify-center bg-[#F0FBF8] text-xl">📦</div>
+                <div className="h-14 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name}
+                      className="w-full h-full object-cover"
+                      onError={e => { e.target.style.display = "none"; e.target.parentElement.innerText = "📦"; }} />
+                  ) : (
+                    <span className="text-xl">📦</span>
+                  )}
+                </div>
                 <div className="p-1.5">
                   <p className="text-[10px] font-semibold text-[#1A1A1A] leading-snug line-clamp-2">
                     {p.name ?? p.product_name}
