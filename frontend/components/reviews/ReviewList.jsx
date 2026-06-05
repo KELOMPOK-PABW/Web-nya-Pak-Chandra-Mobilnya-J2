@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { reviewService } from "@/services/reviewService";
 
 export const REVIEW_DUMMY = [
   {
@@ -57,13 +58,39 @@ function Stars({ rating, size = "text-sm" }) {
   );
 }
 
-export function ReviewList({ reviews = REVIEW_DUMMY, title = "Ulasan Produk" }) {
+export function ReviewList({ reviews = REVIEW_DUMMY, productId, title = "Ulasan Produk" }) {
   const [filter, setFilter] = useState("all");
+  const [apiReviews, setApiReviews] = useState(null);
+  const [isLoading, setIsLoading] = useState(Boolean(productId));
+
+  useEffect(() => {
+    if (!productId) return;
+    let active = true;
+
+    async function loadReviews() {
+      setIsLoading(true);
+      try {
+        const data = await reviewService.getProductReviews(productId);
+        if (active) setApiReviews(data.length > 0 ? data : null);
+      } catch {
+        if (active) setApiReviews(null);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    loadReviews();
+    return () => {
+      active = false;
+    };
+  }, [productId]);
+
+  const visibleReviews = apiReviews ?? reviews;
 
   const summary = useMemo(() => {
-    const total = reviews.length;
+    const total = visibleReviews.length;
     const average = total
-      ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / total
+      ? visibleReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / total
       : 0;
 
     return {
@@ -71,20 +98,22 @@ export function ReviewList({ reviews = REVIEW_DUMMY, title = "Ulasan Produk" }) 
       average,
       counts: [5, 4, 3, 2, 1].map((rating) => ({
         rating,
-        total: reviews.filter((item) => Number(item.rating) === rating).length,
+        total: visibleReviews.filter((item) => Number(item.rating) === rating).length,
       })),
     };
-  }, [reviews]);
+  }, [visibleReviews]);
 
   const filteredReviews =
-    filter === "all" ? reviews : reviews.filter((item) => Number(item.rating) === Number(filter));
+    filter === "all" ? visibleReviews : visibleReviews.filter((item) => Number(item.rating) === Number(filter));
 
   return (
     <section className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h2 className="text-xl font-bold text-[#1A1A1A]">{title}</h2>
-          <p className="text-sm text-[#777] mt-1">Ringkasan pengalaman pembeli setelah transaksi selesai.</p>
+          <p className="text-sm text-[#777] mt-1">
+            {isLoading ? "Memuat ulasan produk..." : "Ringkasan pengalaman pembeli setelah transaksi selesai."}
+          </p>
         </div>
 
         <div className="rounded-2xl bg-[#F8FAF9] border border-[#E5E7EB] px-4 py-3 min-w-40">
@@ -153,4 +182,3 @@ export function ReviewList({ reviews = REVIEW_DUMMY, title = "Ulasan Produk" }) 
     </section>
   );
 }
-

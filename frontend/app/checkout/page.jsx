@@ -6,9 +6,16 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
+import { checkoutService } from "@/services/checkoutService";
+import { Button } from "@/components/ui/Button";
 
 function fmt(n) {
   return "Rp " + Number(n).toLocaleString("id-ID");
+}
+
+function getItemSubtotal(item) {
+  if (item.subtotal !== undefined && item.subtotal !== null) return Number(item.subtotal);
+  return Number(item.product?.price || item.price || 0) * Number(item.qty || 1);
 }
 
 function SectionCard({ title, children }) {
@@ -28,10 +35,12 @@ function SectionCard({ title, children }) {
 export default function CheckoutPage() {
   const router = useRouter();
   const [cartItems, setCartItems] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
   const [loadingCart, setLoadingCart] = useState(true);
   const [error, setError] = useState("");
 
-  // Address form (no backend API for addresses yet)
+  // Address form remains as a fallback when the addresses API is unavailable.
   const [address, setAddress] = useState({
     detail: "",
     city: "",
@@ -59,6 +68,14 @@ export default function CheckoutPage() {
       try {
         const items = await cartService.getCart();
         setCartItems(Array.isArray(items) ? items : []);
+        try {
+          const addressList = await checkoutService.getAddresses();
+          setAddresses(addressList);
+          setSelectedAddressId(addressList[0]?.address_id ?? addressList[0]?.id ?? "");
+        } catch {
+          setAddresses([]);
+          setSelectedAddressId("");
+        }
       } catch (err) {
         setError(err.message || "Gagal memuat cart");
         setCartItems([]);
@@ -69,7 +86,7 @@ export default function CheckoutPage() {
     loadCart();
   }, [isLoggedIn]);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.subtotal || item.product?.price || 0) * Number(item.qty || 1), 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + getItemSubtotal(item), 0);
   const shipping = 15000;
   const total = subtotal + shipping;
 
@@ -84,21 +101,6 @@ export default function CheckoutPage() {
     setError("");
 
     try {
-      const token = authService.getToken();
-      // Step 1: Find or use a default cart_id from cart items (the cart itself)
-      // The cart endpoint returns items, but we need the cart_id
-      // Let's call the count endpoint which returns cart metadata
-      const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/count`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
-      });
-
-      if (!countRes.ok) {
-        const errData = await countRes.json().catch(() => ({}));
-        throw new Error(errData.message || "Gagal mendapatkan informasi cart");
-      }
-
-      // We need the cart_id. The cart endpoints return items that have a cart_id field.
-      // Let's get it from the first cart item
       if (cartItems.length === 0) {
         throw new Error("Keranjang kosong");
       }
@@ -108,29 +110,13 @@ export default function CheckoutPage() {
         throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
       }
 
-      // Step 2: Create checkout
-      const checkoutPayload = {
+      const checkoutData = await checkoutService.createOrder({
         cart_id: cartId,
-        address_id: 1, // Default address - backend needs this
+        address_id: Number(selectedAddressId || 1),
         payment_method: "ewallet",
-      };
-
-      const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify(checkoutPayload),
       });
 
-      const checkoutData = await checkoutRes.json();
-
-      if (!checkoutRes.ok || checkoutData.success === false) {
-        throw new Error(checkoutData.message || "Checkout gagal");
-      }
-
-      const orderId = checkoutData.data?.order_id;
+      const orderId = checkoutData?.order_id ?? checkoutData?.id;
 
       if (orderId) {
         router.push(`/payment/${orderId}`);
@@ -206,6 +192,27 @@ export default function CheckoutPage() {
             {/* 1. Alamat Pengiriman */}
             <SectionCard title="📍 Alamat Pengiriman">
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {addresses.length > 0 && (
+                  <select
+                    value={selectedAddressId}
+                    onChange={(event) => setSelectedAddressId(event.target.value)}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1.5px solid #1A3C34",
+                      background: "#F0FBF8",
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      outline: "none",
+                    }}
+                  >
+                    {addresses.map((item) => (
+                      <option key={item.address_id ?? item.id} value={item.address_id ?? item.id}>
+                        {item.address}, {item.city}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <input
                   placeholder="Nama penerima"
                   value={address.name}
@@ -302,7 +309,7 @@ export default function CheckoutPage() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                         <span style={{ fontSize: 12, color: "#6B7280" }}>x{item.qty}</span>
                         <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>
-                          {fmt(Number(item.subtotal || (item.product?.price || 0) * item.qty))}
+                          {fmt(getItemSubtotal(item))}
                         </span>
                       </div>
                     </div>
@@ -371,19 +378,15 @@ export default function CheckoutPage() {
                   <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>{fmt(total)}</span>
                 </div>
 
-                <button
+                <Button
+                  type="button"
                   onClick={handlePlaceOrder}
                   disabled={submitting || loadingCart || cartItems.length === 0}
-                  style={{
-                    width: "100%", marginTop: 18, height: 52, borderRadius: 14,
-                    background: submitting || loadingCart || cartItems.length === 0 ? "#4DB6AC" : "#1A3C34",
-                    color: "#fff", fontWeight: 700, fontSize: 16,
-                    border: "none", cursor: submitting || loadingCart || cartItems.length === 0 ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  }}
+                  loading={submitting}
+                  className="w-full mt-4"
                 >
                   {submitting ? "Memproses..." : "Buat Pesanan"}
-                </button>
+                </Button>
 
                 <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 11, color: "#9CA3AF", lineHeight: 1.6 }}>
                   Dengan menekan tombol di atas, kamu menyetujui<br />
