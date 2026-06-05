@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { reviewService } from "@/services/reviewService";
 
 const ORDER_REVIEW = {
   orderItemId: "OI-2408-001",
@@ -29,8 +30,11 @@ export default function CreateReviewPage() {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [orderItemId, setOrderItemId] = useState(ORDER_REVIEW.orderItemId);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeRating = hoverRating || rating;
 
@@ -47,11 +51,31 @@ export default function CreateReviewPage() {
 
   const onSubmit = (event) => {
     event.preventDefault();
-    if (!rating || comment.trim().length < 10) {
-      setMessage("Pilih rating dan isi ulasan minimal 10 karakter.");
+    if (!rating || !orderItemId || comment.trim().length < 10) {
+      setMessageType("error");
+      setMessage("Isi order item ID, pilih rating, dan isi ulasan minimal 10 karakter.");
       return;
     }
-    setMessage("Preview UI: ulasan berhasil disiapkan. Integrasi API bisa dilakukan pada sprint berikutnya.");
+    setIsSubmitting(true);
+    setMessage("");
+
+    reviewService
+      .createReview({
+        order_item_id: Number(String(orderItemId).replace(/\D/g, "")) || orderItemId,
+        rating,
+        comment: comment.trim(),
+      })
+      .then(() => {
+        setMessageType("success");
+        setMessage("Ulasan berhasil dikirim.");
+      })
+      .catch((err) => {
+        setMessageType("error");
+        setMessage(err.message || "Gagal mengirim ulasan. Coba lagi.");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
@@ -100,6 +124,16 @@ export default function CreateReviewPage() {
 
           <Card className="p-6">
             <form onSubmit={onSubmit} className="space-y-6">
+              <div>
+                <label className="text-sm font-semibold text-[#374151] block mb-2">Order Item ID</label>
+                <input
+                  value={orderItemId}
+                  onChange={(event) => setOrderItemId(event.target.value)}
+                  placeholder="Contoh: 1"
+                  className="w-full h-11 rounded-2xl border border-[#E5E7EB] px-4 text-sm outline-none focus:border-[#1A3C34]"
+                />
+              </div>
+
               <div>
                 <label className="text-sm font-semibold text-[#374151] block mb-3">Rating Produk</label>
                 <div className="flex flex-wrap items-center gap-3">
@@ -156,7 +190,7 @@ export default function CreateReviewPage() {
 
               {message && (
                 <div className={`rounded-2xl px-4 py-3 text-sm ${
-                  rating && comment.trim().length >= 10
+                  messageType === "success"
                     ? "border border-[#BBF7D0] bg-[#F0FDF4] text-[#166534]"
                     : "border border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]"
                 }`}>
@@ -165,7 +199,7 @@ export default function CreateReviewPage() {
               )}
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button type="submit" className="flex-1">Kirim Ulasan</Button>
+                <Button type="submit" className="flex-1" loading={isSubmitting}>Kirim Ulasan</Button>
                 <Link href="/orders" className="flex-1">
                   <Button type="button" variant="secondary" className="w-full">Nanti Saja</Button>
                 </Link>
@@ -177,4 +211,3 @@ export default function CreateReviewPage() {
     </div>
   );
 }
-

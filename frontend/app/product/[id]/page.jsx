@@ -180,8 +180,8 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Reviews */}
-              <ReviewList title={`Ulasan ${product.name}`} />
-            </div>
+            <ReviewList productId={product.id ?? id} title={`Ulasan ${product.name}`} />
+          </div>
 
             {/* Sidebar */}
             <aside className="space-y-6">

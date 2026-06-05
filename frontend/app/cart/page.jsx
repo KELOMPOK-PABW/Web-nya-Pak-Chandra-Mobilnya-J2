@@ -21,6 +21,13 @@ const getProductImage = (item) => {
   return imageUrl || "/images/cart/kaos.svg";
 };
 
+const getCartItemId = (item) => item.id ?? item.cart_item_id ?? item.cartItemId;
+
+const getItemSubtotal = (item) => {
+  if (item.subtotal !== undefined && item.subtotal !== null) return Number(item.subtotal);
+  return Number(item.product?.price || item.price || 0) * Number(item.qty || 1);
+};
+
 export default function CartPage() {
   const [items, setItems] = useState([]);
   const [countInfo, setCountInfo] = useState({ total_items: 0, total_quantity: 0 });
@@ -108,7 +115,7 @@ export default function CartPage() {
   };
 
   const updateQty = async (id, diff) => {
-    const currentItem = items.find((item) => item.id === id);
+    const currentItem = items.find((item) => getCartItemId(item) === id);
     if (!currentItem) return;
 
     const nextQty = Math.max(1, Number(currentItem.qty) + diff);
@@ -146,7 +153,7 @@ export default function CartPage() {
   };
 
   const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + Number(item.subtotal || item.product?.price || 0), 0),
+    () => items.reduce((sum, item) => sum + getItemSubtotal(item), 0),
     [items]
   );
   const shipping = items.length > 0 ? 15000 : 0;
@@ -195,8 +202,10 @@ export default function CartPage() {
                 </div>
               </Card>
             ) : (
-              items.map((item) => (
-                <Card key={item.id} className="p-5">
+              items.map((item) => {
+                const itemId = getCartItemId(item);
+                return (
+                <Card key={itemId} className="p-5">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1">
                       <img
@@ -217,7 +226,7 @@ export default function CartPage() {
                       <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => updateQty(item.id, -1)}
+                          onClick={() => updateQty(itemId, -1)}
                           disabled={saving}
                           className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB]"
                         >
@@ -226,7 +235,7 @@ export default function CartPage() {
                         <span className="w-10 text-center text-sm font-semibold text-[#111827]">{item.qty}</span>
                         <button
                           type="button"
-                          onClick={() => updateQty(item.id, 1)}
+                          onClick={() => updateQty(itemId, 1)}
                           disabled={saving}
                           className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB]"
                         >
@@ -234,13 +243,14 @@ export default function CartPage() {
                         </button>
                       </div>
 
-                      <Button size="sm" variant="danger" type="button" loading={saving} onClick={() => removeItem(item.id)}>
+                      <Button size="sm" variant="danger" type="button" loading={saving} onClick={() => removeItem(itemId)}>
                         Hapus
                       </Button>
                     </div>
                   </div>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -276,9 +286,15 @@ export default function CartPage() {
                 <span className="text-lg font-bold text-[#0A0A0A]">{formatRupiah(total)}</span>
               </div>
 
-              <Button className="w-full" disabled={items.length === 0 || !validateInfo?.valid}>
-                Beli ({totalQty})
-              </Button>
+              {items.length === 0 || !validateInfo?.valid ? (
+                <Button className="w-full" disabled>
+                  Beli ({totalQty})
+                </Button>
+              ) : (
+                <Link href="/checkout" className="block">
+                  <Button className="w-full">Beli ({totalQty})</Button>
+                </Link>
+              )}
             </Card>
           </div>
         </div>

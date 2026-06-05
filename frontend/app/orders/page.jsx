@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { authService } from "@/services/authService";
+import { orderService } from "@/services/orderService";
 
 const STATUS_LABELS = {
   pending: "Menunggu Pembayaran",
@@ -65,18 +66,10 @@ export default function OrdersPage() {
 
     async function loadOrders() {
       setLoading(true);
-      setError("");
+        setError("");
       try {
-        const token = authService.getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        });
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setOrders(data.data);
-        } else {
-          setOrders([]);
-        }
+        const data = await orderService.getOrders();
+        setOrders(data);
       } catch (err) {
         setError(err.message || "Gagal memuat pesanan");
         setOrders([]);
@@ -197,7 +190,7 @@ export default function OrdersPage() {
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>
-                    #{order.id}
+                    #{order.orderId ?? order.id}
                   </span>
                   <StatusBadge status={order.status || order.payment_status} />
                 </div>
@@ -206,7 +199,19 @@ export default function OrdersPage() {
                     {order.items?.length || 0} item
                   </span>
                   <span style={{ fontWeight: 700, fontSize: 15, color: "#1A3C34" }}>
-                    {fmt(order.total_price || order.totalAmount || 0)}
+                    {fmt(order.total || 0)}
+                  </span>
+                </div>
+                <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                  <span style={{
+                    border: "1.5px solid #E5E7EB",
+                    borderRadius: 12,
+                    color: "#374151",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "7px 12px",
+                  }}>
+                    Lihat Detail
                   </span>
                 </div>
               </div>

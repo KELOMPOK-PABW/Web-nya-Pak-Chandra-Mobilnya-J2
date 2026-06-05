@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { authService } from "@/services/authService";
+import { orderService } from "@/services/orderService";
 
 const STATUS_LABELS = {
   pending: "Menunggu Pembayaran",
@@ -12,221 +16,203 @@ const STATUS_LABELS = {
   processing: "Diproses",
   shipped: "Dikirim",
   delivered: "Terkirim",
+  completed: "Selesai",
   cancelled: "Dibatalkan",
+  canceled: "Dibatalkan",
 };
 
-const STATUS_COLORS = {
-  pending: { color: "#F59E0B", bg: "#FEF3C7" },
-  paid: { color: "#3B82F6", bg: "#DBEAFE" },
-  processing: { color: "#8B5CF6", bg: "#EDE9FE" },
-  shipped: { color: "#10B981", bg: "#D1FAE5" },
-  delivered: { color: "#059669", bg: "#A7F3D0" },
-  cancelled: { color: "#EF4444", bg: "#FEE2E2" },
+const STATUS_VARIANT = {
+  pending: "warning",
+  paid: "info",
+  processing: "warning",
+  shipped: "info",
+  delivered: "success",
+  completed: "success",
+  cancelled: "danger",
+  canceled: "danger",
 };
 
-function fmt(n) {
-  return "Rp " + Number(n).toLocaleString("id-ID");
+function fmt(value) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
 }
 
-function Row({ label, value }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
-      <span style={{ fontSize: 13, color: "#6B7280" }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A" }}>{value}</span>
-    </div>
-  );
+function getItemSubtotal(item) {
+  if (item.subtotal !== undefined && item.subtotal !== null) return Number(item.subtotal);
+  return Number(item.price || item.product?.price || 0) * Number(item.qty || item.quantity || 1);
 }
 
 export default function OrderDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const isLoggedIn = Boolean(authService.getToken());
+
+  async function loadOrder() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await orderService.getOrderById(id);
+      setOrder(data);
+    } catch (err) {
+      setError(err.message || "Gagal memuat detail pesanan.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn) {
       setLoading(false);
-      setError("Silakan login.");
+      setError("Silakan login untuk melihat detail pesanan.");
       return;
     }
-
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const token = authService.getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${id}`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setOrder(data.data);
-        } else {
-          throw new Error(data.message || "Order tidak ditemukan");
-        }
-      } catch (err) {
-        setError(err.message || "Gagal memuat detail pesanan");
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (id) load();
+    if (id) loadOrder();
   }, [id, isLoggedIn]);
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
-        <Navbar />
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: "40px 20px" }}>
-          {[120, 200, 100].map((h, i) => (
-            <div key={i} style={{ height: h, borderRadius: 16, background: "#F3F4F6", marginBottom: 16 }} />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const items = order?.items || [];
+  const status = order?.status || "pending";
+  const orderId = order?.orderId ?? order?.id ?? id;
+  const subtotal = useMemo(() => items.reduce((sum, item) => sum + getItemSubtotal(item), 0), [items]);
+  const total = Number(order?.total || subtotal);
+  const canCancel = ["pending", "paid", "processing"].includes(status);
+  const canConfirm = ["shipped", "delivered"].includes(status);
 
-  if (error || !order) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
-        <Navbar />
-        <div style={{ maxWidth: 500, margin: "80px auto", textAlign: "center", padding: "0 24px" }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0A0A0A", marginBottom: 8 }}>
-            Pesanan Tidak Ditemukan
-          </h1>
-          <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 24 }}>{error || `ID #${id} tidak ditemukan.`}</p>
-          <Link href="/orders" style={{
-            padding: "12px 28px", borderRadius: 12, background: "#1A3C34",
-            color: "#fff", fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-block",
-          }}>
-            Kembali ke Pesanan
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const status = order.payment_status || order.status || "pending";
-  const cfg = STATUS_COLORS[status] ?? { color: "#6B7280", bg: "#F3F4F6" };
+  const runOrderAction = async (action) => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      if (action === "cancel") {
+        await orderService.cancelOrder(orderId);
+        setSuccess("Pesanan berhasil dibatalkan.");
+      } else {
+        await orderService.confirmOrder(orderId);
+        setSuccess("Pesanan berhasil dikonfirmasi diterima.");
+      }
+      await loadOrder();
+    } catch (err) {
+      setError(err.message || "Gagal memperbarui status pesanan.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
+    <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans','Inter',sans-serif" }}>
       <Navbar />
-
-      <div style={{ background: "#fff", borderBottom: "1px solid #EBEBEB" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: "10px 24px", display: "flex", alignItems: "center", gap: 6 }}>
-          <Link href="/orders" style={{ fontSize: 13, color: "#6B7280", textDecoration: "none" }}>Pesanan</Link>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span style={{ fontSize: 13, color: "#1A3C34", fontWeight: 600 }}>Detail #{order.order_id}</span>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px 48px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0A0A0A", margin: 0 }}>
-            #{order.order_id}
-          </h1>
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: cfg.color, background: cfg.bg,
-            borderRadius: 99, padding: "5px 12px",
-          }}>
-            {STATUS_LABELS[status] || status}
-          </span>
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <Link href="/orders" className="text-sm font-semibold text-[#1A3C34]">
+              Kembali ke pesanan
+            </Link>
+            <h1 className="text-2xl font-bold text-[#111827] mt-2">Detail Pesanan #{orderId}</h1>
+          </div>
+          {order && (
+            <Badge variant={STATUS_VARIANT[status] || "default"}>
+              {STATUS_LABELS[status] || status}
+            </Badge>
+          )}
         </div>
 
-        {/* Payment action */}
-        {status === "pending" && (
-          <Link href={`/payment/${order.order_id}`} style={{
-            display: "block", marginBottom: 16, padding: "14px 20px", borderRadius: 14,
-            background: "#1A3C34", color: "#fff", fontWeight: 700, fontSize: 14,
-            textDecoration: "none", textAlign: "center",
-          }}>
-            Bayar Sekarang
-          </Link>
+        {(error || success) && (
+          <div className={`rounded-2xl border px-4 py-3 text-sm ${
+            error
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          }`}>
+            {error || success}
+          </div>
         )}
 
-        {/* Order Items */}
-        <div style={{
-          background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16, overflow: "hidden",
-        }}>
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid #F3F4F6", fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>
-            📦 Produk Dipesan
-          </div>
-          <div style={{ padding: "12px 20px" }}>
-            {order.items && order.items.length > 0 ? (
-              order.items.map((item, i) => (
-                <div key={i} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "10px 0", borderBottom: i < order.items.length - 1 ? "1px solid #F3F4F6" : "none",
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>
-                      {item.product_name}
-                    </p>
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9CA3AF" }}>
-                      {item.store_name} · x{item.qty}
-                    </p>
-                  </div>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34", flexShrink: 0 }}>
-                    {fmt(item.price * item.qty)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p style={{ fontSize: 13, color: "#9CA3AF" }}>Tidak ada item.</p>
+        {loading ? (
+          <Card className="py-12 text-center text-gray-500">Memuat detail pesanan...</Card>
+        ) : !order ? (
+          <Card className="py-12 text-center">
+            <h2 className="text-lg font-bold text-[#111827]">Pesanan tidak ditemukan</h2>
+            <p className="text-sm text-gray-500 mt-2">Cek kembali ID pesanan atau buka daftar pesanan.</p>
+          </Card>
+        ) : (
+          <>
+            {status === "pending" && (
+              <Link href={`/payment/${orderId}`} className="block">
+                <Button className="w-full">Bayar Sekarang</Button>
+              </Link>
             )}
-          </div>
-        </div>
 
-        {/* Address */}
-        {order.address && (
-          <div style={{
-            background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 16, padding: "18px 20px",
-          }}>
-            <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>
-              📍 Alamat Pengiriman
-            </p>
-            <p style={{ margin: 0, fontSize: 13, color: "#374151" }}>
-              {order.address.address}, {order.address.city}
-            </p>
-          </div>
+            <Card className="p-0 overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#F1F5F9]">
+                <h2 className="font-bold text-[#111827]">Produk Dipesan</h2>
+              </div>
+              <div className="divide-y divide-[#F1F5F9]">
+                {items.length === 0 ? (
+                  <div className="p-5 text-sm text-gray-500">Tidak ada item pesanan.</div>
+                ) : (
+                  items.map((item, index) => (
+                    <div key={item.order_item_id ?? item.id ?? index} className="p-5 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-semibold text-[#111827]">
+                          {item.product_name || item.product?.name || `Item #${index + 1}`}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {item.store_name || item.store?.store_name || "Toko"} - x{item.qty || item.quantity || 1}
+                        </p>
+                      </div>
+                      <p className="font-bold text-[#1A3C34]">{fmt(getItemSubtotal(item))}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {order.address && (
+              <Card className="p-5">
+                <h2 className="font-bold text-[#111827]">Alamat Pengiriman</h2>
+                <p className="text-sm text-gray-600 mt-2">
+                  {order.address.address}, {order.address.city}
+                </p>
+              </Card>
+            )}
+
+            <Card className="p-5">
+              <h2 className="font-bold text-[#111827] mb-4">Ringkasan Pesanan</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="font-semibold text-[#111827]">{fmt(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total</span>
+                  <span className="font-bold text-[#1A3C34]">{fmt(total)}</span>
+                </div>
+              </div>
+            </Card>
+
+            {(canCancel || canConfirm) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {canCancel && (
+                  <Button type="button" variant="danger" loading={saving} onClick={() => runOrderAction("cancel")}>
+                    Batalkan Pesanan
+                  </Button>
+                )}
+                {canConfirm && (
+                  <Button type="button" loading={saving} onClick={() => runOrderAction("confirm")}>
+                    Konfirmasi Terima
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         )}
-
-        {/* Order Summary */}
-        <div style={{
-          background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.05)", padding: "18px 20px",
-        }}>
-          <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>
-            Ringkasan Pesanan
-          </p>
-          <Row label="Subtotal" value={fmt(order.items?.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0) || 0)} />
-          <Row label="Ongkos Kirim" value={fmt(15000)} />
-          <div style={{ height: 1, background: "#F3F4F6", margin: "8px 0" }} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Total</span>
-            <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>
-              {fmt(order.totalAmount || order.items?.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0) || 0)}
-            </span>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <Link href="/orders" style={{
-            padding: "12px 24px", borderRadius: 12, border: "1.5px solid #E5E7EB",
-            color: "#374151", fontWeight: 600, fontSize: 14, textDecoration: "none", display: "inline-block",
-          }}>
-            ← Kembali ke Pesanan
-          </Link>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
+

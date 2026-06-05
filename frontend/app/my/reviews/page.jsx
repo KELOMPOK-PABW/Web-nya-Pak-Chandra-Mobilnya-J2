@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { reviewService } from "@/services/reviewService";
 
 const MY_REVIEWS = [
   {
@@ -67,18 +68,53 @@ function Stars({ rating }) {
 
 export default function MyReviewsPage() {
   const [filter, setFilter] = useState("all");
+  const [reviews, setReviews] = useState(MY_REVIEWS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  async function loadReviews() {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const data = await reviewService.getMyReviews();
+      setReviews(data.length > 0 ? data : MY_REVIEWS);
+    } catch (err) {
+      setReviews(MY_REVIEWS);
+      setMessage(err.message || "Menampilkan data contoh karena ulasan API belum tersedia.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
 
   const filteredReviews = useMemo(() => {
-    if (filter === "all") return MY_REVIEWS;
-    return MY_REVIEWS.filter((review) => review.status === filter);
-  }, [filter]);
+    if (filter === "all") return reviews;
+    return reviews.filter((review) => review.status === filter);
+  }, [filter, reviews]);
 
   const summary = useMemo(() => ({
-    total: MY_REVIEWS.length,
-    published: MY_REVIEWS.filter((review) => review.status === "published").length,
-    draft: MY_REVIEWS.filter((review) => review.status === "draft").length,
-    average: MY_REVIEWS.reduce((sum, review) => sum + review.rating, 0) / MY_REVIEWS.length,
-  }), []);
+    total: reviews.length,
+    published: reviews.filter((review) => review.status === "published").length,
+    draft: reviews.filter((review) => review.status === "draft").length,
+    average: reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0,
+  }), [reviews]);
+
+  const deleteReview = async (review) => {
+    if (!review.id || String(review.id).startsWith("REV-MY")) {
+      setReviews((prev) => prev.filter((item) => item.id !== review.id));
+      return;
+    }
+
+    try {
+      await reviewService.deleteReview(review.id);
+      await loadReviews();
+    } catch (err) {
+      setMessage(err.message || "Gagal menghapus ulasan.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
@@ -113,7 +149,7 @@ export default function MyReviewsPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-5 border-b border-[#ECEFF3]">
             <div>
               <h2 className="text-lg font-bold text-[#111827]">Daftar Ulasan</h2>
-              <p className="text-sm text-gray-500">UI statis untuk halaman `/my/reviews`.</p>
+              <p className="text-sm text-gray-500">{isLoading ? "Memuat ulasan..." : "Data dari API dengan fallback contoh."}</p>
             </div>
             <select
               value={filter}
@@ -126,8 +162,16 @@ export default function MyReviewsPage() {
             </select>
           </div>
 
+          {message && (
+            <div className="mx-5 mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {message}
+            </div>
+          )}
+
           <div className="divide-y divide-[#F1F5F9]">
-            {filteredReviews.map((review) => {
+            {isLoading ? (
+              <div className="p-10 text-center text-gray-500">Memuat ulasan saya...</div>
+            ) : filteredReviews.map((review) => {
               const status = STATUS_META[review.status] ?? STATUS_META.draft;
               return (
                 <article key={review.id} className="p-5">
@@ -155,7 +199,7 @@ export default function MyReviewsPage() {
                       <Link href="/reviews/create">
                         <Button type="button" size="sm" variant="outline">Edit</Button>
                       </Link>
-                      <Button type="button" size="sm" variant="secondary">Lihat Produk</Button>
+                      <Button type="button" size="sm" variant="danger" onClick={() => deleteReview(review)}>Hapus</Button>
                     </div>
                   </div>
                 </article>
@@ -171,4 +215,3 @@ export default function MyReviewsPage() {
     </div>
   );
 }
-
