@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { authService } from "@/services/authService";
+import { apiUrl, buildAuthHeaders, handleResponse } from "@/services/apiClient";
 
 const ROLE_LABELS = {
   buyer: "Pembeli",
@@ -28,16 +29,11 @@ export default function ProfilePage() {
       setLoading(true);
       setError("");
       try {
-        const token = authService.getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
+        const res = await fetch(apiUrl("/me"), {
+          headers: buildAuthHeaders(),
         });
-        const data = await res.json();
-        if (data.success) {
-          setProfile(data.data);
-        } else {
-          throw new Error(data.message || "Gagal memuat profil");
-        }
+        const data = await handleResponse(res);
+        setProfile(data.data ?? data);
       } catch (err) {
         setError(err.message || "Gagal memuat data profil");
       } finally {

@@ -1,11 +1,11 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const authService = {
-  async register({ full_name, email, password, role = "buyer" }) {
+  async register({ full_name, email, phone, password, role = "buyer" }) {
     const res = await fetch(`${BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name, email, password, role }),
+      body: JSON.stringify({ full_name, email, phone, password, role }),
     });
     const data = await res.json();
     if (!res.ok || data.success === false) {

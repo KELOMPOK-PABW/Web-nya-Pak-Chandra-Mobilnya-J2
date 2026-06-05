@@ -13,7 +13,7 @@ const ROLES = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "buyer" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", password: "", role: "buyer" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +25,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.full_name || !form.email || !form.password) { setError("Semua field wajib diisi."); return; }
+    if (!form.full_name || !form.email || !form.phone || !form.password) { setError("Semua field wajib diisi."); return; }
     if (form.password.length < 6) { setError("Password minimal 6 karakter."); return; }
     setLoading(true);
     try {
@@ -293,6 +293,17 @@ export default function RegisterPage() {
                   <input
                     type="email" name="email" value={form.email} onChange={handleChange}
                     placeholder="nama@email.com" autoComplete="email"
+                    style={{ fontFamily: "inherit", fontSize: "15px", height: "50px" }}
+                    className="w-full px-4 rounded-2xl border border-[#E5E2DB] bg-[#FAFAF8] text-[#1A1A1A] placeholder:text-[#C8C8C8] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 focus:border-[#1A3C34] transition-all"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "7px", fontFamily: "inherit" }}>No. Telepon</label>
+                  <input
+                    type="tel" name="phone" value={form.phone} onChange={handleChange}
+                    placeholder="08xxxxxxxxxx" autoComplete="tel"
                     style={{ fontFamily: "inherit", fontSize: "15px", height: "50px" }}
                     className="w-full px-4 rounded-2xl border border-[#E5E2DB] bg-[#FAFAF8] text-[#1A1A1A] placeholder:text-[#C8C8C8] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 focus:border-[#1A3C34] transition-all"
                   />
