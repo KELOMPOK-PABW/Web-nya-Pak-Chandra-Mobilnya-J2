@@ -28,8 +28,7 @@ export default function SellerApplyPage() {
 
   useEffect(() => {
     let active = true;
-
-    async function loadApplication() {
+    async function load() {
       try {
         const data = await sellerService.getApplicationStatus();
         if (active) setExistingApplication(data);
@@ -37,37 +36,23 @@ export default function SellerApplyPage() {
         if (active) setExistingApplication(null);
       }
     }
-
-    loadApplication();
-    return () => {
-      active = false;
-    };
+    load();
+    return () => { active = false; };
   }, []);
 
-  const onChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const onSubmit = async (event) => {
-    event.preventDefault();
+  const onSubmit = async (e) => {
+    e.preventDefault();
     setError("");
     setSuccessMsg("");
 
-    const requiredFields = [
-      "ownerName",
-      "storeName",
-      "storeCategory",
-      "city",
-      "phone",
-      "bankName",
-      "bankAccountNumber",
-      "reason",
-    ];
-
-    const hasEmpty = requiredFields.some((key) => !form[key]?.trim());
-    if (hasEmpty) {
-      setError("Semua field wajib diisi sebelum mengirim pengajuan.");
+    const required = ["ownerName", "storeName", "storeCategory", "city", "phone", "reason"];
+    if (required.some(k => !form[k]?.trim())) {
+      setError("Mohon lengkapi kolom bertanda bintang (*).");
       return;
     }
 
@@ -75,87 +60,120 @@ export default function SellerApplyPage() {
     try {
       const application = await sellerService.submitApplication(form);
       setExistingApplication(application);
-      setSuccessMsg("Pengajuan seller berhasil dikirim. Silakan cek status pengajuan.");
+      setSuccessMsg("Pengajuan berhasil dikirim! Tim kami akan meninjau secepatnya.");
       setForm(initialForm);
     } catch (err) {
-      setError(err.message || "Terjadi kesalahan saat mengirim pengajuan. Coba lagi.");
+      setError(err.message || "Gagal mengirim pengajuan.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'DM Sans', sans-serif" }}>
       <Navbar />
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1A1A1A]">Daftar Seller</h1>
-            <p className="text-gray-600 mt-1">Lengkapi data toko untuk proses verifikasi admin.</p>
-          </div>
-          <Link href="/seller/application">
-            <Button variant="outline">Lihat Status Pengajuan</Button>
-          </Link>
-        </section>
+
+      <main style={{ maxWidth: "800px", margin: "0 auto", padding: "40px 24px" }}>
+
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <h1 style={{ fontSize: "32px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>Buka Toko Anda</h1>
+          <p style={{ fontSize: "16px", color: "#666", marginTop: "8px" }}>Mulai berjualan di PABW Shop dan jangkau lebih banyak pembeli.</p>
+        </div>
 
         {existingApplication && (
-          <Card className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-[#FFF7ED] border-[#FFEDD5]">
+          <Card style={{
+            marginBottom: "32px", padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FFF7ED", border: "1.5px solid #FFEDD5"
+          }}>
             <div>
-              <p className="font-semibold text-[#9A3412]">Kamu sudah punya pengajuan sebelumnya</p>
-              <p className="text-sm text-[#7C2D12] mt-1">Silakan pantau status terbaru di halaman status pengajuan.</p>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: "14px", color: "#9A3412" }}>Anda memiliki pengajuan aktif</p>
+              <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#C2410C" }}>Status saat ini sedang dalam tinjauan.</p>
             </div>
-            <Badge variant="warning" className="w-fit">Status: {existingApplication.status}</Badge>
+            <Link href="/seller/application">
+              <Button style={{ padding: "8px 16px", fontSize: "12px" }}>Cek Detail</Button>
+            </Link>
           </Card>
         )}
 
-        <Card>
-          <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Nama Pemilik</label>
-              <input name="ownerName" value={form.ownerName} onChange={onChange} placeholder="Contoh: Rahmawati" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Nama Toko</label>
-              <input name="storeName" value={form.storeName} onChange={onChange} placeholder="Contoh: Toko Rahma Jaya" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Kategori Utama</label>
-              <input name="storeCategory" value={form.storeCategory} onChange={onChange} placeholder="Contoh: Fashion" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Kota Operasional</label>
-              <input name="city" value={form.city} onChange={onChange} placeholder="Contoh: Bandung" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">No. HP</label>
-              <input name="phone" value={form.phone} onChange={onChange} placeholder="08xxxxxxxxxx" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Nama Bank</label>
-              <input name="bankName" value={form.bankName} onChange={onChange} placeholder="Contoh: BCA" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Nomor Rekening</label>
-              <input name="bankAccountNumber" value={form.bankAccountNumber} onChange={onChange} placeholder="Masukkan nomor rekening" className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-semibold text-[#374151] block mb-2">Alasan Menjadi Seller</label>
-              <textarea name="reason" value={form.reason} onChange={onChange} rows={4} placeholder="Ceritakan produk dan komitmen pelayanan kamu" className="w-full rounded-xl border border-[#E5E7EB] px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 resize-none" />
+        {(error || successMsg) && (
+          <div style={{
+            marginBottom: "24px", padding: "12px 16px", borderRadius: "12px", fontSize: "14px",
+            background: error ? "#FEF2F2" : "#F0FDF4",
+            border: `1px solid ${error ? "#FECACA" : "#BBF7D0"}`,
+            color: error ? "#B91C1C" : "#166534"
+          }}>
+            {error || successMsg}
+          </div>
+        )}
+
+        <Card style={{ padding: "32px" }}>
+          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Nama Pemilik *</label>
+                <input name="ownerName" value={form.ownerName} onChange={onChange} placeholder="Sesuai KTP"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Nama Toko *</label>
+                <input name="storeName" value={form.storeName} onChange={onChange} placeholder="Nama unik toko"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
             </div>
 
-            {error && <p className="md:col-span-2 text-sm text-[#B91C1C]">{error}</p>}
-            {successMsg && <p className="md:col-span-2 text-sm text-[#166534]">{successMsg}</p>}
-
-            <div className="md:col-span-2 flex flex-col sm:flex-row gap-3">
-              <Button type="submit" loading={isSubmitting}>Kirim Pengajuan</Button>
-              <Link href="/seller/application">
-                <Button type="button" variant="secondary">Cek Status</Button>
-              </Link>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Kategori *</label>
+                <input name="storeCategory" value={form.storeCategory} onChange={onChange} placeholder="Contoh: Otomotif"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Kota *</label>
+                <input name="city" value={form.city} onChange={onChange} placeholder="Kota domisili"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
             </div>
+
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>No. WhatsApp *</label>
+              <input name="phone" value={form.phone} onChange={onChange} placeholder="08xxxxxxxxxx"
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+            </div>
+
+            <div style={{ height: "1px", background: "#f1f5f9", margin: "10px 0" }} />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Nama Bank</label>
+                <input name="bankName" value={form.bankName} onChange={onChange} placeholder="BCA / Mandiri / dst"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Nomor Rekening</label>
+                <input name="bankAccountNumber" value={form.bankAccountNumber} onChange={onChange} placeholder="Untuk pencairan dana"
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Alasan Bergabung *</label>
+              <textarea name="reason" value={form.reason} onChange={onChange} rows={4} placeholder="Ceritakan singkat tentang produk yang akan Anda jual..."
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #E5E7EB", outline: "none", boxSizing: "border-box", resize: "none" }} />
+            </div>
+
+            <div style={{ marginTop: "12px" }}>
+              <Button type="submit" loading={isSubmitting} style={{ width: "100%", height: "48px", fontSize: "16px" }}>
+                Kirim Pengajuan
+              </Button>
+            </div>
+
+            <p style={{ textAlign: "center", margin: 0, fontSize: "12px", color: "#94a3b8" }}>
+              Dengan mendaftar, Anda menyetujui Ketentuan Seller PABW Shop.
+            </p>
           </form>
         </Card>
       </main>
     </div>
   );
 }
-

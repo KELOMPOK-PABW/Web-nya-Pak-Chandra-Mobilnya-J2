@@ -8,29 +8,31 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { sellerService } from "@/services/sellerService";
 
-const statusConfig = {
+const STATUS_CONFIG = {
   pending: {
     label: "Menunggu Review",
     variant: "warning",
-    hint: "Admin sedang memeriksa data pengajuan kamu.",
+    icon: "🕒",
+    hint: "Admin sedang meninjau data Anda. Mohon tunggu maksimal 2x24 jam.",
   },
   approved: {
     label: "Disetujui",
     variant: "success",
-    hint: "Selamat, akun seller kamu sudah aktif.",
+    icon: "✅",
+    hint: "Selamat! Toko Anda sudah aktif. Anda bisa mulai mengunggah produk sekarang.",
   },
   rejected: {
     label: "Ditolak",
     variant: "danger",
-    hint: "Perbaiki data lalu kirim ulang pengajuan.",
+    icon: "❌",
+    hint: "Maaf, pengajuan Anda ditolak. Silakan periksa alasan dan ajukan kembali.",
   },
 };
 
-function formatDate(isoDate) {
-  if (!isoDate) return "-";
-  return new Date(isoDate).toLocaleString("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
+function fmtDate(iso) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleDateString("id-ID", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
   });
 }
 
@@ -41,34 +43,28 @@ export default function SellerApplicationStatusPage() {
 
   useEffect(() => {
     let active = true;
-
-    async function loadApplication() {
+    async function load() {
       setIsLoading(true);
       setError("");
       try {
         const data = await sellerService.getApplicationStatus();
         if (active) setApplication(data);
       } catch (err) {
-        if (active) setError(err.message || "Gagal mengambil status pengajuan.");
+        if (active) setError(err.message || "Gagal memuat status pengajuan.");
       } finally {
         if (active) setIsLoading(false);
       }
     }
-
-    loadApplication();
-    return () => {
-      active = false;
-    };
+    load();
+    return () => { active = false; };
   }, []);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
         <Navbar />
-        <main className="max-w-[1280px] mx-auto px-6 py-8">
-          <Card className="text-center py-12">
-            <p className="text-gray-600">Memuat status pengajuan...</p>
-          </Card>
+        <main style={{ maxWidth: "600px", margin: "80px auto", textAlign: "center" }}>
+          <p style={{ color: "#666" }}>Memuat status pengajuan...</p>
         </main>
       </div>
     );
@@ -76,17 +72,18 @@ export default function SellerApplicationStatusPage() {
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'DM Sans', sans-serif" }}>
         <Navbar />
-        <main className="max-w-[1280px] mx-auto px-6 py-8">
-          <Card className="text-center py-12">
-            <h1 className="text-2xl font-bold text-[#1A1A1A]">Belum Ada Pengajuan Seller</h1>
-            <p className="text-gray-600 mt-2">
-              {error || "Kamu belum mengirim pengajuan. Isi formulir dulu agar bisa diproses admin."}
+        <main style={{ maxWidth: "600px", margin: "80px auto", padding: "0 24px" }}>
+          <Card style={{ padding: "48px 32px", textAlign: "center" }}>
+            <p style={{ fontSize: "64px", margin: "0 0 20px" }}>📭</p>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>Belum Ada Pengajuan</h1>
+            <p style={{ fontSize: "14px", color: "#666", marginTop: "12px", lineHeight: "1.6" }}>
+              Anda belum mengirimkan pengajuan sebagai seller. Buka toko sekarang untuk mulai berjualan.
             </p>
-            <div className="mt-6">
+            <div style={{ marginTop: "32px" }}>
               <Link href="/seller/apply">
-                <Button>Ajukan Menjadi Seller</Button>
+                <Button>Buka Toko Sekarang</Button>
               </Link>
             </div>
           </Card>
@@ -95,55 +92,70 @@ export default function SellerApplicationStatusPage() {
     );
   }
 
-  const activeStatus = statusConfig[application.status] || statusConfig.pending;
+  const stat = STATUS_CONFIG[application.status] || STATUS_CONFIG.pending;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'DM Sans', sans-serif" }}>
       <Navbar />
-      <main className="max-w-[1280px] mx-auto px-6 py-8 space-y-6">
-        <section>
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">Status Pengajuan Seller</h1>
-          <p className="text-gray-600 mt-1">Pantau progres verifikasi akun seller kamu di sini.</p>
-        </section>
+      <main style={{ maxWidth: "660px", margin: "40px auto", padding: "0 24px 64px" }}>
 
-        <Card>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <p className="text-sm text-gray-500">Status Saat Ini</p>
-              <p className="text-lg font-semibold text-[#1F2937] mt-1">{activeStatus.label}</p>
-              <p className="text-sm text-gray-600 mt-1">{activeStatus.hint}</p>
+        <div style={{ marginBottom: "32px" }}>
+          <Link href="/home" style={{ fontSize: "13px", fontWeight: 600, color: "#1A3C34", textDecoration: "none", display: "flex", alignItems: "center", gap: "6px" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+            Kembali ke Beranda
+          </Link>
+          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#1A1A1A", margin: "16px 0 0" }}>Status Pengajuan</h1>
+        </div>
+
+        <Card style={{ padding: "32px", overflow: "hidden", position: "relative" }}>
+          {/* Header Status */}
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+            <div style={{
+              width: "72px", height: "72px", borderRadius: "50%", background: "#f8f9fa",
+              margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px"
+            }}>
+              {stat.icon}
             </div>
-            <Badge variant={activeStatus.variant} className="w-fit">{activeStatus.label}</Badge>
+            <Badge variant={stat.variant} style={{ fontSize: "14px", padding: "6px 20px" }}>{stat.label}</Badge>
+            <p style={{ fontSize: "14px", color: "#666", marginTop: "16px", lineHeight: "1.6", maxWidth: "400px", margin: "16px auto 0" }}>
+              {stat.hint}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            <div className="rounded-2xl bg-[#F9FAFB] p-4 border border-[#ECEFF3]">
-              <p className="text-xs uppercase tracking-wide text-gray-500">ID Pengajuan</p>
-              <p className="text-sm font-semibold text-[#1F2937] mt-1">{application.id}</p>
+          <div style={{ height: "1px", background: "#f1f5f9", marginBottom: "32px" }} />
+
+          {/* Detail Data */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: "12px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>ID Pengajuan</span>
+              <span style={{ fontSize: "14px", fontWeight: 700, color: "#1A1A1A" }}>#{application.id}</span>
             </div>
-            <div className="rounded-2xl bg-[#F9FAFB] p-4 border border-[#ECEFF3]">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Dikirim Pada</p>
-              <p className="text-sm font-semibold text-[#1F2937] mt-1">{formatDate(application.submittedAt)}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: "12px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Diajukan Pada</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "#1A1A1A" }}>{fmtDate(application.submittedAt)}</span>
             </div>
-            <div className="rounded-2xl bg-[#F9FAFB] p-4 border border-[#ECEFF3]">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Nama Pemilik</p>
-              <p className="text-sm font-semibold text-[#1F2937] mt-1">{application.ownerName}</p>
-            </div>
-            <div className="rounded-2xl bg-[#F9FAFB] p-4 border border-[#ECEFF3]">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Nama Toko</p>
-              <p className="text-sm font-semibold text-[#1F2937] mt-1">{application.storeName}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: "12px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Nama Toko</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "#1A1A1A" }}>{application.storeName}</span>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Link href="/seller/apply">
-              <Button variant="outline">Edit & Kirim Ulang</Button>
-            </Link>
-            <Link href="/stores/me">
-              <Button variant="secondary">Buka Toko Saya</Button>
-            </Link>
+          {/* Call to Action */}
+          <div style={{ marginTop: "40px", display: "flex", gap: "12px" }}>
+            {application.status === "rejected" ? (
+              <Link href="/seller/apply" style={{ flex: 1 }}>
+                <Button style={{ width: "100%" }}>Ajukan Ulang</Button>
+              </Link>
+            ) : application.status === "approved" ? (
+              <Link href="/stores/me" style={{ flex: 1 }}>
+                <Button style={{ width: "100%" }}>Buka Dashboard Toko</Button>
+              </Link>
+            ) : (
+              <Button variant="outline" style={{ flex: 1 }} onClick={() => window.location.reload()}>Refresh Status</Button>
+            )}
           </div>
         </Card>
+
       </main>
     </div>
   );

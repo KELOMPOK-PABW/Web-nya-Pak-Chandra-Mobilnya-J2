@@ -3,24 +3,29 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { productService } from "@/services/productService";
 import { sellerService } from "@/services/sellerService";
 
-const sellerMenus = [
+const SELLER_MENUS = [
   { label: "Dashboard", href: "/seller/dashboard" },
   { label: "Produk", href: "/seller/products" },
   { label: "Pesanan", href: "/seller/orders" },
-  { label: "Toko Saya", href: "/stores/me" },
-  { label: "Status Pengajuan", href: "/seller/application" },
 ];
 
+function fmt(n) {
+  return "Rp" + Number(n || 0).toLocaleString("id-ID");
+}
+
 export default function MyStorePage() {
-  // Store profile state
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [error, setError] = useState("");
+
   const [form, setForm] = useState({
     storeName: "",
     slogan: "",
@@ -30,19 +35,23 @@ export default function MyStorePage() {
     description: "",
   });
 
-  // Product summary state
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    async function loadStore() {
+    async function loadData() {
       setIsLoading(true);
       setError("");
       try {
-        const store = await sellerService.getMyStore();
+        const [store, productsRes] = await Promise.all([
+          sellerService.getMyStore(),
+          productService.getSellerProducts().catch(() => ({ data: [] }))
+        ]);
+
         if (!active) return;
+
         setForm({
           storeName: store.storeName || "",
           slogan: store.slogan || "",
@@ -51,204 +60,238 @@ export default function MyStorePage() {
           phone: store.phone || "",
           description: store.description || "",
         });
+        setProducts(productsRes.data || []);
       } catch (err) {
         if (active) setError(err.message || "Gagal mengambil data toko.");
       } finally {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+          setProductsLoading(false);
+        }
       }
     }
 
-    async function loadProducts() {
-      setProductsLoading(true);
-      try {
-        const res = await productService.getSellerProducts();
-        if (!active) return;
-        setProducts(res.data || []);
-      } catch (err) {
-        if (active) setProducts([]);
-      } finally {
-        if (active) setProductsLoading(false);
-      }
-    }
-
-    loadStore();
-    loadProducts();
+    loadData();
     return () => { active = false; };
   }, []);
 
-  const activeProducts = products.filter(p => p.stock > 0);
-  const totalValue = products.reduce((s, p) => s + Number(p.price || 0) * Number(p.stock || 0), 0);
+  const totalStockValue = products.reduce((s, p) => s + (Number(p.price || 0) * Number(p.stock || 0)), 0);
+  const activeProductsCount = products.filter(p => Number(p.stock) > 0).length;
 
-  const onChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onSave = async (event) => {
-    event.preventDefault();
+  const onSave = async (e) => {
+    e.preventDefault();
     setIsSaving(true);
     setSaveMessage("");
     setError("");
     try {
-      const store = await sellerService.updateMyStore(form);
-      setForm((prev) => ({
+      const updated = await sellerService.updateMyStore(form);
+      setForm(prev => ({
         ...prev,
-        storeName: store.storeName || prev.storeName,
-        phone: store.phone || prev.phone,
+        storeName: updated.storeName || prev.storeName,
+        phone: updated.phone || prev.phone,
       }));
-      setSaveMessage("Informasi toko berhasil diperbarui.");
+      setSaveMessage("Informasi toko berhasil diperbarui!");
       setIsEditing(false);
     } catch (err) {
-      setError(err.message || "Gagal menyimpan perubahan. Silakan coba lagi.");
+      setError(err.message || "Gagal menyimpan perubahan.");
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#f8f9fa", fontFamily: "'DM Sans', sans-serif" }}>
       <Navbar />
-      <div className="flex flex-1 max-w-[1280px] w-full mx-auto">
-        <Sidebar title="Toko Saya" subtitle="Seller Center" menus={sellerMenus} />
+      <div style={{ display: "flex", flex: 1 }}>
+        <Sidebar menus={SELLER_MENUS} />
 
-        <main className="flex-1 p-8">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-[#1A1A1A]">Toko Saya</h1>
-            <p className="text-sm text-[#777]">Ringkasan toko dan produk Anda.</p>
+        <main style={{ flex: 1, padding: "32px", maxWidth: "1200px" }}>
+
+          <div style={{ marginBottom: "24px" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>Profil Toko</h1>
+            <p style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Kelola informasi identitas dan performa toko Anda.</p>
           </div>
 
-          {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+          {(error || saveMessage) && (
+            <div style={{
+              marginBottom: "20px", padding: "12px 16px", borderRadius: "12px", fontSize: "14px",
+              background: error ? "#FEF2F2" : "#F0FDF4",
+              border: `1px solid ${error ? "#FECACA" : "#BBF7D0"}`,
+              color: error ? "#B91C1C" : "#166534"
+            }}>
+              {error || saveMessage}
+            </div>
           )}
 
-          {/* Store Profile Form */}
-          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-[#1A1A1A]">Informasi Toko</h2>
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-sm font-semibold text-[#1A3C34] hover:text-[#2D6A5E] cursor-pointer"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", alignItems: "start" }}>
 
-            {isLoading ? (
-              <div className="py-12 text-center text-gray-500">Memuat data toko...</div>
-            ) : (
-              <form onSubmit={onSave} className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">Nama Toko</label>
-                    <input name="storeName" value={form.storeName} onChange={onChange} disabled={!isEditing}
-                      className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">Slogan</label>
-                    <input name="slogan" value={form.slogan} onChange={onChange} disabled={!isEditing}
-                      className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">Kota</label>
-                    <input name="city" value={form.city} onChange={onChange} disabled={!isEditing}
-                      className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">No. HP</label>
-                    <input name="phone" value={form.phone} onChange={onChange} disabled={!isEditing}
-                      className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">Alamat</label>
-                    <input name="address" value={form.address} onChange={onChange} disabled={!isEditing}
-                      className="w-full h-11 rounded-xl border border-[#E5E7EB] px-3 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-[#374151] block mb-2">Deskripsi Toko</label>
-                    <textarea name="description" value={form.description} onChange={onChange} disabled={!isEditing} rows={3}
-                      className="w-full rounded-xl border border-[#E5E7EB] px-3 py-2 bg-white disabled:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20" />
-                  </div>
+            {/* LEFT: Info Form */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <Card style={{ padding: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>Informasi Dasar</h2>
+                  {!isEditing && (
+                    <Button variant="outline" style={{ padding: "6px 16px", fontSize: "12px" }} onClick={() => setIsEditing(true)}>
+                      Edit Profil
+                    </Button>
+                  )}
                 </div>
 
-                {saveMessage && (
-                  <p className="text-sm text-[#166534]">{saveMessage}</p>
-                )}
-
-                {isEditing && (
-                  <div className="flex gap-3">
-                    <button type="submit" disabled={isSaving}
-                      className="rounded-xl bg-[#1A3C34] text-white text-sm font-semibold px-5 py-2.5 hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50">
-                      {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
-                    </button>
-                    <button type="button" onClick={() => setIsEditing(false)}
-                      className="rounded-xl border border-[#E5E7EB] text-[#555] text-sm font-semibold px-5 py-2.5 hover:bg-[#F9FAFB] transition-colors cursor-pointer">
-                      Batal
-                    </button>
-                  </div>
-                )}
-              </form>
-            )}
-          </div>
-
-          {/* Product Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
-              <p className="text-xs text-[#888] font-semibold tracking-wide">Total Produk</p>
-              <p className="text-xl font-bold text-[#1A1A1A] mt-1">
-                {productsLoading ? "..." : products.length}
-              </p>
-            </div>
-            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
-              <p className="text-xs text-[#888] font-semibold tracking-wide">Produk Aktif</p>
-              <p className="text-xl font-bold text-[#1A3C34] mt-1">
-                {productsLoading ? "..." : activeProducts.length}
-              </p>
-            </div>
-            <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
-              <p className="text-xs text-[#888] font-semibold tracking-wide">Nilai Stok</p>
-              <p className="text-xl font-bold text-[#1A1A1A] mt-1">
-                {productsLoading ? "..." : `Rp ${(totalValue / 1000000).toFixed(1)} jt`}
-              </p>
-            </div>
-          </div>
-
-          {/* Products List */}
-          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6">
-            <h2 className="text-base font-bold text-[#1A1A1A] mb-4">Produk</h2>
-
-            {productsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-[#888]">Belum ada produk.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {products.map(p => (
-                  <div key={p.id} className="flex items-center justify-between py-3 border-b border-[#F3F4F6] last:border-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#F0FBF8] flex items-center justify-center text-lg">📦</div>
+                {isLoading ? (
+                  <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>Memuat informasi toko...</div>
+                ) : (
+                  <form onSubmit={onSave} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                       <div>
-                        <p className="text-sm font-semibold text-[#1A1A1A]">{p.name}</p>
-                        <p className="text-xs text-[#888]">
-                          Rp {Number(p.price).toLocaleString("id-ID")} · Stok: {p.stock}
-                        </p>
+                        <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Nama Toko</label>
+                        <input
+                          disabled={!isEditing} value={form.storeName}
+                          onChange={e => setForm({ ...form, storeName: e.target.value })}
+                          style={{
+                            width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                            background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Slogan</label>
+                        <input
+                          disabled={!isEditing} value={form.slogan}
+                          onChange={e => setForm({ ...form, slogan: e.target.value })}
+                          style={{
+                            width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                            background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box"
+                          }}
+                        />
                       </div>
                     </div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${p.stock > 0 ? "bg-[#D1FAE5] text-[#059669]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
-                      {p.stock > 0 ? "Tersedia" : "Habis"}
-                    </span>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Kota</label>
+                        <input
+                          disabled={!isEditing} value={form.city}
+                          onChange={e => setForm({ ...form, city: e.target.value })}
+                          style={{
+                            width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                            background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>No. Telepon</label>
+                        <input
+                          disabled={!isEditing} value={form.phone}
+                          onChange={e => setForm({ ...form, phone: e.target.value })}
+                          style={{
+                            width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                            background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Alamat Lengkap</label>
+                      <input
+                        disabled={!isEditing} value={form.address}
+                        onChange={e => setForm({ ...form, address: e.target.value })}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                          background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", marginBottom: "6px", display: "block" }}>Deskripsi Toko</label>
+                      <textarea
+                        disabled={!isEditing} value={form.description}
+                        onChange={e => setForm({ ...form, description: e.target.value })}
+                        rows={3}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #E5E7EB",
+                          background: isEditing ? "#fff" : "#f8f9fa", outline: "none", boxSizing: "border-box", resize: "none"
+                        }}
+                      />
+                    </div>
+
+                    {isEditing && (
+                      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                        <Button type="submit" loading={isSaving}>Simpan Perubahan</Button>
+                        <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Batal</Button>
+                      </div>
+                    )}
+                  </form>
+                )}
+              </Card>
+
+              {/* Products List Partial */}
+              <Card style={{ padding: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>Katalog Produk</h2>
+                  <Button variant="outline" style={{ padding: "6px 16px", fontSize: "12px" }}>
+                    <a href="/seller/products" style={{ textDecoration: "none", color: "inherit" }}>Kelola Produk</a>
+                  </Button>
+                </div>
+
+                {productsLoading ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {[1, 2, 3].map(i => <div key={i} style={{ height: "50px", background: "#f1f5f9", borderRadius: "10px" }} />)}
                   </div>
-                ))}
-              </div>
-            )}
+                ) : products.length === 0 ? (
+                  <div style={{ padding: "30px", textAlign: "center", color: "#999", fontSize: "13px" }}>Belum ada produk di toko Anda.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {products.slice(0, 5).map(p => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px", border: "1px solid #f1f5f9", borderRadius: "12px" }}>
+                        <div style={{ width: "40px", height: "40px", background: "#f0fdf4", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>🛍</div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontWeight: 600, fontSize: "13px" }}>{p.name}</p>
+                          <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>{fmt(p.price)} · Stok: {p.stock}</p>
+                        </div>
+                        <Badge variant={p.stock > 0 ? "success" : "danger"}>{p.stock > 0 ? "Aktif" : "Habis"}</Badge>
+                      </div>
+                    ))}
+                    {products.length > 5 && (
+                      <p style={{ textAlign: "center", margin: "10px 0 0", fontSize: "12px", color: "#666" }}>Menampilkan 5 dari {products.length} produk</p>
+                    )}
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* RIGHT: Stats */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <Card style={{ padding: "20px" }}>
+                <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#64748b", margin: "0 0 16px", textTransform: "uppercase" }}>Performa Toko</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>Total Produk</p>
+                    <p style={{ margin: "2px 0 0", fontSize: "20px", fontWeight: 800 }}>{products.length}</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>Produk Aktif</p>
+                    <p style={{ margin: "2px 0 0", fontSize: "20px", fontWeight: 800, color: "#059669" }}>{activeProductsCount}</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>Estimasi Nilai Stok</p>
+                    <p style={{ margin: "2px 0 0", fontSize: "20px", fontWeight: 800, color: "#1A3C34" }}>{fmt(totalStockValue)}</p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card style={{ padding: "20px", background: "#1A3C34" }}>
+                <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>Status Toko</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                  <div style={{ width: "8px", height: "8px", background: "#4ade80", borderRadius: "50%" }} />
+                  <span style={{ color: "#fff", fontWeight: 700, fontSize: "16px" }}>Aktif Berjualan</span>
+                </div>
+              </Card>
+            </div>
+
           </div>
+
         </main>
       </div>
     </div>
