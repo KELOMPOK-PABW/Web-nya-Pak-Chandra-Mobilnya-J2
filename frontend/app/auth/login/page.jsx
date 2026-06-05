@@ -29,7 +29,7 @@ export default function LoginPage() {
       const user = data.data?.user;
       const role = user?.roles?.[0] || "buyer";
       if (role === "seller") router.push("/seller/dashboard");
-      else if (role === "kurir") router.push("/courier/tasks");
+      else if (role === "kurir") router.push("/courier/dashboard");
       else router.push("/home");
     } catch (err) {
       setError(err.message || "Login gagal. Coba lagi.");

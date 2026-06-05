@@ -16,7 +16,7 @@ export default function RootPage() {
     // Cek role untuk redirect yang tepat
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (user.role === "seller") router.replace("/seller/dashboard");
-    else if (user.role === "kurir") router.replace("/courier/tasks");
+    else if (user.role === "kurir") router.replace("/courier/dashboard");
     else if (user.role === "admin") router.replace("/admin/users");
     else router.replace("/home");
   }, [router]);
