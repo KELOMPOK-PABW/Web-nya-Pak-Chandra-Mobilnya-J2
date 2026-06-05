@@ -46,7 +46,7 @@ export function Navbar() {
       {/* Left: logo + title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Link
-          href={isSeller ? "/seller/dashboard" : "/home"}
+          href={isSeller ? "/seller/dashboard" : isKurir ? "/courier/dashboard" : "/home"}
           style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
         >
           <div style={{
