@@ -4,13 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
+import { Button } from "@/components/ui/Button";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { checkoutService } from "@/services/checkoutService";
-import { Button } from "@/components/ui/Button";
 
+/* ── helpers ── */
 function fmt(n) {
-  return "Rp " + Number(n).toLocaleString("id-ID");
+  return "Rp " + Number(n || 0).toLocaleString("id-ID");
 }
 
 function getItemSubtotal(item) {
@@ -18,13 +19,22 @@ function getItemSubtotal(item) {
   return Number(item.product?.price || item.price || 0) * Number(item.qty || 1);
 }
 
+/* ── kecil-keciil ── */
 function SectionCard({ title, children }) {
   return (
     <div style={{
-      background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 16, overflow: "hidden",
+      background: "#fff",
+      borderRadius: 16,
+      border: "1px solid #EBEBEB",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+      marginBottom: 16,
+      overflow: "hidden",
     }}>
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{
+        padding: "14px 20px",
+        borderBottom: "1px solid #F3F4F6",
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>{title}</span>
       </div>
       <div style={{ padding: "18px 20px" }}>{children}</div>
@@ -32,92 +42,130 @@ function SectionCard({ title, children }) {
   );
 }
 
+function InputField({ placeholder, value, onChange, type = "text" }) {
+  return (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: "1.5px solid #E5E7EB",
+        background: "#FAFAF8",
+        fontSize: 13,
+        fontFamily: "inherit",
+        outline: "none",
+        boxSizing: "border-box",
+      }}
+    />
+  );
+}
+
+/* ── page ── */
 export default function CheckoutPage() {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState([]);
-  const [addresses, setAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [loadingCart, setLoadingCart] = useState(true);
-  const [error, setError] = useState("");
 
-  // Address form remains as a fallback when the addresses API is unavailable.
-  const [address, setAddress] = useState({
-    detail: "",
-    city: "",
-    province: "",
-    zip: "",
-    name: "",
-    phone: "",
-  });
+  const [cartItems, setCartItems] = useState([]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressMode, setAddressMode] = useState("saved"); // "saved" | "manual"
+  const [manualAddress, setManualAddress] = useState({ name: "", phone: "", detail: "", city: "", province: "", zip: "" });
+
+  const [loadingCart, setLoadingCart] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [addressError, setAddressError] = useState("");
 
-  // State
-  const [submitting, setSubmitting] = useState(false);
   const isLoggedIn = Boolean(authService.getToken());
 
+  /* load cart & saved addresses */
   useEffect(() => {
     if (!isLoggedIn) {
       setLoadingCart(false);
-      setError("Silakan login terlebih dahulu untuk checkout.");
       return;
     }
 
-    async function loadCart() {
+    async function load() {
       setLoadingCart(true);
       setError("");
       try {
-        const items = await cartService.getCart();
-        setCartItems(Array.isArray(items) ? items : []);
-        try {
-          const addressList = await checkoutService.getAddresses();
-          setAddresses(addressList);
-          setSelectedAddressId(addressList[0]?.address_id ?? addressList[0]?.id ?? "");
-        } catch {
-          setAddresses([]);
-          setSelectedAddressId("");
+        const [items, addressList] = await Promise.allSettled([
+          cartService.getCart(),
+          checkoutService.getAddresses(),
+        ]);
+
+        const cartData = items.status === "fulfilled" ? (Array.isArray(items.value) ? items.value : []) : [];
+        setCartItems(cartData);
+
+        if (addressList.status === "fulfilled" && Array.isArray(addressList.value) && addressList.value.length > 0) {
+          setSavedAddresses(addressList.value);
+          const firstId = addressList.value[0]?.address_id ?? addressList.value[0]?.id ?? "";
+          setSelectedAddressId(String(firstId));
+          setAddressMode("saved");
+        } else {
+          setSavedAddresses([]);
+          setAddressMode("manual");
         }
       } catch (err) {
-        setError(err.message || "Gagal memuat cart");
-        setCartItems([]);
+        setError(err.message || "Gagal memuat data checkout.");
       } finally {
         setLoadingCart(false);
       }
     }
-    loadCart();
+
+    load();
   }, [isLoggedIn]);
 
+  /* computed */
   const subtotal = cartItems.reduce((sum, item) => sum + getItemSubtotal(item), 0);
   const shipping = 15000;
   const total = subtotal + shipping;
 
+  /* validate manual address */
+  function validateManual() {
+    if (!manualAddress.name.trim()) return "Nama penerima wajib diisi.";
+    if (!manualAddress.detail.trim()) return "Alamat lengkap wajib diisi.";
+    if (!manualAddress.city.trim()) return "Kota wajib diisi.";
+    return null;
+  }
+
+  /* place order */
   const handlePlaceOrder = async () => {
-    // Validate address
-    if (!address.detail.trim() || !address.city.trim() || !address.name.trim()) {
-      setAddressError("Lengkapi alamat pengiriman (nama, detail, dan kota).");
-      return;
-    }
     setAddressError("");
-    setSubmitting(true);
     setError("");
 
+    // Validasi alamat
+    if (addressMode === "manual") {
+      const err = validateManual();
+      if (err) { setAddressError(err); return; }
+    } else if (!selectedAddressId) {
+      setAddressError("Pilih alamat pengiriman.");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      setError("Keranjang kosong, tidak bisa checkout.");
+      return;
+    }
+
+    const cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
+    if (!cartId) {
+      setError("Cart ID tidak ditemukan. Coba refresh halaman.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      if (cartItems.length === 0) {
-        throw new Error("Keranjang kosong");
-      }
-
-      const cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
-      if (!cartId) {
-        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
-      }
-
-      const checkoutData = await checkoutService.createOrder({
-        cart_id: cartId,
+      const result = await checkoutService.createOrder({
+        cart_id: Number(cartId),
         address_id: Number(selectedAddressId || 1),
         payment_method: "ewallet",
       });
 
-      const orderId = checkoutData?.order_id ?? checkoutData?.id;
-
+      const orderId = result?.order_id ?? result?.id;
       if (orderId) {
         router.push(`/payment/${orderId}`);
       } else {
@@ -130,11 +178,13 @@ export default function CheckoutPage() {
     }
   };
 
+  /* ── not logged in ── */
   if (!isLoggedIn) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#F5F5F5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
         <Navbar />
-        <div style={{ maxWidth: 500, margin: "80px auto", textAlign: "center", padding: "0 24px" }}>
+        <div style={{ maxWidth: 460, margin: "80px auto", textAlign: "center", padding: "0 24px" }}>
+          <p style={{ fontSize: 48, margin: "0 0 12px" }}>🔐</p>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0A0A0A", marginBottom: 8 }}>Login Diperlukan</h1>
           <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 24 }}>Silakan login untuk melanjutkan checkout.</p>
           <Link href="/auth/login" style={{
@@ -148,12 +198,13 @@ export default function CheckoutPage() {
     );
   }
 
+  /* ── main ── */
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ minHeight: "100vh", background: "#F5F5F5", fontFamily: "'DM Sans','Inter',sans-serif" }}>
 
       <Navbar />
 
+      {/* breadcrumb */}
       <div style={{ background: "#fff", borderBottom: "1px solid #EBEBEB" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 24px", display: "flex", alignItems: "center", gap: 6 }}>
           <Link href="/cart" style={{ fontSize: 13, color: "#6B7280", textDecoration: "none" }}>Keranjang</Link>
@@ -162,11 +213,10 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 48px" }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0A0A0A", marginBottom: 24 }}>
-          Checkout
-        </h1>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 64px" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0A0A0A", marginBottom: 24 }}>Checkout</h1>
 
+        {/* error banner */}
         {error && (
           <div style={{
             marginBottom: 16, padding: "12px 16px", borderRadius: 12,
@@ -175,7 +225,6 @@ export default function CheckoutPage() {
             {error}
           </div>
         )}
-
         {addressError && (
           <div style={{
             marginBottom: 16, padding: "12px 16px", borderRadius: 12,
@@ -187,150 +236,165 @@ export default function CheckoutPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20, alignItems: "start" }}>
 
-          {/* ── LEFT COLUMN ── */}
+          {/* ── LEFT ── */}
           <div>
+
             {/* 1. Alamat Pengiriman */}
             <SectionCard title="📍 Alamat Pengiriman">
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {addresses.length > 0 && (
-                  <select
-                    value={selectedAddressId}
-                    onChange={(event) => setSelectedAddressId(event.target.value)}
+              {savedAddresses.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  <button
+                    onClick={() => setAddressMode("saved")}
                     style={{
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1.5px solid #1A3C34",
-                      background: "#F0FBF8",
-                      fontSize: 13,
-                      fontFamily: "inherit",
-                      outline: "none",
+                      padding: "6px 16px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                      fontFamily: "inherit", cursor: "pointer", border: "none",
+                      background: addressMode === "saved" ? "#1A3C34" : "#F3F4F6",
+                      color: addressMode === "saved" ? "#fff" : "#6B7280",
                     }}
                   >
-                    {addresses.map((item) => (
-                      <option key={item.address_id ?? item.id} value={item.address_id ?? item.id}>
-                        {item.address}, {item.city}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <input
-                  placeholder="Nama penerima"
-                  value={address.name}
-                  onChange={e => setAddress(a => ({ ...a, name: e.target.value }))}
-                  style={{
-                    padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
-                    background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
-                  }}
-                />
-                <input
-                  placeholder="No. telepon"
-                  value={address.phone}
-                  onChange={e => setAddress(a => ({ ...a, phone: e.target.value }))}
-                  style={{
-                    padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
-                    background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
-                  }}
-                />
-                <textarea
-                  placeholder="Alamat lengkap (jalan, RT/RW, kelurahan)"
-                  value={address.detail}
-                  onChange={e => setAddress(a => ({ ...a, detail: e.target.value }))}
-                  rows={2}
-                  style={{
-                    width: "100%", padding: "10px 12px", borderRadius: 10,
-                    border: "1.5px solid #E5E7EB", background: "#FAFAF8", fontSize: 13,
-                    fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box",
-                  }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    placeholder="Kota"
-                    value={address.city}
-                    onChange={e => setAddress(a => ({ ...a, city: e.target.value }))}
+                    Alamat Tersimpan
+                  </button>
+                  <button
+                    onClick={() => setAddressMode("manual")}
                     style={{
-                      flex: 1, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
-                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      padding: "6px 16px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                      fontFamily: "inherit", cursor: "pointer", border: "none",
+                      background: addressMode === "manual" ? "#1A3C34" : "#F3F4F6",
+                      color: addressMode === "manual" ? "#fff" : "#6B7280",
                     }}
-                  />
-                  <input
-                    placeholder="Provinsi"
-                    value={address.province}
-                    onChange={e => setAddress(a => ({ ...a, province: e.target.value }))}
-                    style={{
-                      flex: 1, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
-                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
-                    }}
-                  />
-                  <input
-                    placeholder="Kode pos"
-                    value={address.zip}
-                    onChange={e => setAddress(a => ({ ...a, zip: e.target.value }))}
-                    style={{
-                      width: 100, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB",
-                      background: "#FAFAF8", fontSize: 13, fontFamily: "inherit", outline: "none",
-                    }}
-                  />
+                  >
+                    Alamat Baru
+                  </button>
                 </div>
-              </div>
+              )}
+
+              {addressMode === "saved" && savedAddresses.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {savedAddresses.map((item) => {
+                    const addrId = String(item.address_id ?? item.id);
+                    const isSelected = selectedAddressId === addrId;
+                    return (
+                      <div
+                        key={addrId}
+                        onClick={() => setSelectedAddressId(addrId)}
+                        style={{
+                          padding: "12px 16px",
+                          borderRadius: 12,
+                          border: isSelected ? "2px solid #1A3C34" : "1.5px solid #E5E7EB",
+                          background: isSelected ? "#F0FBF8" : "#FAFAF8",
+                          cursor: "pointer",
+                          transition: "border-color 0.15s, background 0.15s",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{
+                            width: 16, height: 16, borderRadius: "50%",
+                            border: isSelected ? "5px solid #1A3C34" : "2px solid #D1D5DB",
+                            flexShrink: 0, transition: "border 0.15s",
+                          }} />
+                          <div>
+                            <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: "#0A0A0A" }}>
+                              {item.address}
+                            </p>
+                            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280" }}>
+                              {item.city}{item.province ? `, ${item.province}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <Link href="/profile/addresses" style={{ fontSize: 12, color: "#1A3C34", fontWeight: 600, marginTop: 4, textDecoration: "none" }}>
+                    + Kelola Alamat
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <InputField
+                    placeholder="Nama penerima *"
+                    value={manualAddress.name}
+                    onChange={e => setManualAddress(a => ({ ...a, name: e.target.value }))}
+                  />
+                  <InputField
+                    placeholder="No. telepon"
+                    value={manualAddress.phone}
+                    onChange={e => setManualAddress(a => ({ ...a, phone: e.target.value }))}
+                  />
+                  <textarea
+                    placeholder="Alamat lengkap (jalan, RT/RW, kelurahan) *"
+                    value={manualAddress.detail}
+                    onChange={e => setManualAddress(a => ({ ...a, detail: e.target.value }))}
+                    rows={2}
+                    style={{
+                      width: "100%", padding: "10px 12px", borderRadius: 10,
+                      border: "1.5px solid #E5E7EB", background: "#FAFAF8", fontSize: 13,
+                      fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <InputField placeholder="Kota *" value={manualAddress.city} onChange={e => setManualAddress(a => ({ ...a, city: e.target.value }))} />
+                    <InputField placeholder="Provinsi" value={manualAddress.province} onChange={e => setManualAddress(a => ({ ...a, province: e.target.value }))} />
+                    <div style={{ width: 100, flexShrink: 0 }}>
+                      <InputField placeholder="Kode pos" value={manualAddress.zip} onChange={e => setManualAddress(a => ({ ...a, zip: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </SectionCard>
 
             {/* 2. Produk yang Dipesan */}
             <SectionCard title="🛍 Produk yang Dipesan">
               {loadingCart ? (
-                <p style={{ color: "#9CA3AF", fontSize: 13 }}>Memuat produk...</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[1, 2].map(i => (
+                    <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0" }}>
+                      <div style={{ width: 64, height: 64, background: "#F3F4F6", borderRadius: 10 }} />
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+                        <div style={{ height: 12, width: "60%", background: "#F3F4F6", borderRadius: 4 }} />
+                        <div style={{ height: 12, width: "40%", background: "#F3F4F6", borderRadius: 4 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : cartItems.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <p style={{ color: "#9CA3AF", fontSize: 13 }}>Tidak ada produk di keranjang.</p>
-                  <Link href="/products" style={{ fontSize: 13, fontWeight: 600, color: "#1A3C34" }}>
-                    Lihat produk
+                <div style={{ textAlign: "center", padding: "24px 0" }}>
+                  <p style={{ fontSize: 36, margin: "0 0 8px" }}>🛒</p>
+                  <p style={{ color: "#9CA3AF", fontSize: 13, marginBottom: 12 }}>Keranjang kosong.</p>
+                  <Link href="/products" style={{ fontSize: 13, fontWeight: 600, color: "#1A3C34", textDecoration: "none" }}>
+                    Lihat Produk
                   </Link>
                 </div>
               ) : (
-                cartItems.map((item) => (
-                  <div key={item.id} style={{
-                    display: "flex", gap: 14, padding: "12px 0",
-                    borderBottom: "1px solid #F3F4F6",
-                  }}>
-                    <div style={{
-                      width: 72, height: 72, borderRadius: 10,
-                      background: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 30, flexShrink: 0,
+                <div>
+                  {cartItems.map((item, i) => (
+                    <div key={item.id ?? i} style={{
+                      display: "flex", gap: 14, padding: "12px 0",
+                      borderBottom: i < cartItems.length - 1 ? "1px solid #F3F4F6" : "none",
                     }}>
-                      📦
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>
-                        {item.product?.store?.store_name || item.store_name || "Toko"}
-                      </p>
-                      <p style={{ margin: "2px 0 3px", fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>
-                        {item.product?.name || item.name}
-                      </p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                        <span style={{ fontSize: 12, color: "#6B7280" }}>x{item.qty}</span>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>
-                          {fmt(getItemSubtotal(item))}
-                        </span>
+                      <div style={{
+                        width: 64, height: 64, borderRadius: 10,
+                        background: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 26, flexShrink: 0,
+                      }}>📦</div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
+                          {item.product?.store?.store_name || item.store_name || "Toko"}
+                        </p>
+                        <p style={{ margin: "2px 0 4px", fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>
+                          {item.product?.name || item.name || "Produk"}
+                        </p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>x{item.qty || 1}</span>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: "#1A3C34" }}>
+                            {fmt(getItemSubtotal(item))}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
-
-              <div style={{ marginTop: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
-                  Catatan untuk Penjual (opsional)
-                </label>
-                <textarea
-                  placeholder="Contoh: tolong bungkus rapi ya..."
-                  rows={2}
-                  style={{
-                    width: "100%", padding: "10px 12px", borderRadius: 10,
-                    border: "1.5px solid #E5E7EB", background: "#FAFAF8", fontSize: 13,
-                    fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box",
-                  }}
-                />
-              </div>
             </SectionCard>
 
             {/* 3. Metode Pembayaran */}
@@ -340,40 +404,42 @@ export default function CheckoutPage() {
                 border: "2px solid #1A3C34", background: "#F0FBF8",
                 display: "flex", alignItems: "center", gap: 12,
               }}>
-                <span style={{ fontSize: 20 }}>💳</span>
-                <span style={{ fontWeight: 600, fontSize: 14, color: "#0A0A0A" }}>E-Wallet</span>
+                <span style={{ fontSize: 22 }}>💳</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#0A0A0A" }}>E-Wallet</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "#6B7280" }}>Saldo PABW Shop</p>
+                </div>
               </div>
-              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
-                Pembayaran dilakukan melalui E-Wallet internal.
-              </p>
             </SectionCard>
 
           </div>
 
-          {/* ── RIGHT COLUMN: Order Summary ── */}
+          {/* ── RIGHT: Ringkasan ── */}
           <div style={{ position: "sticky", top: 72 }}>
             <div style={{
-              background: "#fff", borderRadius: 16, border: "1px solid #EBEBEB",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.05)", overflow: "hidden",
+              background: "#fff", borderRadius: 16,
+              border: "1px solid #EBEBEB",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+              overflow: "hidden",
             }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6" }}>
                 <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Ringkasan Pesanan</span>
               </div>
               <div style={{ padding: "18px 20px" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 13, color: "#6B7280" }}>Subtotal ({cartItems.length} item)</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A" }}>{fmt(subtotal)}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 13, color: "#6B7280" }}>Ongkos Kirim</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#0A0A0A" }}>{fmt(shipping)}</span>
                   </div>
                 </div>
 
-                <div style={{ height: 1, background: "#F3F4F6", margin: "12px 0" }} />
+                <div style={{ height: 1, background: "#F3F4F6", marginBottom: 14 }} />
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                   <span style={{ fontWeight: 700, fontSize: 15, color: "#0A0A0A" }}>Total</span>
                   <span style={{ fontWeight: 800, fontSize: 20, color: "#1A3C34" }}>{fmt(total)}</span>
                 </div>
@@ -381,16 +447,16 @@ export default function CheckoutPage() {
                 <Button
                   type="button"
                   onClick={handlePlaceOrder}
-                  disabled={submitting || loadingCart || cartItems.length === 0}
+                  disabled={loadingCart || cartItems.length === 0}
                   loading={submitting}
-                  className="w-full mt-4"
+                  className="w-full"
                 >
                   {submitting ? "Memproses..." : "Buat Pesanan"}
                 </Button>
 
-                <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 11, color: "#9CA3AF", lineHeight: 1.6 }}>
+                <p style={{ margin: "12px 0 0", textAlign: "center", fontSize: 11, color: "#9CA3AF", lineHeight: 1.6 }}>
                   Dengan menekan tombol di atas, kamu menyetujui<br />
-                  <span style={{ color: "#1A3C34", fontWeight: 500, cursor: "pointer" }}>Syarat & Ketentuan</span> PABW Shop.
+                  <span style={{ color: "#1A3C34", fontWeight: 500 }}>Syarat & Ketentuan</span> PABW Shop.
                 </p>
               </div>
             </div>
