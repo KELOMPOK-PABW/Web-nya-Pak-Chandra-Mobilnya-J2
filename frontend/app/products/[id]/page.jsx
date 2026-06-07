@@ -154,7 +154,7 @@ export default function ProductDetailPage() {
             </aside>
             </div>
 
-            <ReviewList title={`Ulasan ${product.name}`} />
+            <ReviewList productId={product.id} title={`Ulasan ${product.name}`} />
           </div>
         )}
       </main>

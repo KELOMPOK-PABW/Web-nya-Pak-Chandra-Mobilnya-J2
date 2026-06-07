@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Button } from "@/components/ui/Button";
+import { courierService } from "@/services/courierService";
 
 const COURIER_MENUS = [
+  { label: "Dashboard", href: "/courier/dashboard" },
   { label: "Tugas Pengiriman", href: "/courier/tasks", icon: "🚚" },
 ];
 
@@ -74,24 +77,57 @@ export default function CourierTasksPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [tasks, setTasks] = useState(TASKS_DUMMY);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+  const [message, setMessage] = useState("");
+
+  async function loadTasks() {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const data = await courierService.getTasks();
+      setTasks(data.length > 0 ? data : TASKS_DUMMY);
+    } catch (err) {
+      setTasks(TASKS_DUMMY);
+      setMessage(err.message || "Menampilkan data contoh karena API tugas kurir belum tersedia.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
 
   const filtered = tasks.filter(t =>
     activeTab === "all" || t.status === activeTab
   );
 
-  const handleAction = (assignment_id, action) => {
-    // nanti: PUT /courier/order-items/{id}/pickup atau /deliver
+  const handleAction = async (task, action) => {
     const statusMap = {
       pickup:  "sedang dikirim",
       deliver: "sampai di tujuan",
       return:  "dikirim balik",
     };
-    setTasks(prev => prev.map(t =>
-      t.assignment_id === assignment_id
-        ? { ...t, status: statusMap[action] }
-        : t
-    ));
-    setConfirmModal(null);
+
+    setSavingId(task.assignment_id);
+    setMessage("");
+    try {
+      if (action === "pickup") await courierService.pickupOrderItem(task.order_item_id);
+      if (action === "deliver") await courierService.deliverOrderItem(task.order_item_id);
+      if (action === "return") await courierService.returnOrderItem(task.order_item_id);
+      setTasks(prev => prev.map(t =>
+        t.assignment_id === task.assignment_id
+          ? { ...t, status: statusMap[action] }
+          : t
+      ));
+      await loadTasks();
+    } catch (err) {
+      setMessage(err.message || "Gagal memperbarui status tugas kurir.");
+    } finally {
+      setSavingId(null);
+      setConfirmModal(null);
+    }
   };
 
   return (
@@ -105,8 +141,14 @@ export default function CourierTasksPage() {
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Tugas Pengiriman</h1>
-            <p className="text-sm text-gray-500 mt-1">{tasks.length} tugas aktif</p>
+            <p className="text-sm text-gray-500 mt-1">{isLoading ? "Memuat tugas..." : `${tasks.length} tugas aktif`}</p>
           </div>
+
+          {message && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {message}
+            </div>
+          )}
 
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-4 mb-6">
@@ -201,19 +243,25 @@ export default function CourierTasksPage() {
                             Detail
                           </Link>
                           {cfg.next && (
-                            <button
+                            <Button
+                              type="button"
+                              size="sm"
+                              loading={savingId === task.assignment_id}
                               onClick={() => setConfirmModal(task)}
-                              className="px-3 py-1.5 text-xs font-bold rounded-lg text-white transition-colors"
-                              style={{ background: "#1A3C34" }}>
+                            >
                               {cfg.next}
-                            </button>
+                            </Button>
                           )}
                           {task.status === "sedang dikirim" && (
-                            <button
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="danger"
+                              loading={savingId === task.assignment_id}
                               onClick={() => setConfirmModal({ ...task, forceAction: "return" })}
-                              className="px-3 py-1.5 text-xs font-semibold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                            >
                               Kembalikan
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -253,7 +301,7 @@ export default function CourierTasksPage() {
               </button>
               <button
                 onClick={() => handleAction(
-                  confirmModal.assignment_id,
+                  confirmModal,
                   confirmModal.forceAction ?? STATUS_CONFIG[confirmModal.status]?.action
                 )}
                 className="flex-1 h-10 rounded-lg text-sm font-bold text-white transition-colors"
