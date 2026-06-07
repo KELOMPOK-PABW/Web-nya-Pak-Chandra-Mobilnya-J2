@@ -66,7 +66,7 @@ export default function OrdersPage() {
 
     async function loadOrders() {
       setLoading(true);
-        setError("");
+      setError("");
       try {
         const data = await orderService.getOrders();
         setOrders(data);
