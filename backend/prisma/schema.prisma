@@ -7,83 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 enum UserRole {
-  buyer    
-  seller  
-  kurir    
-}
-
-model User {
-  id                   Int                  @id @default(autoincrement()) 
-  full_name            String
-  email                String               @unique
-  password             String
-  phone                String?
-  role                 UserRole             @default(buyer)
-  isActive             Boolean              @default(true) @map("is_active")
-  createdAt            DateTime             @default(now()) @map("created_at")
-  products             Product[]
-  addresses            Address[]
-  carts                Cart[]
-  buyerOrders          Order[]              @relation("BuyerOrders")
-  sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
-  orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
-  kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
-  wallets              Wallet[]
-  reviews              Review[]
-  chatSessions         ChatSession[]
-
-  @@map("users")
+  buyer
+  seller
+  kurir
 }
 
 enum StockStatus {
   tersedia
   habis
-}
-
-model Product {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String
-  price       Int
-  stock       Int
-  stockStatus StockStatus @map("stock_status")
-  imageUrl    String      @map("image_url")
-  sellerId    Int         @map("seller_id")
-  categoryId  Int?        @map("category_id")
-  createdAt   DateTime    @default(now()) @map("created_at")
-
-  seller     User        @relation(fields: [sellerId], references: [id])
-  category   Category?   @relation(fields: [categoryId], references: [id])
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  reviews    Review[]
-
-  @@map("products")
-}
-
-model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String    @default("") @db.VarChar(500)
-  createdAt   DateTime  @default(now()) @map("created_at")
-
-  products    Product[]
-
-  @@map("categories")
-}
-
-model Address {
-  id         Int    @id @default(autoincrement()) @map("address_id")
-  userId     Int    @map("user_id")
-  address    String
-  city       String
-  postalCode String @map("postal_code")
-
-  user   User    @relation(fields: [userId], references: [id])
-  orders Order[]
-
-  @@map("addresses")
 }
 
 enum PaymentMethod {
@@ -96,25 +29,173 @@ enum PaymentStatus {
   failed
 }
 
-model Payment {
-  id        Int           @id @default(autoincrement()) @map("payment_id")
-  orderId   Int           @unique @map("order_id")
-  method    PaymentMethod
-  amount    Decimal       @db.Decimal(15, 2)
-  status    PaymentStatus @default(pending)
-  paidAt    DateTime?     @map("paid_at")
-  createdAt DateTime      @default(now()) @map("created_at")
-
-  order Order @relation(fields: [orderId], references: [id])
-
-  @@map("payments")
-}
-
 enum CartStatus {
   active
   checked_out
   abandoned
 }
+
+enum OrderItemStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
+
+enum OrderHistoryStatus {
+  menunggu_penjual
+  diproses_penjual
+  menunggu_kurir
+  sedang_dikirim
+  sampai_di_tujuan
+  diterima_pembeli
+  transaksi_gagal
+}
+
+enum WalletTransactionType {
+  topup
+  payment
+  refund
+}
+
+enum SellerApplicationStatus {
+  pending
+  approved
+  rejected
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  full_name String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      UserRole @default(buyer)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  addresses            Address[]
+  carts                Cart[]
+  buyerOrders          Order[]              @relation("BuyerOrders")
+  sellerOrderItems     OrderItem[]          @relation("SellerOrderItems")
+  orderStatusHistories OrderStatusHistory[] @relation("OrderStatusUpdatedBy")
+  kurirAssignments     KurirAssignment[]    @relation("KurirAssignments")
+  wallets              Wallet[]
+  reviews              Review[]
+  userRoles            UserRoleMap[]
+  sellerApplications   SellerApplication[]
+  stores               Store[]
+  products             Product[]
+  chatSessions         ChatSession[]
+
+  @@map("users")
+}
+
+model Role {
+  id       Int           @id @default(autoincrement())
+  nameRole String        @map("name_role")
+  users    UserRoleMap[]
+
+  @@map("role")
+}
+
+
+model UserRoleMap {
+  userId Int @map("user_id")
+  roleId Int @map("role_id")
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Category {
+  id           Int       @id @default(autoincrement())
+  categoryName String    @map("category_name")
+  products     Product[]
+
+  @@map("categories")
+}
+
+
+model SellerApplication {
+  id        Int                     @id @default(autoincrement())
+  userId    Int                     @map("user_id")
+  storeName String                  @map("store_name")
+  phone     String
+  status    SellerApplicationStatus @default(pending)
+  createdAt DateTime                @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("seller_applications")
+}
+
+model Store {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  storeName String   @map("store_name")
+  phone     String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+
+  @@index([userId])
+  @@map("stores")
+}
+
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  categoryId  Int?        @map("category_id")
+  storeId     Int?        @map("store_id")
+  name        String
+  description String
+  price       Int
+  stock       Int
+  stockStatus StockStatus @map("stock_status")
+  imageUrl    String?     @map("image_url")
+  sellerId    Int         @map("seller_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  seller     User       @relation(fields: [sellerId], references: [id])
+  category   Category?  @relation(fields: [categoryId], references: [id])
+  store      Store?     @relation(fields: [storeId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@index([categoryId])
+  @@index([storeId])
+  @@index([sellerId])
+  @@map("products")
+}
+
+
+model Address {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @map("user_id")
+  address    String @db.Text
+  city       String
+  postalCode String @map("postal_code")
+
+  user   User    @relation(fields: [userId], references: [id])
+  orders Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
 
 model Cart {
   id           Int        @id @default(autoincrement()) @map("cart_id")
@@ -135,7 +216,7 @@ model CartItem {
   id        Int      @id @default(autoincrement()) @map("cart_item_id")
   cartId    Int      @map("cart_id")
   productId Int      @map("product_id")
-  quantity  Int      @default(1)
+  qty       Int      @default(1)
   createdAt DateTime @default(now()) @map("created_at")
 
   cart    Cart    @relation(fields: [cartId], references: [id])
@@ -147,6 +228,7 @@ model CartItem {
   @@map("cart_items")
 }
 
+
 model Order {
   id            Int           @id @default(autoincrement()) @map("order_id")
   buyerId       Int           @map("buyer_id")
@@ -157,25 +239,17 @@ model Order {
   createdAt     DateTime      @default(now()) @map("created_at")
   paidAt        DateTime?     @map("paid_at")
 
-  buyer        User                 @relation("BuyerOrders", fields: [buyerId], references: [id])
-  cart         Cart                 @relation(fields: [cartId], references: [id])
-  address      Address              @relation(fields: [addressId], references: [id])
-  items        OrderItem[]
-  histories    OrderStatusHistory[]
-  payment      Payment?
-  reviews      Review[]
+  buyer      User                 @relation("BuyerOrders", fields: [buyerId], references: [id])
+  cart       Cart                 @relation(fields: [cartId], references: [id])
+  address    Address              @relation(fields: [addressId], references: [id])
+  items      OrderItem[]
+  histories  OrderStatusHistory[]
+  payment    Payment?
+  reviews    Review[]
+  walletTxns WalletTransaction[]
 
+  @@index([buyerId])
   @@map("orders")
-}
-
-enum OrderItemStatus {
-  menunggu_penjual
-  diproses_penjual
-  menunggu_kurir
-  sedang_dikirim
-  sampai_di_tujuan
-  diterima_pembeli
-  transaksi_gagal
 }
 
 model OrderItem {
@@ -186,7 +260,6 @@ model OrderItem {
   productNameSnap String          @map("product_name_snap")
   priceSnap       Decimal         @map("price_snap") @db.Decimal(15, 2)
   qty             Int
-  subtotal        Decimal         @db.Decimal(15, 2)
   status          OrderItemStatus @default(menunggu_penjual)
   createdAt       DateTime        @default(now()) @map("created_at")
 
@@ -195,17 +268,36 @@ model OrderItem {
   seller          User             @relation("SellerOrderItems", fields: [sellerId], references: [id])
   kurirAssignment KurirAssignment?
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
-enum OrderHistoryStatus {
-  menunggu_penjual
-  diproses_penjual
-  menunggu_kurir
-  sedang_dikirim
-  sampai_di_tujuan
-  diterima_pembeli
-  transaksi_gagal
+model OrderStatusHistory {
+  id        Int                @id @default(autoincrement())
+  orderId   Int                @map("order_id")
+  updatedBy Int                @map("updated_by")
+  status    OrderHistoryStatus
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  order   Order @relation(fields: [orderId], references: [id])
+  updater User  @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+model Payment {
+  id      Int           @id @default(autoincrement()) @map("payment_id")
+  orderId Int           @unique @map("order_id")
+  amount  Decimal       @db.Decimal(15, 2)
+  method  PaymentMethod
+  status  PaymentStatus @default(pending)
+  paidAt  DateTime?     @map("paid_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
 }
 
 model KurirAssignment {
@@ -222,51 +314,61 @@ model KurirAssignment {
   @@map("kurir_assignments")
 }
 
-model OrderStatusHistory {
-  id        Int                @id @default(autoincrement())
-  orderId   Int                @map("order_id")
-  status    OrderHistoryStatus
-  updatedBy Int                @map("updated_by")
-  createdAt DateTime           @default(now()) @map("created_at")
-
-  order   Order @relation(fields: [orderId], references: [id])
-  updater User  @relation("OrderStatusUpdatedBy", fields: [updatedBy], references: [id])
-
-  @@map("order_status_history")
-}
-
 model Wallet {
-  id        Int      @id @default(autoincrement()) @map("wallet_id")
-  userId    Int      @map("user_id")
+  id        Int      @id @default(autoincrement()) @map("id")
+  userId    Int?     @map("user_id")
   balance   Decimal  @default(0.00) @db.Decimal(15, 2)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user         User                @relation(fields: [userId], references: [id])
+  user         User?               @relation(fields: [userId], references: [id])
   transactions WalletTransaction[]
 
-  @@unique([userId])
-  @@map("wallets")
-}
-
-enum WalletTransactionType {
-  topup
-  payment
-  refund
+  @@index([userId])
+  @@map("ewallet")
 }
 
 model WalletTransaction {
-  id           Int                    @id @default(autoincrement()) @map("wallet_transaction_id")
-  walletId     Int                    @map("wallet_id")
-  type         WalletTransactionType
-  amount       Decimal                @db.Decimal(15, 2)
-  balanceAfter Decimal                @map("balance_after") @db.Decimal(15, 2)
-  createdAt    DateTime               @default(now()) @map("created_at")
+  id            Int                   @id @default(autoincrement()) @map("id")
+  eWalletId     Int?                  @map("e_wallet_id")
+  orderId       Int?                  @map("order_id")
+  type          WalletTransactionType
+  amount        Decimal               @db.Decimal(15, 2)
+  balanceBefore Decimal               @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter  Decimal               @map("balance_after") @db.Decimal(15, 2)
+  createdAt     DateTime              @default(now()) @map("created_at")
 
-  wallet Wallet @relation(fields: [walletId], references: [id])
+  wallet Wallet? @relation(fields: [eWalletId], references: [id])
+  order  Order?  @relation(fields: [orderId], references: [id])
 
-  @@index([walletId])
-  @@map("wallet_transactions")
+  @@index([eWalletId])
+  @@index([orderId])
+  @@map("ewallet_transaction")
+}
+
+
+model ChatSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id])
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  sessionId Int      @map("session_id")
+  sender    String
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@map("chat_messages")
 }
 
 model Review {
@@ -284,40 +386,4 @@ model Review {
   reviewer User?    @relation(fields: [reviewerId], references: [id])
 
   @@map("review")
-}
-
-enum ChatRole {
-  user
-  assistant
-  system
-}
-
-model ChatSession {
-  id        Int            @id @default(autoincrement())
-  userId    Int            @map("user_id")
-  title     String?        @db.VarChar(200)
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
-
-  user     User          @relation(fields: [userId], references: [id])
-  messages ChatMessage[]
-
-  @@index([userId])
-  @@map("chat_sessions")
-}
-
-model ChatMessage {
-  id                  Int      @id @default(autoincrement())
-  sessionId           Int      @map("session_id")
-  role                ChatRole
-  content             String   @db.Text
-  intent              String?  @db.VarChar(50)
-  suggestedProductIds Json?    @map("suggested_product_ids")
-  entities            Json?    @map("entities")
-  createdAt           DateTime @default(now()) @map("created_at")
-
-  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-  @@map("chat_messages")
 }
