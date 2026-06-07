@@ -13,7 +13,7 @@ const formatReviewResponse = (review) => {
 const formatProductReviewResponse = (review) => {
   return {
     user: review.reviewer
-      ? { name: review.reviewer.full_name }
+      ? { name: review.reviewer.fullName }
       : null,
     rating: review.rating,
     comment: review.comment,

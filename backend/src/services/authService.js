@@ -6,22 +6,18 @@ const env = require("../config/env");
 const registerUser = async (userData) => {
   const { full_name, email, password, phone, role } = userData;
 
-  // Check if user already exists
   const existingUser = await authRepository.findUserByEmail(email);
   if (existingUser) {
     throw new Error("Email sudah terdaftar");
   }
 
-  // Hash password
   const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
 
-  // Create user
   const newUser = await authRepository.createUser({
     full_name,
     email,
-    password: hashedPassword,
+    passwordHash: hashedPassword,
     phone: phone || null,
-    role: role || "buyer",
     isActive: true,
   });
 
@@ -29,21 +25,21 @@ const registerUser = async (userData) => {
 };
 
 const loginUser = async (email, password) => {
-  // Find user
   const user = await authRepository.findUserByEmail(email);
   if (!user) {
     throw new Error("Email atau password salah");
   }
 
-  // Check password
-  const isMatch = await bcrypt.compare(password, user.password);
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
     throw new Error("Email atau password salah");
   }
 
-  // Generate token
+  // Get role from user_roles relation
+  const userRole = user.roles?.[0]?.role?.nameRole || "buyer";
+
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: userRole },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );

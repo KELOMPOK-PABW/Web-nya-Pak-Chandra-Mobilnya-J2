@@ -1,16 +1,19 @@
 const prisma = require("../config/database");
 
 const findByUserId = async (userId) => {
-  return prisma.user.findUnique({
-    where: { id: Number(userId) },
-    select: {
-      id: true,
-      full_name: true,
-      phone: true,
-    },
+  return prisma.store.findUnique({
+    where: { userId: Number(userId) },
+  });
+};
+
+const updateByUserId = async (userId, data) => {
+  return prisma.store.update({
+    where: { userId: Number(userId) },
+    data,
   });
 };
 
 module.exports = {
   findByUserId,
+  updateByUserId,
 };

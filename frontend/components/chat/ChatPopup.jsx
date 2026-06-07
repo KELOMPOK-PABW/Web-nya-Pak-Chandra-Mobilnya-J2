@@ -6,6 +6,10 @@ import { chatService } from "@/services/chatService";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
+import ComparisonCard from "@/components/chat/ComparisonCard";
+import ReviewSummary from "@/components/chat/ReviewSummary";
+import ConfirmationCard from "@/components/chat/ConfirmationCard";
+import MemoryPanel from "@/components/chat/MemoryPanel";
 
 const STORAGE_KEY = "chat_session_id";
 const fmt = (n) => "Rp " + Number(n).toLocaleString("id-ID");
@@ -29,6 +33,9 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
   const [sessions, setSessions] = useState([]);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false);
+  const [confirmQty, setConfirmQty] = useState(1);
+  const [pendingProduct, setPendingProduct] = useState(null);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -106,25 +113,33 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
       .catch(() => {});
   }, []);
 
-  const handleAddToCart = useCallback(async (productId) => {
-    if (addingToCart) return;
+  // ── Show confirmation card before adding to cart ──
+  const handleRequestAddToCart = useCallback((product) => {
+    setPendingProduct(product);
+    setConfirmQty(1);
+  }, []);
+
+  const handleConfirmAddToCart = useCallback(async () => {
+    if (!pendingProduct || addingToCart) return;
+    const productId = pendingProduct.product_id ?? pendingProduct.id;
     setAddingToCart(true);
     try {
-      await cartService.addItem({ product_id: productId, qty: 1 });
+      await cartService.addItem({ product_id: productId, qty: confirmQty });
       await refreshCartCount();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "✅ Produk berhasil ditambahkan ke keranjang!", isNotification: true },
+        { role: "assistant", content: `${pendingProduct.name ?? pendingProduct.product_name} (${confirmQty}x) berhasil ditambahkan ke keranjang!`, type: "success", isNotification: true },
       ]);
+      setPendingProduct(null);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `❌ Gagal menambahkan: ${err.message}`, isNotification: true },
+        { role: "assistant", content: `Gagal menambahkan: ${err.message}`, type: "error", isNotification: true },
       ]);
     } finally {
       setAddingToCart(false);
     }
-  }, [addingToCart, refreshCartCount]);
+  }, [pendingProduct, addingToCart, confirmQty, refreshCartCount]);
 
   const sendMessage = useCallback(async (msg) => {
     const text = (msg || input).trim();
@@ -157,13 +172,16 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
         intent: result.intent,
         entities: result.entities || {},
         followUpSuggestions: result.follow_up_suggestions || [],
+        reviewData: result.review_summary || result.review_data || null,
+        confidence: result.confidence || (result.intent === "search_product" ? "high" : "medium"),
+        citations: result.citations || [],
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       setMessages((prev) => prev.slice(0, -1));
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `❌ Gagal terhubung ke AI: ${err.message}`, isNotification: true },
+        { role: "assistant", content: `Gagal terhubung ke AI: ${err.message}`, type: "error", isNotification: true },
       ]);
     } finally {
       setLoading(false);
@@ -190,7 +208,7 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
     } catch (e) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `❌ Gagal memuat sesi: ${e.message}`, isNotification: true },
+        { role: "assistant", content: `Gagal memuat sesi: ${e.message}`, type: "error", isNotification: true },
       ]);
     } finally {
       setLoading(false);
@@ -281,6 +299,16 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
               </svg>
             </button>
             <button
+              onClick={() => setShowMemoryPanel(!showMemoryPanel)}
+              className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-[#F5F5F5] transition-colors text-gray-400 hover:text-[#1A3C34] cursor-pointer"
+              title="Yang saya ingat"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a4 4 0 00-4 4v1h8V6a4 4 0 00-4-4z"/>
+                <path d="M4 10h16v10a2 2 0 01-2 2H6a2 2 0 01-2-2V10z"/>
+              </svg>
+            </button>
+            <button
               onClick={handleNewChat}
               className="bg-[#1A3C34] text-white rounded-lg px-2 py-1.5 text-[11px] font-semibold hover:bg-[#2D6A5E] transition-colors cursor-pointer"
             >
@@ -356,6 +384,7 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
             <div className="w-12 h-12 rounded-2xl bg-[#F0FBF8] flex items-center justify-center mb-3">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A3C34" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h10a2 2 0 012 2v8"/>
+                <path d="M12 8V4m0 0L8 8m4-4l4 4"/>
               </svg>
             </div>
             <p className="text-[13px] font-semibold text-[#1A1A1A] mb-1">Tanya tentang produk ini</p>
@@ -369,10 +398,43 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
           <ChatBubble
             key={i}
             msg={msg}
-            onAddToCart={handleAddToCart}
+            onAddToCart={handleRequestAddToCart}
             addingToCart={addingToCart}
           />
         ))}
+
+        {/* ── Confirmation card (above input, before next message) ── */}
+        {pendingProduct && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-[90%]">
+              <ConfirmationCard
+                product={pendingProduct}
+                qty={confirmQty}
+                onConfirm={handleConfirmAddToCart}
+                onCancel={() => setPendingProduct(null)}
+                onEditQty={setConfirmQty}
+                loading={addingToCart}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Memory panel (inline when toggled) ── */}
+        {showMemoryPanel && (
+          <div className="py-2">
+            <MemoryPanel
+              memories={[
+                { id: "budget-1", label: "Budget laptop", value: "Rp 10-15 juta", category: "budget" },
+                { id: "brand-1", label: "Brand favorit", value: "Lenovo, ASUS", category: "brand" },
+                { id: "pref-1", label: "Preferensi", value: "Laptop tipis, gaming", category: "preference" },
+              ]}
+              onEdit={(id, val) => console.log("Edit", id, val)}
+              onDelete={(id) => console.log("Delete", id)}
+              onClearAll={() => console.log("Clear all")}
+              onClose={() => setShowMemoryPanel(false)}
+            />
+          </div>
+        )}
 
         {loading && messages.length > 0 && (
           <div className="flex justify-start">
@@ -449,23 +511,38 @@ export default function ChatPopup({ product, onClose, initialSessionId }) {
   );
 }
 
-/* ─── Mini Chat Bubble ─── */
-const PRODUCT_INTENTS = ["search_product", "add_to_cart"];
+/* ─── Mini Chat Bubble (enhanced with ComparisonCard, ReviewSummary) ─── */
+const PRODUCT_INTENTS = ["search_product", "compare", "add_to_cart"];
 
 function ChatBubble({ msg, onAddToCart, addingToCart }) {
   const isUser = msg.role === "user";
   const isNotification = msg.isNotification;
   const isProductRelated = PRODUCT_INTENTS.includes(msg.intent);
-  const showCartButton = msg.intent === "add_to_cart" && msg.products && msg.products.length > 0;
+  const isCompare = msg.intent === "compare";
+  const showCartButton = msg.intent === "add_to_cart" && msg.products && msg.products.length > 0 && !msg.confirmed;
+  const hasReviewData = msg.reviewData || (msg.products?.[0]?.review_summary);
 
   if (isNotification) {
+    const notifType = msg.type || "success";
     return (
       <div className="flex justify-center">
-        <div className={`rounded-xl px-3 py-2 text-[12px] font-medium ${
-          msg.content.startsWith("✅")
-            ? "bg-green-50 border border-green-200 text-green-700"
+        <div className={`rounded-xl px-3 py-2 text-[12px] font-medium flex items-center gap-1.5 ${
+          notifType === "success"
+            ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
             : "bg-red-50 border border-red-200 text-red-700"
         }`}>
+          {notifType === "success" ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          )}
           {msg.content}
         </div>
       </div>
@@ -474,7 +551,8 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className="max-w-[90%]">
+      <div className="max-w-[95%]">
+        {/* ── Message bubble ── */}
         <div
           className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed break-words whitespace-pre-wrap ${
             isUser
@@ -485,20 +563,44 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
           {msg.content}
         </div>
 
-        {!isUser && showCartButton && (
+        {/* ── ComparisonCard (when intent is 'compare' and 2+ products) ── */}
+        {!isUser && isCompare && msg.products && msg.products.length >= 2 && (
+          <div className="mt-2">
+            <ComparisonCard
+              products={msg.products}
+              onAddToCart={onAddToCart}
+              addingToCart={addingToCart}
+            />
+          </div>
+        )}
+
+        {/* ── ReviewSummary ── */}
+        {!isUser && hasReviewData && !isCompare && (
+          <div className="mt-2">
+            <ReviewSummary
+              summary={msg.reviewData || msg.products?.[0]?.review_summary}
+              reviews={msg.products?.[0]?.reviews || []}
+              productName={msg.products?.[0]?.name ?? msg.products?.[0]?.product_name}
+            />
+          </div>
+        )}
+
+        {/* ── Single add-to-cart button (for non-compare, direct add) ── */}
+        {!isUser && showCartButton && !isCompare && (
           <div className="mt-1.5">
             <button
-              onClick={() => onAddToCart && onAddToCart(msg.products[0].product_id ?? msg.products[0].id)}
+              onClick={() => onAddToCart && onAddToCart(msg.products[0])}
               disabled={addingToCart}
               className="w-full bg-[#1A3C34] text-white text-[11px] font-semibold py-2 px-3 rounded-lg hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               <span>🛒</span>
-              <span>{addingToCart ? "Menambahkan..." : `Tambah "${msg.products[0].name ?? msg.products[0].product_name}" ke Keranjang`}</span>
+              <span>{addingToCart ? "Menambahkan..." : `Tambah ke Keranjang`}</span>
             </button>
           </div>
         )}
 
-        {!isUser && isProductRelated && msg.products && msg.products.length > 0 && (
+        {/* ── Product cards (for search results - non-compare) ── */}
+        {!isUser && isProductRelated && !isCompare && msg.products && msg.products.length > 0 && !showCartButton && (
           <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
             {msg.products.map((p, i) => (
               <a
@@ -526,6 +628,7 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
           </div>
         )}
 
+        {/* ── Follow-up suggestions ── */}
         {!isUser && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {msg.followUpSuggestions.map((s, i) => (
@@ -535,6 +638,21 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
               >
                 {s}
               </span>
+            ))}
+          </div>
+        )}
+
+        {/* ── Source citations ── */}
+        {!isUser && msg.citations && msg.citations.length > 0 && (
+          <div className="mt-1.5 border-t border-[#F0F0F0] pt-1.5">
+            <p className="text-[9px] text-gray-400 mb-1 font-medium">Sumber:</p>
+            {msg.citations.map((cit, i) => (
+              <div key={i} className="text-[9px] text-gray-400">
+                <a href={cit.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[#1A3C34] hover:underline">
+                  {cit.label || `Sumber ${i + 1}`}
+                </a>
+              </div>
             ))}
           </div>
         )}

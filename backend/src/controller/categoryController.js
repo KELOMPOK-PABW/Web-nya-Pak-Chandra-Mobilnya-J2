@@ -9,7 +9,11 @@ const getAllCategories = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    const statusCode = error.message && (
+      error.message.includes("tidak ditemukan") ||
+      error.message.startsWith("Category ID")
+    ) ? 400 : 500;
+    return res.status(statusCode).json({
       success: false,
       message: error.message,
     });

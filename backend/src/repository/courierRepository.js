@@ -9,11 +9,11 @@ const findAssignmentsByKurirId = async (kurirId) => {
           product: { select: { name: true } },
           order: {
             select: {
-              buyer: { select: { full_name: true, phone: true } },
+              buyer: { select: { fullName: true, phone: true } },
               address: { select: { address: true, city: true } },
             },
           },
-          seller: { select: { full_name: true } },
+          seller: { select: { fullName: true } },
         },
       },
     },
@@ -30,11 +30,11 @@ const findAssignmentById = async (id) => {
           product: { select: { name: true } },
           order: {
             select: {
-              buyer: { select: { full_name: true, phone: true } },
+              buyer: { select: { fullName: true, phone: true } },
               address: { select: { address: true, city: true } },
             },
           },
-          seller: { select: { full_name: true } },
+          seller: { select: { fullName: true } },
         },
       },
     },

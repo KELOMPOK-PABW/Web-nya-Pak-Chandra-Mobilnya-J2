@@ -6,10 +6,10 @@ const getSellerOrders = async (sellerId) => {
   return items.map((item) => ({
     id: item.order.id,
     order_item_id: item.id,
-    buyerName: item.order.buyer?.full_name || "-",
+    buyerName: item.order.buyer?.fullName || "-",
     productName: item.product?.name || item.productNameSnap,
     qty: item.qty,
-    total: Number(item.subtotal),
+    total: Number(item.priceSnap) * Number(item.qty),
     status: item.status,
     createdAt: item.createdAt,
   }));

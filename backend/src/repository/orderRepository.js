@@ -26,7 +26,7 @@ const findOrderByIdForBuyer = async (orderId, buyerId) => {
         include: {
           seller: {
             select: {
-              full_name: true,
+              fullName: true,
             },
           },
         },

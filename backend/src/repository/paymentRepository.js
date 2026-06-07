@@ -59,7 +59,16 @@ const updateWalletBalance = async (tx, walletId, newBalance) => {
 };
 
 const createWalletTransaction = async (tx, data) => {
-  return tx.walletTransaction.create({ data });
+  return tx.walletTransaction.create({
+    data: {
+      eWalletId: data.walletId,
+      type: data.type,
+      amount: data.amount,
+      balanceBefore: data.balanceBefore ?? 0,
+      balanceAfter: data.balanceAfter,
+      orderId: data.orderId,
+    },
+  });
 };
 
 module.exports = {

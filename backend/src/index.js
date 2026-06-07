@@ -26,6 +26,7 @@ const chatRoutes = require("./routes/chatRoutes")
 const llmRoutes = require("./routes/llmRoutes")
 const courierRoutes = require("./routes/courierRoutes")
 const adminRoutes = require("./routes/adminRoutes")
+const addressRoutes = require("./routes/addressRoutes")
 const authController = require("./controller/authController")
 const reviewController = require("./controller/reviewController")
 const storeController = require("./controller/storeController")
@@ -43,8 +44,8 @@ app.use(helmet({
 app.use(compression());
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX,
     message: { success: false, message: "Terlalu banyak permintaan, coba lagi nanti" },
   })
 );
@@ -59,6 +60,7 @@ app.use("/api/auth", authRoutes)
 // Protected routes (require authentication)
 app.use("/api/users", authenticate, userRoutes)
 app.use("/api/cart", authenticate, cartRoutes)
+app.use("/api/addresses", authenticate, addressRoutes)
 app.use("/api/checkout", authenticate, checkoutRoutes)
 app.use("/api/orders", authenticate, orderRoutes)
 app.use("/api/wallet", authenticate, walletRoutes)

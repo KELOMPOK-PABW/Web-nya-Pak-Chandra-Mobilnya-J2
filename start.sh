@@ -29,11 +29,15 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# ── 1. Read DATABASE_URL from backend .env ───────────────────────
+# ── 1. Read DATABASE_URL from backend .env (strip quotes) ────────
+# Dotenv files often quote values; Prisma's CLI rejects quoted env vars,
+# so we strip surrounding " or ' before exporting.
 if [ -f "$BACKEND_DIR/.env" ]; then
-  source_env=$(grep -E '^DATABASE_URL=' "$BACKEND_DIR/.env" | head -1)
-  if [ -n "$source_env" ]; then
-    export "$source_env"
+  raw=$(grep -E '^[[:space:]]*DATABASE_URL=' "$BACKEND_DIR/.env" | head -1 | sed 's/^[[:space:]]*DATABASE_URL=//')
+  # Strip surrounding single or double quotes
+  cleaned=$(echo "$raw" | sed -E "s/^'(.*)'$/\1/; s/^\"(.*)\"$/\1/")
+  if [ -n "$cleaned" ]; then
+    export DATABASE_URL="$cleaned"
   fi
 fi
 
@@ -50,7 +54,12 @@ if [ ! -f "$FRONTEND_DIR/node_modules/.package-lock.json" ]; then
   (cd "$FRONTEND_DIR" && npm install) || { echo -e "${RED}Frontend install failed${NC}"; exit 1; }
 fi
 
-# ── 3. Generate Prisma client ────────────────────────────────────
+# ── 3. Apply migrations + generate Prisma client ──────────────────
+echo -e "${CYAN}🔧 Applying database migrations...${NC}"
+(cd "$BACKEND_DIR" && npx prisma migrate deploy) || {
+  echo -e "${YELLOW}⚠  No pending migrations or migrate deploy failed. Trying db push...${NC}"
+  (cd "$BACKEND_DIR" && npx prisma db push) || { echo -e "${RED}Database setup failed${NC}"; exit 1; }
+}
 echo -e "${CYAN}🔧 Generating Prisma client...${NC}"
 (cd "$BACKEND_DIR" && npx prisma generate) || { echo -e "${RED}Prisma generate failed${NC}"; exit 1; }
 

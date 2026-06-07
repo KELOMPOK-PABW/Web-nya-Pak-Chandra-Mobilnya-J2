@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { authService } from "@/services/authService";
+import { useToast } from "@/components/ui/Toast";
 
 const ROLE_LABELS = {
   buyer: "Pembeli",
@@ -12,9 +14,12 @@ const ROLE_LABELS = {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const isLoggedIn = Boolean(authService.getToken());
 
   useEffect(() => {
@@ -46,6 +51,12 @@ export default function ProfilePage() {
     }
     loadProfile();
   }, [isLoggedIn]);
+
+  const handleLogout = () => {
+    authService.logout();
+    showToast({ type: "success", message: "Berhasil keluar. Sampai jumpa!" });
+    setTimeout(() => router.push("/auth/login"), 500);
+  };
 
   if (!isLoggedIn) {
     return (
@@ -161,9 +172,56 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
+
+              {/* Logout */}
+              <div className="mt-8 pt-6 border-t border-[#F0F0F0]">
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold py-3 text-center hover:bg-red-100 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Keluar
+                </button>
+              </div>
             </section>
           </div>
         ) : null}
+
+        {/* Logout Confirmation Modal */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
+            <div className="relative bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center border border-[#F0F0F0]">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-[#1A1A1A] mb-2">Yakin ingin keluar?</h3>
+              <p className="text-sm text-gray-500 mb-6">Kamu perlu login kembali untuk mengakses akun ini.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 rounded-xl border border-[#E5E7EB] text-[#374151] text-sm font-semibold py-3 hover:bg-[#F9FAFB] transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 rounded-xl bg-red-600 text-white text-sm font-semibold py-3 hover:bg-red-700 transition-colors cursor-pointer"
+                >
+                  Keluar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

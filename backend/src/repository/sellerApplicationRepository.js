@@ -9,7 +9,7 @@ const findByUserId = async (userId) => {
 const findAll = async () => {
   return prisma.sellerApplication.findMany({
     include: {
-      user: { select: { full_name: true, email: true } },
+      user: { select: { fullName: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
   });

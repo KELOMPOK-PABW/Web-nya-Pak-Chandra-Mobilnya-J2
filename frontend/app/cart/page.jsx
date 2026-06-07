@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
+import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
+import ProactivePrompt from "@/components/chat/ProactivePrompt";
 
 const formatRupiah = (value) =>
   new Intl.NumberFormat("id-ID", {
@@ -29,16 +32,29 @@ const getItemSubtotal = (item) => {
 };
 
 export default function CartPage() {
+  const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [countInfo, setCountInfo] = useState({ total_items: 0, total_quantity: 0 });
   const [validateInfo, setValidateInfo] = useState({ valid: true, invalid_items: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingItemId, setSavingItemId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const router = useRouter();
   const isLoggedIn = Boolean(authService.getToken());
   const { refreshCartCount } = useCartContext();
+
+  // ── Cart abandonment tracking ──
+  useEffect(() => {
+    if (items.length > 0) {
+      const timer = setTimeout(() => {
+        // Signal is implicit via ProactivePrompt rendering condition below
+      }, 10 * 60 * 1000); // 10 min
+      return () => clearTimeout(timer);
+    }
+  }, [items.length]);
 
   const getDerivedCount = (cartItems) => ({
     total_items: cartItems.length,
@@ -121,6 +137,7 @@ export default function CartPage() {
     const nextQty = Math.max(1, Number(currentItem.qty) + diff);
     if (nextQty === Number(currentItem.qty)) return;
 
+    setSavingItemId(id);
     setSaving(true);
     setError("");
     setSuccess("");
@@ -128,15 +145,17 @@ export default function CartPage() {
     try {
       await cartService.updateItem(id, nextQty);
       await fetchCartData();
-      setSuccess("Qty cart berhasil diperbarui.");
+      showToast({ type: "success", message: "Jumlah item berhasil diperbarui!" });
     } catch (err) {
       setError(err.message || "Gagal update qty");
     } finally {
+      setSavingItemId(null);
       setSaving(false);
     }
   };
 
   const removeItem = async (id) => {
+    setSavingItemId(id);
     setSaving(true);
     setError("");
     setSuccess("");
@@ -144,10 +163,11 @@ export default function CartPage() {
     try {
       await cartService.deleteItem(id);
       await fetchCartData();
-      setSuccess("Item berhasil dihapus dari cart.");
+      showToast({ type: "success", message: "Item berhasil dihapus dari keranjang." });
     } catch (err) {
       setError(err.message || "Gagal menghapus item");
     } finally {
+      setSavingItemId(null);
       setSaving(false);
     }
   };
@@ -169,14 +189,42 @@ export default function CartPage() {
           <div>
             <h1 className="text-2xl font-bold text-[#0A0A0A]">Keranjang Belanja</h1>
           </div>
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#374151] shadow-sm">
-            {loading ? "Memuat cart..." : `${countInfo.total_items || items.length} item • ${totalQty} qty`}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/chat"
+              className="rounded-2xl border border-[#1A3C34]/20 bg-[#F0FBF8] px-4 py-3 text-sm font-semibold text-[#1A3C34] hover:bg-[#D8F5F0] transition-colors flex items-center gap-2"
+              style={{ textDecoration: "none" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
+                <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
+              </svg>
+              Cek promo
+            </Link>
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#374151] shadow-sm">
+              {loading ? "Memuat cart..." : `${countInfo.total_items || items.length} item • ${totalQty} qty`}
+            </div>
           </div>
         </div>
 
-        {(error || success) && (
-          <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
-            {error || success}
+        {/* ── Proactive prompt (cart abandonment) ── */}
+        {!loading && items.length > 0 && (
+          <div className="mb-4">
+            <ProactivePrompt
+              type="CART_ABANDON"
+              onDismiss={() => {}}
+              onAction={(action) => {
+                if (action === "ask") router.push("/chat");
+                if (action === "checkout") router.push("/checkout");
+              }}
+              delay={500}
+            />
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
         )}
 
@@ -222,28 +270,35 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 relative">
                       <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => updateQty(itemId, -1)}
-                          disabled={saving}
-                          className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB]"
+                          onClick={() => updateQty(item.id, -1)}
+                          disabled={savingItemId === item.id}
+                          className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                         >
                           -
                         </button>
-                        <span className="w-10 text-center text-sm font-semibold text-[#111827]">{item.qty}</span>
+                        <span className={`w-10 text-center text-sm font-semibold text-[#111827] ${savingItemId === item.id ? 'opacity-40' : ''}`}>
+                          {savingItemId === item.id ? (
+                            <svg className="inline w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                            </svg>
+                          ) : item.qty}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => updateQty(itemId, 1)}
-                          disabled={saving}
-                          className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB]"
+                          onClick={() => updateQty(item.id, 1)}
+                          disabled={savingItemId === item.id}
+                          className="w-9 h-9 text-lg text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                         >
                           +
                         </button>
                       </div>
 
-                      <Button size="sm" variant="danger" type="button" loading={saving} onClick={() => removeItem(itemId)}>
+                      <Button size="sm" variant="danger" type="button" loading={savingItemId === item.id} onClick={() => removeItem(item.id)}>
                         Hapus
                       </Button>
                     </div>
@@ -286,15 +341,9 @@ export default function CartPage() {
                 <span className="text-lg font-bold text-[#0A0A0A]">{formatRupiah(total)}</span>
               </div>
 
-              {items.length === 0 || !validateInfo?.valid ? (
-                <Button className="w-full" disabled>
-                  Beli ({totalQty})
-                </Button>
-              ) : (
-                <Link href="/checkout" className="block">
-                  <Button className="w-full">Beli ({totalQty})</Button>
-                </Link>
-              )}
+              <Button className="w-full" disabled={items.length === 0 || !validateInfo?.valid} onClick={() => router.push("/checkout")}>
+                Beli ({totalQty})
+              </Button>
             </Card>
           </div>
         </div>

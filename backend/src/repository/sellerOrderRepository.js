@@ -8,7 +8,7 @@ const findOrderItemsBySellerId = async (sellerId) => {
         select: {
           id: true,
           buyerId: true,
-          buyer: { select: { full_name: true } },
+          buyer: { select: { fullName: true } },
         },
       },
       product: {

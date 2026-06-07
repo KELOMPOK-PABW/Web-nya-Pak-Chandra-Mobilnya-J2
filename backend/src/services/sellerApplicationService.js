@@ -36,7 +36,7 @@ const getAllApplications = async () => {
   return apps.map((app) => ({
     id: app.id,
     userId: app.userId,
-    ownerName: app.user?.full_name || "-",
+    ownerName: app.user?.fullName || "-",
     email: app.user?.email || "-",
     storeName: app.storeName,
     phone: app.phone,
@@ -52,12 +52,14 @@ const getAllApplications = async () => {
 const approveApplication = async (id) => {
   const app = await sellerApplicationRepository.updateStatus(Number(id), "approved", null);
 
-  // Update user role to seller
+  // Assign seller role via user_roles
   const prisma = require("../config/database");
-  await prisma.user.update({
-    where: { id: app.userId },
-    data: { role: "seller" },
-  });
+  const sellerRole = await prisma.role.findFirst({ where: { nameRole: "seller" } });
+  if (sellerRole) {
+    await prisma.userRole.create({
+      data: { userId: app.userId, roleId: sellerRole.id },
+    });
+  }
 
   return { id: app.id, status: app.status };
 };

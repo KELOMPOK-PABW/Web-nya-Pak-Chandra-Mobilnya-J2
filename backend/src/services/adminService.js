@@ -16,7 +16,7 @@ const getUsers = async ({ page = 1, limit = 20, search, role, status }) => {
   return {
     users: users.map((u) => ({
       id: u.id,
-      full_name: u.full_name,
+      full_name: u.fullName,
       email: u.email,
       phone: u.phone,
       role: u.role,
@@ -62,7 +62,7 @@ const getUserDetail = async (userId) => {
 
   return {
     id: user.id,
-    full_name: user.full_name,
+    full_name: user.fullName,
     email: user.email,
     phone: user.phone,
     role: user.role,

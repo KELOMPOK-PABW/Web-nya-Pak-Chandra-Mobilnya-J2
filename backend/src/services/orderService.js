@@ -32,7 +32,7 @@ const getOrderById = async (orderId, buyerId) => {
       : null,
     items: order.items.map((item) => ({
       product_name: item.productNameSnap,
-      store_name: item.seller ? item.seller.full_name : "-",
+      store_name: item.seller ? item.seller.fullName : "-",
       qty: item.qty,
       price: Number(item.priceSnap),
     })),
