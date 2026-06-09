@@ -56,7 +56,7 @@ const updateCategory = async (id, data) => {
 const formatCategoryResponse = (category) => {
   return {
     id: category.id,
-    category_name: category.name,
+    category_name: category.categoryName,
   };
 };
 

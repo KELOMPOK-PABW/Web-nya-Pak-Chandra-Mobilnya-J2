@@ -2,7 +2,7 @@ const prisma = require("../config/database");
 
 const findAll = async () => {
   return prisma.category.findMany({
-    orderBy: { name: "asc" },
+    orderBy: { categoryName: "asc" },
   });
 };
 
@@ -15,8 +15,7 @@ const findById = async (id) => {
 const create = async (data) => {
   return prisma.category.create({
     data: {
-      name: data.name,
-      description: data.description || "",
+      categoryName: data.name,
     },
   });
 };
@@ -30,7 +29,7 @@ const update = async (id, data) => {
 
 const findByName = async (name) => {
   return prisma.category.findFirst({
-    where: { name: { equals: name } },
+    where: { categoryName: { equals: name } },
   });
 };
 

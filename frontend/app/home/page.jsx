@@ -33,14 +33,16 @@ const QUICK_PROMPTS = [
 ];
 
 const CATEGORY_ICONS = {
-  Fashion: "👕",
-  Gadget: "📱",
-  Rumah: "🏠",
-  Makanan: "🍕",
-  Olahraga: "🏃",
-  Kecantikan: "💄",
-  Elektronik: "💻",
-  Otomotif: "🚗",
+  "Kecantikan": "💄",
+  "Parfum": "🧴",
+  "Rumah Tangga": "🏠",
+  "Makanan & Minuman": "🍕",
+  "Elektronik": "💻",
+  "Pakaian": "👕",
+  "Olahraga": "🏃",
+  "Otomotif": "🚗",
+  "Aksesoris": "⌚",
+  "Kesehatan": "💊",
 };
 
 function fmt(n) {

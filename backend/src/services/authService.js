@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authRepository = require("../repository/authRepository");
+const prisma = require("../config/database");
 const env = require("../config/env");
 
 const registerUser = async (userData) => {
@@ -21,7 +22,19 @@ const registerUser = async (userData) => {
     isActive: true,
   });
 
-  return newUser;
+  // Assign the selected role via user_roles junction table
+  const roleRecord = await prisma.role.findFirst({
+    where: { nameRole: role || "buyer" },
+  });
+  if (roleRecord) {
+    await prisma.userRole.create({
+      data: { userId: newUser.id, roleId: roleRecord.id },
+    });
+  }
+
+  // Re-fetch user with roles populated for the response
+  const userWithRoles = await authRepository.findUserById(newUser.id);
+  return userWithRoles;
 };
 
 const loginUser = async (email, password) => {

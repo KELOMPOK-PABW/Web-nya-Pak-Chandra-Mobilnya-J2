@@ -13,7 +13,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const DUMMYJSON_URL = "https://dummyjson.com/products";
-const DEFAULT_SELLER_ID = 6;
+const DEFAULT_SELLER_ID = 1;
 const LIMIT = 100;
 
 // Map DummyJSON category slugs to our category names
@@ -79,23 +79,22 @@ async function ensureCategories(apiProducts) {
 
   // Find existing categories
   const existing = await prisma.category.findMany();
-  const existingNames = new Set(existing.map((c) => c.name));
+  const existingNames = new Set(existing.map((c) => c.categoryName));
 
   // Create missing categories
-  for (const name of neededNames) {
-    if (!existingNames.has(name)) {
-      const desc = CATEGORY_DESCRIPTIONS[name] || "";
+  for (const categoryName of neededNames) {
+    if (!existingNames.has(categoryName)) {
       await prisma.category.create({
-        data: { name, description: desc },
+        data: { categoryName },
       });
-      console.log(`  Created category: ${name}`);
+      console.log(`  Created category: ${categoryName}`);
     }
   }
 
   // Return map of name -> id
   const all = await prisma.category.findMany();
   const map = {};
-  for (const c of all) map[c.name] = c.id;
+  for (const c of all) map[c.categoryName] = c.id;
   return map;
 }
 
@@ -116,8 +115,8 @@ async function seedProducts(apiProducts, categoryMap) {
     const categoryName = CATEGORY_MAP[p.category];
     const categoryId = categoryName ? categoryMap[categoryName] : null;
 
-    // Truncate description to fit VARCHAR(191) column
-    const description = (p.description || "").slice(0, 190);
+    // Truncate description
+    const desc = (p.description || "").slice(0, 190);
 
     // Use first gallery image if available, otherwise fall back to thumbnail
     const imageUrl = (p.images && p.images.length > 0 ? p.images[0] : p.thumbnail) || "";
@@ -128,12 +127,12 @@ async function seedProducts(apiProducts, categoryMap) {
     await prisma.product.create({
       data: {
         name: (p.title || "").slice(0, 190),
-        description: description,
+        desc: desc,
         price: priceIdr,
         stock: p.stock || 0,
         stockStatus: p.stock > 0 ? "tersedia" : "habis",
         imageUrl: imageUrl,
-        sellerId: DEFAULT_SELLER_ID,
+        storeId: DEFAULT_SELLER_ID,
         categoryId: categoryId,
       },
     });
@@ -169,7 +168,7 @@ async function main() {
   console.log(`  Total categories: ${cats.length}`);
   for (const c of cats) {
     const count = await prisma.product.count({ where: { categoryId: c.id } });
-    console.log(`    ${c.name}: ${count} products`);
+    console.log(`    ${c.categoryName}: ${count} products`);
   }
 }
 

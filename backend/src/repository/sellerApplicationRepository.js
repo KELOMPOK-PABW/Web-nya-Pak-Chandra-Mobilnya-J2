@@ -3,7 +3,7 @@ const prisma = require("../config/database");
 // ---- From HEAD branch ----
 
 const findByUserId = async (userId) => {
-  return prisma.sellerApplication.findUnique({
+  return prisma.sellerApplication.findFirst({
     where: { userId: Number(userId) },
   });
 };
