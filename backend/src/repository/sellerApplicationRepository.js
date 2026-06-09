@@ -1,5 +1,39 @@
 const prisma = require("../config/database");
 
+// ---- From HEAD branch ----
+
+const findByUserId = async (userId) => {
+  return prisma.sellerApplication.findFirst({
+    where: { userId: Number(userId) },
+  });
+};
+
+const findAll = async () => {
+  return prisma.sellerApplication.findMany({
+    include: {
+      user: { select: { fullName: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const create = async (data) => {
+  return prisma.sellerApplication.create({ data });
+};
+
+const updateStatus = async (id, status, reviewerNote) => {
+  return prisma.sellerApplication.update({
+    where: { id: Number(id) },
+    data: {
+      status,
+      reviewerNote: reviewerNote || null,
+      reviewedAt: new Date(),
+    },
+  });
+};
+
+// ---- From main branch ----
+
 const createApplication = async (data) => {
   return await prisma.sellerApplication.create({
     data,
@@ -56,7 +90,6 @@ const getRoleByName = async (roleName) => {
 };
 
 const addUserRoleMap = async (userId, roleId, prismaTransaction = prisma) => {
-  // Check if mapping already exists
   const existing = await prismaTransaction.userRoleMap.findUnique({
     where: {
       userId_roleId: {
@@ -76,12 +109,17 @@ const addUserRoleMap = async (userId, roleId, prismaTransaction = prisma) => {
   return existing;
 };
 
-// Expose prisma for transactions
 const $transaction = async (callback) => {
   return await prisma.$transaction(callback);
 };
 
 module.exports = {
+  // From HEAD
+  findByUserId,
+  findAll,
+  create,
+  updateStatus,
+  // From main
   createApplication,
   getApplications,
   getApplicationById,

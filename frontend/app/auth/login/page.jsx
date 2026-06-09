@@ -245,8 +245,11 @@ export default function LoginPage() {
               </p>
 
               {/* Trust badges */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "16px", marginTop: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "20px", flexWrap: "wrap" }}>
                 {[
+                  { icon: "🔒", label: "Pembayaran Aman" },
+                  { icon: "🚚", label: "Gratis Ongkir" },
+                  { icon: "⭐", label: "Garansi 100%" },
                 ].map((b) => (
                   <div key={b.label} style={{ display: "flex", alignItems: "center", gap: "6px", background: "white", borderRadius: "999px", padding: "6px 14px", border: "1px solid #EBEBEB", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     <span style={{ fontSize: "14px" }}>{b.icon}</span>
@@ -348,6 +351,7 @@ export default function LoginPage() {
                       className="w-full px-4 pr-12 rounded-2xl border border-[#E5E2DB] bg-[#FAFAF8] text-[#1A1A1A] placeholder:text-[#C8C8C8] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 focus:border-[#1A3C34] transition-all"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-[#BDBDBD] hover:text-[#777] transition-colors">
                       {showPassword ? (
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>

@@ -1,5 +1,12 @@
 const authService = require("../services/authService");
 
+const getRoleFromUser = (user) => {
+  if (user.roles && user.roles.length > 0) {
+    return user.roles.map(r => r.role?.nameRole || "buyer");
+  }
+  return ["buyer"];
+};
+
 const register = async (req, res) => {
   try {
     const newUser = await authService.registerUser(req.body);
@@ -9,11 +16,11 @@ const register = async (req, res) => {
       message: "Registrasi berhasil",
       data: {
         id: newUser.id,
-        full_name: newUser.full_name,
+        full_name: newUser.fullName,
         email: newUser.email,
         phone: newUser.phone,
         is_active: newUser.isActive,
-        roles: [newUser.role],
+        roles: getRoleFromUser(newUser),
         created_at: newUser.createdAt,
       },
     });
@@ -39,9 +46,9 @@ const login = async (req, res) => {
         access_token: token,
         user: {
           id: user.id,
-          full_name: user.full_name,
+          full_name: user.fullName,
           email: user.email,
-          roles: [user.role],
+          roles: getRoleFromUser(user),
           is_active: user.isActive,
         },
       },
@@ -65,10 +72,10 @@ const getMe = async (req, res) => {
       success: true,
       data: {
         id: user.id,
-        full_name: user.full_name,
+        full_name: user.fullName,
         email: user.email,
         phone: user.phone,
-        roles: [user.role],
+        roles: getRoleFromUser(user),
         is_active: user.isActive,
         created_at: user.createdAt,
       },

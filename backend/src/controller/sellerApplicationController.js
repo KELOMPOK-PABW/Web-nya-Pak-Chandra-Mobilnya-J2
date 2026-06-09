@@ -24,6 +24,18 @@ const apply = async (req, res, next) => {
   }
 };
 
+const getMyApplication = async (req, res) => {
+  try {
+    const result = await service.getMyApplication(req.user.id);
+    if (!result) {
+      return res.status(200).json({ success: true, data: null, message: "Belum ada pengajuan" });
+    }
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const getApplications = async (req, res, next) => {
   try {
     const result = await service.getApplications();
@@ -55,8 +67,7 @@ const reject = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    
-    // Validate reason if necessary
+
     if (!reason) {
       return res.status(400).json({
         success: false,
@@ -78,6 +89,7 @@ const reject = async (req, res, next) => {
 
 module.exports = {
   apply,
+  getMyApplication,
   getApplications,
   approve,
   reject

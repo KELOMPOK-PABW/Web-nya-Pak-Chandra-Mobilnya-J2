@@ -4,12 +4,16 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
+import { BottomBar } from "@/components/layout/BottomBar";
 import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
+import { useToast } from "@/components/ui/Toast";
 import ChatPopup from "@/components/chat/ChatPopup";
 import { ReviewList } from "@/components/reviews/ReviewList";
+import ProactivePrompt from "@/components/chat/ProactivePrompt";
+import useStruggleDetection from "@/hooks/useStruggleDetection";
 
 const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
 
@@ -21,9 +25,10 @@ export default function ProductDetailPage() {
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
 
+  const { showToast } = useToast();
+
   // Cart state
   const [addingToCart, setAddingToCart] = useState(false);
-  const [cartMessage, setCartMessage] = useState(null);
 
   // Chat popup state
   const [showChat, setShowChat] = useState(false);
@@ -51,6 +56,15 @@ export default function ProductDetailPage() {
     return () => { mounted = false; };
   }, [id]);
 
+  // ── Struggle detection (dwell) ──
+  const struggle = useStruggleDetection({
+    pageType: "pdp",
+    productId: id,
+    onSignal: (signal) => {
+      // Dwell detected — ProactivePrompt will show
+    },
+  });
+
   // Auto-open chat sidebar when navigated from /chat (?chat=1)
   useEffect(() => {
     if (searchParams.get("chat") === "1") {
@@ -72,14 +86,13 @@ export default function ProductDetailPage() {
     if (!product || !product.id) return;
 
     setAddingToCart(true);
-    setCartMessage(null);
 
     try {
       await cartService.addItem({ product_id: product.id, qty: 1 });
       await refreshCartCount();
-      setCartMessage({ type: "success", text: "Berhasil ditambahkan ke keranjang" });
+      showToast({ type: "success", message: `${product.name} berhasil ditambahkan ke keranjang!` });
     } catch (err) {
-      setCartMessage({ type: "error", text: err.message || "Gagal menambahkan ke keranjang" });
+      showToast({ type: "error", message: err.message || "Gagal menambahkan ke keranjang" });
     } finally {
       setAddingToCart(false);
     }
@@ -87,6 +100,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
+      <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } } .animate-shimmer { animation: shimmer 1.5s ease-in-out infinite; }`}</style>
       <Navbar />
 
       <div className={`flex ${showChat ? "" : ""}`}>
@@ -108,12 +122,29 @@ export default function ProductDetailPage() {
         </div>
 
         {loading ? (
-          <div className="bg-white border border-[#E8E8E8] rounded-2xl p-8 animate-pulse">
-            <div className="h-72 bg-gray-200 rounded-3xl" />
-            <div className="mt-6 space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-1/3" />
-              <div className="h-4 bg-gray-200 rounded w-1/4" />
-              <div className="h-8 bg-gray-200 rounded w-1/5" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            {/* Left skeleton */}
+            <div className="space-y-6">
+              <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
+                <div className="h-72 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-3xl animate-shimmer bg-[length:200%_100%]" />
+              </div>
+              <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6 space-y-4">
+                <div className="h-7 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded w-2/3 animate-shimmer bg-[length:200%_100%]" />
+                <div className="h-4 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+                <div className="h-10 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded w-1/4 animate-shimmer bg-[length:200%_100%]" />
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-16 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-xl animate-shimmer bg-[length:200%_100%]" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Right skeleton */}
+            <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6 sticky top-24 space-y-4">
+              <div className="h-5 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded w-1/2 animate-shimmer bg-[length:200%_100%]" />
+              <div className="h-8 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded w-1/3 animate-shimmer bg-[length:200%_100%]" />
+              <div className="h-12 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-xl animate-shimmer bg-[length:200%_100%]" />
+              <div className="h-12 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-xl animate-shimmer bg-[length:200%_100%]" />
             </div>
           </div>
         ) : error ? (
@@ -132,6 +163,21 @@ export default function ProductDetailPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
+              {/* ── Proactive prompt (dwell detection) ── */}
+              {struggle.signals.some(s => s.type === "DWELL") && (
+                <ProactivePrompt
+                  type="DWELL"
+                  productName={product?.name}
+                  onDismiss={() => struggle.dismiss("DWELL")}
+                  onAction={(action) => {
+                    if (action === "ask" || action === "compare") {
+                      setShowChat(true);
+                    }
+                    struggle.dismiss("DWELL");
+                  }}
+                />
+              )}
+
               {/* Product Image */}
               <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
                 <div className="rounded-3xl h-72 flex items-center justify-center text-6xl bg-[#F3F4F6]">
@@ -194,45 +240,55 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
 
-                {/* Cart feedback message */}
-                {cartMessage && (
-                  <div className={`mt-3 rounded-xl px-4 py-2.5 text-[13px] font-medium ${
-                    cartMessage.type === "success"
-                      ? "bg-[#F0FBF8] border border-[#C8EDE8] text-[#1A3C34]"
-                      : "bg-red-50 border border-red-200 text-red-700"
-                  }`}>
-                    {cartMessage.text}
-                  </div>
-                )}
-
-                <div className="mt-5 flex flex-col gap-3">
+                <div className="mt-5 flex flex-col gap-2">
+                  {/* Primary: Add to Cart */}
                   <button
                     onClick={addToCart}
                     disabled={addingToCart || product.stock === 0}
-                    className="rounded-xl bg-[#1A3C34] text-white text-sm font-semibold py-3 text-center hover:bg-[#16332C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full cursor-pointer"
+                    className="rounded-xl bg-[#1A3C34] text-white text-sm font-semibold py-2.5 text-center hover:bg-[#16332C] disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] w-full cursor-pointer"
                   >
                     {addingToCart
                       ? "Menambahkan..."
                       : product.stock === 0
                         ? "Stok Habis"
-                        : "Tambah ke Keranjang"}
+                        : "🛒 Tambah ke Keranjang"}
                   </button>
+
+                  {/* Secondary row: Chat + Compare side by side */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setShowChat(true)}
+                      className="rounded-xl border border-[#1A3C34]/30 bg-[#F0FBF8] text-[#1A3C34] text-[12px] font-semibold py-2.5 text-center hover:bg-[#D8F5F0] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                      </svg>
+                      Tanya AI
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowChat(true);
+                        window.history.replaceState({}, '', `/product/${id}?chat=1&compare=1`);
+                      }}
+                      className="rounded-xl border border-[#E8E8E8] text-[#555] text-[12px] font-semibold py-2.5 text-center hover:bg-[#FAFAF8] hover:border-[#1A3C34]/30 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 3h5v5"/>
+                        <path d="M8 3H3v5"/>
+                        <path d="M16 21h5v-5"/>
+                        <path d="M8 21H3v-5"/>
+                      </svg>
+                      Bandingkan
+                    </button>
+                  </div>
+
+                  {/* Tertiary: Continue shopping */}
                   <Link
                     href="/products"
-                    className="rounded-xl border border-[#E8E8E8] text-[#555] text-sm font-semibold py-3 text-center hover:bg-[#FAFAF8] transition-colors block"
+                    className="rounded-xl border border-[#E8E8E8] text-[#888] text-[12px] font-medium py-2 text-center hover:bg-[#FAFAF8] hover:text-[#555] transition-colors block"
                   >
-                    Lanjut Belanja
+                    ← Lanjut Belanja
                   </Link>
-                  <button
-                    onClick={() => setShowChat(true)}
-                    className="rounded-xl border border-[#1A3C34] bg-[#F0FBF8] text-[#1A3C34] text-sm font-semibold py-3 text-center hover:bg-[#D8F5F0] transition-colors w-full cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
-                      <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-                    </svg>
-                    Chat dengan AI
-                  </button>
                 </div>
               </div>
             </aside>
@@ -249,6 +305,8 @@ export default function ProductDetailPage() {
           />
         )}
       </div>
+
+      <BottomBar />
     </div>
   );
 }

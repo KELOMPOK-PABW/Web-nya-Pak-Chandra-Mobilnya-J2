@@ -56,8 +56,22 @@ const updateCategory = async (id, data) => {
 const formatCategoryResponse = (category) => {
   return {
     id: category.id,
-    category_name: category.name,
+    category_name: category.categoryName,
   };
+};
+
+const deleteCategory = async (id) => {
+  if (!id || isNaN(id)) {
+    throw new Error("Category ID tidak valid");
+  }
+
+  const existing = await categoryRepository.findById(Number(id));
+  if (!existing) {
+    throw new Error("Kategori tidak ditemukan");
+  }
+
+  await categoryRepository.deleteById(Number(id));
+  return { message: "Kategori berhasil dihapus" };
 };
 
 module.exports = {
@@ -65,4 +79,5 @@ module.exports = {
   getCategoryById,
   createCategory,
   updateCategory,
+  deleteCategory,
 };

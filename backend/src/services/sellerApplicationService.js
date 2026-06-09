@@ -1,7 +1,7 @@
 const repository = require("../repository/sellerApplicationRepository");
 
+// ---- apply from main (with pending-exists check) ----
 const apply = async (userId, data) => {
-  // Check if there is an existing pending application
   const existing = await repository.getApplicationByUserId(userId);
   if (existing && existing.status === 'pending') {
     throw new Error("Anda sudah memiliki pengajuan yang sedang diproses");
@@ -10,14 +10,15 @@ const apply = async (userId, data) => {
   const applicationData = {
     userId,
     storeName: data.store_name,
-    phone: data.phone,
+    phone: data.phone || null,
+    address: data.address || null,
+    city: data.city || null,
     status: 'pending'
   };
 
   const app = await repository.createApplication(applicationData);
   return {
     id: app.id,
-    user_id: app.userId,
     store_name: app.storeName,
     phone: app.phone,
     status: app.status,
@@ -25,17 +26,44 @@ const apply = async (userId, data) => {
   };
 };
 
-const getApplications = async () => {
-  const apps = await repository.getApplications();
-  return apps.map(app => ({
+// ---- getMyApplication from HEAD (returns user's own app with all fields) ----
+const getMyApplication = async (userId) => {
+  const app = await repository.findByUserId(userId);
+  if (!app) return null;
+
+  return {
     id: app.id,
-    store_name: app.storeName,
+    storeName: app.storeName,
     phone: app.phone,
+    address: app.address,
+    city: app.city,
     status: app.status,
-    created_at: app.createdAt
+    reviewerNote: app.reviewerNote,
+    submittedAt: app.createdAt,
+    reviewedAt: app.reviewedAt,
+  };
+};
+
+// ---- getApplications from HEAD (admin: all apps with owner info) ----
+const getApplications = async () => {
+  const apps = await repository.findAll();
+  return apps.map((app) => ({
+    id: app.id,
+    userId: app.userId,
+    ownerName: app.user?.fullName || "-",
+    email: app.user?.email || "-",
+    storeName: app.storeName,
+    phone: app.phone,
+    address: app.address,
+    city: app.city,
+    status: app.status,
+    reviewerNote: app.reviewerNote,
+    submittedAt: app.createdAt,
+    reviewedAt: app.reviewedAt,
   }));
 };
 
+// ---- approve from main (with transactional store + role creation) ----
 const approve = async (id) => {
   const app = await repository.getApplicationById(id);
   if (!app) {
@@ -45,12 +73,9 @@ const approve = async (id) => {
     throw new Error(`Pengajuan sudah berstatus ${app.status}`);
   }
 
-  // Need to transactionally: 1. Update app status, 2. Create store, 3. Update user role
   await repository.$transaction(async (prisma) => {
-    // 1. Update status
     await repository.updateApplicationStatus(id, 'approved', prisma);
 
-    // 2. Create store
     await repository.createStore({
       userId: app.userId,
       storeName: app.storeName,
@@ -58,22 +83,18 @@ const approve = async (id) => {
       isActive: true
     }, prisma);
 
-    // 3. Update user role to seller
     await repository.updateUserRole(app.userId, 'seller', prisma);
 
-    // 4. Also insert to user_roles mapping if Role exists
     const sellerRole = await repository.getRoleByName('seller');
     if (sellerRole) {
       await repository.addUserRoleMap(app.userId, sellerRole.id, prisma);
     }
   });
 
-  return {
-    id: Number(id),
-    status: "approved"
-  };
+  return { id: Number(id), status: "approved" };
 };
 
+// ---- reject from main (with existence + status validation) ----
 const reject = async (id, reason) => {
   const app = await repository.getApplicationById(id);
   if (!app) {
@@ -83,18 +104,15 @@ const reject = async (id, reason) => {
     throw new Error(`Pengajuan sudah berstatus ${app.status}`);
   }
 
-  // Status is updated to rejected. Reason is not saved in DB per schema but we can return it.
   await repository.updateApplicationStatus(id, 'rejected');
 
-  return {
-    id: Number(id),
-    status: "rejected"
-  };
+  return { id: Number(id), status: "rejected" };
 };
 
 module.exports = {
   apply,
+  getMyApplication,
   getApplications,
   approve,
-  reject
+  reject,
 };

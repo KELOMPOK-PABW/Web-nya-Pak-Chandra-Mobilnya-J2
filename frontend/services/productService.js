@@ -12,11 +12,13 @@ async function handleResponse(res) {
 
 export const productService = {
   async getProducts(params = {}) {
-    const url = new URL(`${BASE_URL}/products`);
+    const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
+      if (v !== undefined && v !== null && v !== "") searchParams.set(k, v);
     });
-    const res = await fetch(url.toString());
+    const qs = searchParams.toString();
+    const url = `${BASE_URL}/products${qs ? `?${qs}` : ''}`;
+    const res = await fetch(url);
     const data = await handleResponse(res);
     return { data: data.data, meta: data.meta };
   },

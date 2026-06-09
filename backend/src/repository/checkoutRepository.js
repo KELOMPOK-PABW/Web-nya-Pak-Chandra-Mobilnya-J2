@@ -6,7 +6,11 @@ const findCartById = async(cartId) => {
   include: {
     items: {
       include: {
-        product: true,
+        product: {
+          include: {
+            store: true,
+          },
+        },
       },
     },
     user: true,
@@ -53,7 +57,6 @@ const updateCartToCheckedOut = async (tx, cartId) => {
     where: { id: cartId },
     data: {
       status: "checked_out",
-      checkedOutAt: new Date(),
     },
   });
 };

@@ -34,20 +34,20 @@ const findProductById = async (productId) => {
 const findCartItemByCartIdAndProductId = async (cartId, productId) => {
   return prisma.cartItem.findUnique({
     where: {
-      cartId_productId: {
+      cartId_productListId: {
         cartId,
-        productId,
+        productListId: productId,
       },
     },
   });
 };
 
-const createCartItem = async ({ cartId, productId, quantity }) => {
+const createCartItem = async ({ cartId, productId, qty }) => {
   return prisma.cartItem.create({
     data: {
       cartId,
-      productId,
-      quantity,
+      productListId: productId,
+      qty,
     },
   });
 };
@@ -68,10 +68,10 @@ const findCartItemByIdAndUser = async (cartItemId, userId) => {
   });
 };
 
-const updateCartItemQuantity = async (cartItemId, quantity) => {
+const updateCartItemQuantity = async (cartItemId, qty) => {
   return prisma.cartItem.update({
     where: { id: cartItemId },
-    data: { quantity, },
+    data: { qty },
     include: {
       product : true
     }
@@ -148,12 +148,12 @@ const getCartCountByCartId = async (cartId) => {
   const items = await prisma.cartItem.findMany({
     where: { cartId: Number(cartId) },
     select: {
-      quantity: true,
+      qty: true,
     },
   });
 
   const totalItems = items.length;
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
 
   return {
     totalItems,

@@ -9,7 +9,11 @@ const getAllCategories = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    const statusCode = error.message && (
+      error.message.includes("tidak ditemukan") ||
+      error.message.startsWith("Category ID")
+    ) ? 400 : 500;
+    return res.status(statusCode).json({
       success: false,
       message: error.message,
     });
@@ -83,9 +87,27 @@ const updateCategory = async (req, res) => {
   }
 };
 
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await categoryService.deleteCategory(id);
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    const statusCode = error.message === "Kategori tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllCategories,
   getCategoryById,
   createCategory,
   updateCategory,
+  deleteCategory,
 };
