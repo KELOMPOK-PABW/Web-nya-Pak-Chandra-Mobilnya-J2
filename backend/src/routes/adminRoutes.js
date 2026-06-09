@@ -11,7 +11,7 @@ router.put("/users/:id/unban", adminController.unbanUser);
 router.put("/users/:id/role", adminController.changeUserRole);
 
 // Seller applications
-router.get("/seller-applications", sellerApplicationController.getAllApplications);
+router.get("/seller-applications", sellerApplicationController.getApplications);
 router.put("/seller-applications/:id/approve", sellerApplicationController.approve);
 router.put("/seller-applications/:id/reject", sellerApplicationController.reject);
 
