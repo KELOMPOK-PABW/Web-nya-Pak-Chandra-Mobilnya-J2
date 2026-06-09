@@ -1,21 +1,32 @@
-const sellerApplicationService = require("../services/sellerApplicationService");
+const service = require("../services/sellerApplicationService");
+const { sellerApplicationSchema } = require("../validations/sellerApplicationValidation");
 
-const apply = async (req, res) => {
+const apply = async (req, res, next) => {
   try {
-    const { store_name, phone, address, city } = req.body;
-    if (!store_name) {
-      return res.status(400).json({ success: false, message: "Nama toko wajib diisi" });
+    const { error, value } = sellerApplicationSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
     }
-    const result = await sellerApplicationService.apply(req.user.id, req.body);
-    return res.status(201).json({ success: true, message: "Pengajuan berhasil dikirim", data: result });
+
+    const userId = req.user.id;
+    const result = await service.apply(userId, value);
+
+    res.status(201).json({
+      success: true,
+      message: "Pengajuan seller berhasil dikirim",
+      data: result
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 const getMyApplication = async (req, res) => {
   try {
-    const result = await sellerApplicationService.getMyApplication(req.user.id);
+    const result = await service.getMyApplication(req.user.id);
     if (!result) {
       return res.status(200).json({ success: true, data: null, message: "Belum ada pengajuan" });
     }
@@ -25,34 +36,61 @@ const getMyApplication = async (req, res) => {
   }
 };
 
-const getAllApplications = async (req, res) => {
+const getApplications = async (req, res, next) => {
   try {
-    const applications = await sellerApplicationService.getAllApplications();
-    return res.status(200).json({ success: true, data: applications });
+    const result = await service.getApplications();
+    res.status(200).json({
+      success: true,
+      data: result
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const approve = async (req, res) => {
+const approve = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await sellerApplicationService.approveApplication(id);
-    return res.status(200).json({ success: true, message: "Pengajuan disetujui", data: result });
+    const result = await service.approve(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Pengajuan seller disetujui",
+      data: result
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const reject = async (req, res) => {
+const reject = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const result = await sellerApplicationService.rejectApplication(id, reason);
-    return res.status(200).json({ success: true, message: "Pengajuan ditolak", data: result });
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Alasan penolakan (reason) wajib diisi"
+      });
+    }
+
+    const result = await service.reject(id, reason);
+
+    res.status(200).json({
+      success: true,
+      message: "Pengajuan seller ditolak",
+      data: result
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-module.exports = { apply, getMyApplication, getAllApplications, approve, reject };
+module.exports = {
+  apply,
+  getMyApplication,
+  getApplications,
+  approve,
+  reject
+};
