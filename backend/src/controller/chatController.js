@@ -1,5 +1,5 @@
 const chatService = require("../services/chatService");
-const { sendMessageSchema, llmChatSchema } = require("../validations/chatValidation");
+const { sendMessageSchema, llmChatSchema, createSessionSchema } = require("../validations/chatValidation");
 
 const errorStatus = (message) => {
   if (!message) return 400;
@@ -62,6 +62,27 @@ const getSessions = async (req, res) => {
   }
 };
 
+const createSession = async (req, res) => {
+  const { error, value } = createSessionSchema.validate(req.body, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details.map((d) => d.message).join(", "),
+    });
+  }
+
+  try {
+    const session = await chatService.createSession(req.user.id, value.title);
+    return res.status(200).json({
+      success: true,
+      message: "Session berhasil dibuat",
+      data: session,
+    });
+  } catch (e) {
+    return res.status(errorStatus(e.message)).json({ success: false, message: e.message });
+  }
+};
+
 const getMessages = async (req, res) => {
   try {
     const messages = await chatService.getSessionMessages(req.user.id, req.params.sessionId);
@@ -84,6 +105,7 @@ module.exports = {
   sendMessage,
   llmChat,
   getSessions,
+  createSession,
   getMessages,
   deleteSession,
 };

@@ -28,7 +28,16 @@ const llmChatSchema = Joi.object({
   history: Joi.array().items(historyItemSchema).max(20).optional(),
 });
 
+const createSessionSchema = Joi.object({
+  title: Joi.string().min(1).max(200).required().messages({
+    "any.required": "Judul session wajib diisi",
+    "string.empty": "Judul session tidak boleh kosong",
+    "string.max": "Judul session maksimal 200 karakter",
+  }),
+});
+
 module.exports = {
   sendMessageSchema,
   llmChatSchema,
+  createSessionSchema,
 };

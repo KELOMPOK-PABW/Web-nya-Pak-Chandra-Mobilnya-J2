@@ -223,9 +223,8 @@ model Order {
   items            OrderItem[]
   histories        OrderStatusHistory[]
   payment          Payment?
-  reviews          Review[]
-  walletTxns       WalletTransaction[]
-  kurirAssignments KurirAssignment[]
+  reviews    Review[]
+  walletTxns WalletTransaction[]
 
   @@index([buyerId])
   @@map("orders")
@@ -242,11 +241,10 @@ model OrderItem {
   status          String   @default("menunggu_penjual")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  order             Order            @relation(fields: [orderId], references: [id])
-  product           Product          @relation(fields: [productListId], references: [id])
-  seller            User             @relation("SellerOrderItems", fields: [sellerId], references: [id])
-  kurirAssignment   KurirAssignment? @relation(fields: [kurirAssignmentId], references: [id])
-  kurirAssignmentId Int?
+  order           Order            @relation(fields: [orderId], references: [id])
+  product         Product          @relation(fields: [productListId], references: [id])
+  seller          User             @relation("SellerOrderItems", fields: [sellerId], references: [id])
+  kurirAssignment KurirAssignment?
 
   @@index([orderId])
   @@index([productListId])
@@ -286,17 +284,15 @@ model Payment {
 
 model KurirAssignment {
   id          Int       @id @default(autoincrement()) @map("kurir_assignment_id")
-  orderId     Int       @map("order_id")
+  orderItemId Int       @unique @map("order_item_id")
   kurirId     Int       @map("kurir_id")
   assignedAt  DateTime  @default(now()) @map("assigned_at")
   pickupAt    DateTime? @map("pickup_at")
   deliveredAt DateTime? @map("delivered_at")
 
-  order      Order       @relation(fields: [orderId], references: [id])
-  kurir      User        @relation(fields: [kurirId], references: [id])
-  orderItems OrderItem[]
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+  kurir     User      @relation(fields: [kurirId], references: [id])
 
-  @@index([orderId])
   @@index([kurirId])
   @@map("kurir_assignments")
 }

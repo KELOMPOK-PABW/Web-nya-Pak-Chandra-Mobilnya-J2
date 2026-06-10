@@ -223,11 +223,24 @@ const getUserSessions = async (userId) => {
   return rows.map((s) => ({
     id: s.id,
     title: s.title || "Percakapan baru",
-    message_count: s._count?.messages ?? 0,
-    last_message: s.messages?.[0]?.content?.slice(0, 80) || null,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   }));
+};
+
+const createSession = async (userId, title) => {
+  await enforceSessionLimit(userId);
+
+  const session = await chatRepository.createSession({
+    userId: Number(userId),
+    title: title.trim(),
+  });
+
+  return {
+    id: session.id,
+    title: session.title || title.trim(),
+    created_at: session.createdAt,
+  };
 };
 
 const getSessionMessages = async (userId, sessionId) => {
@@ -235,15 +248,11 @@ const getSessionMessages = async (userId, sessionId) => {
   if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
 
   const messages = await chatRepository.getSessionMessages(session.id, 100);
-  const productsContext = await fetchProductsContext();
 
   return messages.map((msg) => ({
     id: msg.id,
-    role: msg.role,
-    content: msg.content,
-    intent: msg.intent || null,
-    entities: msg.entities || null,
-    suggested_products: hydrateProducts(productsContext, msg.suggestedProductIds || []),
+    sender: msg.role,
+    message: msg.content,
     created_at: msg.createdAt,
   }));
 };
@@ -260,6 +269,7 @@ module.exports = {
   runLlmChat,
   sendMessage,
   getUserSessions,
+  createSession,
   getSessionMessages,
   deleteSession,
 };
