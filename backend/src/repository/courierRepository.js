@@ -13,7 +13,12 @@ const findAssignmentsByKurirId = async (kurirId) => {
               address: { select: { address: true, city: true } },
             },
           },
-          seller: { select: { fullName: true } },
+          seller: {
+            select: {
+              fullName: true,
+              stores: { select: { storeName: true }, take: 1 },
+            },
+          },
         },
       },
     },
@@ -34,7 +39,13 @@ const findAssignmentById = async (id) => {
               address: { select: { address: true, city: true } },
             },
           },
-          seller: { select: { fullName: true } },
+          seller: {
+            select: {
+              fullName: true,
+              phone: true,
+              stores: { select: { storeName: true }, take: 1 },
+            },
+          },
         },
       },
     },
