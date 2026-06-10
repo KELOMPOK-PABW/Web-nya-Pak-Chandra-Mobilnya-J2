@@ -31,3 +31,7 @@ export function apiUrl(path) {
   return `${BASE_URL}${path}`;
 }
 
+export function unwrapData(payload) {
+  return payload?.data ?? payload;
+}
+

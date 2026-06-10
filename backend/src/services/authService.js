@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authRepository = require("../repository/authRepository");
+const AppError = require("../utils/AppError");
 const prisma = require("../config/database");
 const env = require("../config/env");
 
@@ -9,7 +10,7 @@ const registerUser = async (userData) => {
 
   const existingUser = await authRepository.findUserByEmail(email);
   if (existingUser) {
-    throw new Error("Email sudah terdaftar");
+    throw new AppError("Email sudah terdaftar", 409);
   }
 
   const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
@@ -40,12 +41,12 @@ const registerUser = async (userData) => {
 const loginUser = async (email, password) => {
   const user = await authRepository.findUserByEmail(email);
   if (!user) {
-    throw new Error("Email atau password salah");
+    throw new AppError("Email atau password salah", 401);
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
-    throw new Error("Email atau password salah");
+    throw new AppError("Email atau password salah", 401);
   }
 
   // Get role from user_roles relation
@@ -63,7 +64,7 @@ const loginUser = async (email, password) => {
 const getUserById = async (id) => {
   const user = await authRepository.findUserById(id);
   if (!user) {
-    throw new Error("User tidak ditemukan");
+    throw new AppError("User tidak ditemukan", 404);
   }
   return user;
 };

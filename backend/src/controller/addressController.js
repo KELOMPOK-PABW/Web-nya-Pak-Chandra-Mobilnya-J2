@@ -22,25 +22,23 @@ const create = async (req, res) => {
   }
 };
 
-const update = async (req, res) => {
+const update = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await addressService.update(id, req.user.id, req.body);
     return res.status(200).json({ success: true, message: "Alamat berhasil diperbarui", data: result });
   } catch (error) {
-    const statusCode = error.message === "Alamat tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const deleteById = async (req, res) => {
+const deleteById = async (req, res, next) => {
   try {
     const { id } = req.params;
     await addressService.deleteById(id, req.user.id);
     return res.status(200).json({ success: true, message: "Alamat berhasil dihapus" });
   } catch (error) {
-    const statusCode = error.message === "Alamat tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 

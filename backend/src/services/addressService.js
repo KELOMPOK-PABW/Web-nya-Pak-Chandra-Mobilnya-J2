@@ -1,4 +1,5 @@
 const addressRepository = require("../repository/addressRepository");
+const AppError = require("../utils/AppError");
 
 const getAll = async (userId) => {
   return addressRepository.findByUserId(userId);
@@ -16,8 +17,8 @@ const create = async (userId, data) => {
 
 const update = async (id, userId, data) => {
   const existing = await addressRepository.findById(Number(id));
-  if (!existing) throw new Error("Alamat tidak ditemukan");
-  if (existing.userId !== Number(userId)) throw new Error("Akses ditolak");
+  if (!existing) throw new AppError("Alamat tidak ditemukan", 404);
+  if (existing.userId !== Number(userId)) throw new AppError("Akses ditolak", 403);
 
   const updateData = {};
   if (data.address !== undefined) updateData.address = data.address;
@@ -29,8 +30,8 @@ const update = async (id, userId, data) => {
 
 const deleteById = async (id, userId) => {
   const existing = await addressRepository.findById(Number(id));
-  if (!existing) throw new Error("Alamat tidak ditemukan");
-  if (existing.userId !== Number(userId)) throw new Error("Akses ditolak");
+  if (!existing) throw new AppError("Alamat tidak ditemukan", 404);
+  if (existing.userId !== Number(userId)) throw new AppError("Akses ditolak", 403);
 
   return addressRepository.deleteById(Number(id));
 };

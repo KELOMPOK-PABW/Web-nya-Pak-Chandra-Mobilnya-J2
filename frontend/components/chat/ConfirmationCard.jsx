@@ -2,7 +2,7 @@
 
 import React from "react";
 
-const fmt = (n) => "Rp " + Number(n).toLocaleString("id-ID");
+import { formatPrice as fmt } from "@/utils/format";
 
 /**
  * Add-to-cart confirmation card with product image, price, quantity,

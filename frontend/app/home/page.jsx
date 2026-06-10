@@ -45,9 +45,7 @@ const CATEGORY_ICONS = {
   "Kesehatan": "💊",
 };
 
-function fmt(n) {
-  return "Rp " + Number(n).toLocaleString("id-ID");
-}
+import { formatPrice as fmt } from "@/utils/format";
 
 function ProductCard({ product }) {
   return (

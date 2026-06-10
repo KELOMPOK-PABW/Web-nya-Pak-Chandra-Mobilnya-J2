@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-const fmt = (n) => "Rp " + Number(n).toLocaleString("id-ID");
+import { formatPrice as fmt } from "@/utils/format";
 
 /**
  * Side-by-side comparison card for 2-3 products.

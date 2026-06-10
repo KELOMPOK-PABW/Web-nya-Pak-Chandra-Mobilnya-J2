@@ -307,7 +307,9 @@ model KurirAssignment {
 model ChatSession {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
+  title     String?
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user     User          @relation(fields: [userId], references: [id])
   messages ChatMessage[]
@@ -317,11 +319,14 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
-  sessionId Int      @map("session_id")
-  sender    String // user, ai
-  message   String   @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id                  Int      @id @default(autoincrement())
+  sessionId           Int      @map("session_id")
+  role                String   @map("sender") // user, assistant
+  content             String   @map("message") @db.Text
+  intent              String?
+  suggestedProductIds Json?    @map("suggested_product_ids")
+  entities            Json?
+  createdAt           DateTime @default(now()) @map("created_at")
 
   session ChatSession @relation(fields: [sessionId], references: [id])
 

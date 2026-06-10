@@ -1,4 +1,5 @@
 const adminRepository = require("../repository/adminRepository");
+const AppError = require("../utils/AppError");
 
 const getUsers = async ({ page = 1, limit = 20, search, role, status }) => {
   const skip = (page - 1) * limit;
@@ -29,7 +30,7 @@ const getUsers = async ({ page = 1, limit = 20, search, role, status }) => {
 
 const banUser = async (userId) => {
   const user = await adminRepository.findUserById(userId);
-  if (!user) throw new Error("User tidak ditemukan");
+  if (!user) throw new AppError("User tidak ditemukan", 404);
   if (!user.isActive) throw new Error("User sudah di-ban");
 
   await adminRepository.updateUser(userId, { isActive: false });
@@ -38,7 +39,7 @@ const banUser = async (userId) => {
 
 const unbanUser = async (userId) => {
   const user = await adminRepository.findUserById(userId);
-  if (!user) throw new Error("User tidak ditemukan");
+  if (!user) throw new AppError("User tidak ditemukan", 404);
   if (user.isActive) throw new Error("User sudah aktif");
 
   await adminRepository.updateUser(userId, { isActive: true });
@@ -50,7 +51,7 @@ const changeUserRole = async (userId, role) => {
   if (!validRoles.includes(role)) throw new Error("Role tidak valid");
 
   const user = await adminRepository.findUserById(userId);
-  if (!user) throw new Error("User tidak ditemukan");
+  if (!user) throw new AppError("User tidak ditemukan", 404);
 
   await adminRepository.updateUser(userId, { role });
   return { id: user.id, role };
@@ -58,7 +59,7 @@ const changeUserRole = async (userId, role) => {
 
 const getUserDetail = async (userId) => {
   const user = await adminRepository.findUserById(userId);
-  if (!user) throw new Error("User tidak ditemukan");
+  if (!user) throw new AppError("User tidak ditemukan", 404);
 
   return {
     id: user.id,

@@ -1,7 +1,7 @@
 const reviewService = require("../services/reviewService");
 const { createReviewSchema, updateReviewSchema } = require("../validations/reviewValidation");
 
-const createReview = async (req, res) => {
+const createReview = async (req, res, next) => {
   try {
     const { error, value } = createReviewSchema.validate(req.body);
     if (error) {
@@ -16,9 +16,7 @@ const createReview = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Akses ditolak" ? 403 :
-                        error.message === "Order item tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
@@ -34,18 +32,17 @@ const getAllReviews = async (req, res) => {
   }
 };
 
-const getReviewById = async (req, res) => {
+const getReviewById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await reviewService.getReviewById(Number(id));
     return res.status(200).json({ success: true, data: result });
   } catch (error) {
-    const statusCode = error.message === "Review tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const updateReview = async (req, res) => {
+const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { error, value } = updateReviewSchema.validate(req.body);
@@ -60,13 +57,11 @@ const updateReview = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Review tidak ditemukan" ? 404 :
-                        error.message === "Akses ditolak" ? 403 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const deleteReview = async (req, res) => {
+const deleteReview = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -74,9 +69,7 @@ const deleteReview = async (req, res) => {
     const result = await reviewService.deleteReview(Number(id), userId);
     return res.status(200).json(result);
   } catch (error) {
-    const statusCode = error.message === "Review tidak ditemukan" ? 404 :
-                        error.message === "Akses ditolak" ? 403 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
