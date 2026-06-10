@@ -1,5 +1,5 @@
 /**
- * Seed script: scrape 1,000+ real products from DummyJSON + Open Food Facts APIs
+ * Seed script: scrape products from DummyJSON + Tokopedia Kaggle + Open Food Facts
  * and insert into database with realistic variants.
  *
  * Usage: node scripts/seed_products.js
@@ -55,7 +55,26 @@ const ALL_CATEGORIES = [
   { name: "Olahraga", desc: "Perlengkapan olahraga" },
   { name: "Otomotif", desc: "Produk otomotif dan kendaraan" },
   { name: "Aksesoris", desc: "Jam tangan dan aksesoris" },
+  { name: "Pertukangan", desc: "Alat perkakas, hardware, dan perlengkapan bangunan" },
 ];
+
+// Map Kaggle Tokopedia categories to local category names
+const TOKOPEDIA_CATEGORY_MAP = {
+  fashion: "Pakaian",
+  elektronik: "Elektronik",
+  handphone: "Elektronik",
+  olahraga: "Olahraga",
+  pertukangan: "Pertukangan",
+};
+
+// Price ranges (IDR) per Tokopedia product category
+const TOKOPEDIA_PRICE_RANGES = {
+  fashion:        [25000, 500000],
+  elektronik:     [50000, 15000000],
+  handphone:      [500000, 12000000],
+  olahraga:       [20000, 500000],
+  pertukangan:    [10000, 500000],
+};
 
 // Variant suffixes per category — generates N variants per base product
 const VARIANT_PATTERNS = {
@@ -164,8 +183,133 @@ function truncate(str, max) {
   return (str || "").slice(0, max);
 }
 
+/**
+ * Sanitize text for safe MySQL/Prisma insertion.
+ * Strips emoji, non-BMP characters, control characters (except \n \t),
+ * and replaces malformed content that can cause hex-escape errors.
+ */
+function sanitizeText(str) {
+  if (!str) return "";
+  // Remove surrogate pairs (emoji, non-BMP Unicode)
+  let cleaned = str.replace(/[\uD800-\uDFFF]/g, "");
+  // Remove control characters except \n (0x0A), \t (0x09), \r (0x0D)
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  // Strip backslashes to avoid MySQL hex-escape misinterpretation
+  cleaned = cleaned.replace(/\\/g, " ");
+  // Replace any remaining weird chars with space
+  cleaned = cleaned.replace(/[^\x20-\x7E\x0A\x0D\x09\u00A0-\uD7FF\uE000-\uFFFD]/g, " ");
+  // Collapse multiple spaces
+  cleaned = cleaned.replace(/  +/g, " ");
+  // Trim
+  cleaned = cleaned.trim();
+  return cleaned;
+}
+
 // ============================================================
-//  3. API FETCHERS
+//  3. CSV PARSER (Kaggle Tokopedia dataset)
+// ============================================================
+
+/**
+ * Parse a CSV file line-by-line, handling quoted fields (commas & newlines inside quotes).
+ * Returns array of objects keyed by header row.
+ *
+ * @param {string} filePath - Path to CSV file
+ * @param {object} [opts]
+ * @param {number} [opts.skipLines] - Number of header lines before actual CSV data
+ * @returns {Promise<Array<object>>}
+ */
+async function parseCSV(filePath, opts = {}) {
+  const fs = require("fs");
+  const readline = require("readline");
+
+  const stream = fs.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+  let headers = [];
+  const rows = [];
+  let currentRow = [];
+  let currentField = "";
+  let inQuotes = false;
+  let rowIndex = 0;
+
+  for await (const rawLine of rl) {
+    // Remove trailing \r if present
+    let line = rawLine;
+    if (line.endsWith("\r")) line = line.slice(0, -1);
+
+    // Skip empty lines
+    if (line.length === 0 && !inQuotes) continue;
+
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+
+      if (ch === '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          // Escaped quote ("")
+          currentField += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        currentRow.push(currentField);
+        currentField = "";
+      } else {
+        currentField += ch;
+      }
+    }
+
+    if (inQuotes) {
+      // Line break inside quoted field — add newline and continue
+      currentField += "\n";
+    } else {
+      // End of row
+      currentRow.push(currentField);
+      currentField = "";
+      inQuotes = false;
+
+      if (rowIndex === 0) {
+        headers = currentRow.map((h) => h.trim());
+      } else if (currentRow.length === headers.length) {
+        const obj = {};
+        for (let i = 0; i < headers.length; i++) {
+          let val = currentRow[i] || "";
+          // Unescape double-quotes inside the value
+          if (val.startsWith('"') && val.endsWith('"')) {
+            val = val.slice(1, -1).replace(/""/g, '"');
+          }
+          obj[headers[i]] = val;
+        }
+        rows.push(obj);
+      }
+      currentRow = [];
+
+      if (rowIndex >= 0) rowIndex++;
+    }
+  }
+
+  // Handle last row if file doesn't end with newline
+  if (currentField || currentRow.length > 0) {
+    if (inQuotes) currentField += "\n";
+    currentRow.push(currentField);
+    if (rowIndex > 0 && currentRow.length === headers.length) {
+      const obj = {};
+      for (let i = 0; i < headers.length; i++) {
+        let val = currentRow[i] || "";
+        if (val.startsWith('"') && val.endsWith('"')) {
+          val = val.slice(1, -1).replace(/""/g, '"');
+        }
+        obj[headers[i]] = val;
+      }
+      rows.push(obj);
+    }
+  }
+
+  return rows;
+}
+
+// ============================================================
+//  4. API FETCHERS (DummyJSON & Open Food Facts)
 // ============================================================
 
 async function fetchDummyJSON() {
@@ -253,7 +397,7 @@ function generateVariants(baseProduct, categoryNames) {
 }
 
 // ============================================================
-//  5. DATABASE OPERATIONS
+//  5. DATABASE OPERATIONS (create/insert helpers)
 // ============================================================
 
 async function ensureCategories() {
@@ -319,17 +463,142 @@ async function insertProducts(products, label) {
 }
 
 // ============================================================
+//  5. TOKOPEDIA PRODUCT LOADER (from Kaggle CSV)
+// ============================================================
+
+const DEFAULT_TOKOPEDIA_CSV = "scripts/data/tokopedia-product-reviews-2019.csv";
+
+/**
+ * Load unique products from the Tokopedia Product Reviews Kaggle dataset CSV.
+ * Extracts unique products by product_id, maps categories, generates prices
+ * based on category ranges, and picks sample review text as description.
+ *
+ * @param {string} [csvPath] - Path to the CSV file
+ * @param {object} categoryMap - Local category ID map { categoryName: id }
+ * @param {Array} stores - Available stores to assign products to
+ * @returns {Promise<Array>} Array of product objects ready for insertProducts
+ */
+async function loadTokopediaProducts(csvPath, categoryMap, stores) {
+  const fs = require("fs");
+
+  // Resolve path
+  const filePath = csvPath || process.env.TOKOPEDIA_CSV_PATH || DEFAULT_TOKOPEDIA_CSV;
+
+  if (!fs.existsSync(filePath)) {
+    console.log(`  ⬜ Tokopedia CSV tidak ditemukan: ${filePath}`);
+    console.log(`  💡 Download dari https://www.kaggle.com/datasets/farhan999/tokopedia-product-reviews`);
+    console.log(`     dan taruh di ${filePath}`);
+    return [];
+  }
+
+  console.log(`  📂 Loading ${filePath}...`);
+  const rows = await parseCSV(filePath);
+  console.log(`  ✓ ${rows.length} total rows in CSV`);
+
+  // Group by product_id to get unique products
+  const productMap = new Map();
+  const reviewSamples = new Map(); // product_id → sample review text
+
+  for (const row of rows) {
+    const pid = row.product_id || row.productId;
+    if (!pid) continue;
+
+    const pname = (row.product_name || row.productName || "").trim();
+    if (!pname || pname.length < 3) continue;
+
+    if (!productMap.has(pid)) {
+      const rawCat = (row.category || "").trim().toLowerCase();
+      const localCat = TOKOPEDIA_CATEGORY_MAP[rawCat];
+
+      if (!localCat) {
+        // Unknown category — skip
+        productMap.set(pid, null);
+        continue;
+      }
+
+      const categoryId = categoryMap[localCat];
+      if (!categoryId) {
+        productMap.set(pid, null);
+        continue;
+      }
+
+      productMap.set(pid, {
+        name: sanitizeText(truncate(pname, 190)),
+        categoryId,
+        localCategory: localCat,
+        rawCategory: rawCat,
+      });
+    }
+
+    // Collect sample review text for description (first non-empty review)
+    if (!reviewSamples.has(pid)) {
+      const text = (row.text || "").trim();
+      if (text.length > 10) {
+        reviewSamples.set(pid, text);
+      }
+    }
+  }
+
+  // Filter out null entries (unknown category) and build product objects
+  const products = [];
+  for (const [pid, info] of productMap) {
+    if (!info) continue;
+
+    const store = stores[Math.floor(Math.random() * stores.length)];
+    const [minPrice, maxPrice] = TOKOPEDIA_PRICE_RANGES[info.rawCategory] || [50000, 500000];
+    const price = randomInt(minPrice, maxPrice);
+
+    // Use review text as description, or generate one
+    const sampleReview = reviewSamples.get(pid);
+    const rawDesc = sampleReview
+      ? truncate(sampleReview, 190)
+      : `Produk ${info.name} berkualitas tersedia di Tokopedia`;
+    const desc = sanitizeText(rawDesc);
+
+    products.push({
+      name: info.name,
+      desc,
+      price,
+      stock: randomInt(10, 200),
+      stockStatus: "tersedia",
+      imageUrl: "",
+      storeId: store.id,
+      categoryId: info.categoryId,
+    });
+  }
+
+  console.log(`  → ${products.length} unique products extracted across ${Object.keys(TOKOPEDIA_CATEGORY_MAP).length} categories`);
+
+  // Per-category breakdown
+  const catCounts = {};
+  for (const p of products) {
+    const cat = Object.keys(TOKOPEDIA_CATEGORY_MAP).find(
+      (k) => TOKOPEDIA_CATEGORY_MAP[k] === Object.keys(categoryMap).find(
+        (ck) => categoryMap[ck] === p.categoryId
+      )
+    ) || "unknown";
+    catCounts[cat] = (catCounts[cat] || 0) + 1;
+  }
+  for (const [cat, count] of Object.entries(catCounts)) {
+    const localName = TOKOPEDIA_CATEGORY_MAP[cat] || cat;
+    console.log(`    • ${localName}: ${count} products`);
+  }
+
+  return products;
+}
+
+// ============================================================
 //  6. MAIN
 // ============================================================
 
 async function main() {
   console.log("╔══════════════════════════════════════════════╗");
-  console.log("║        🌟 PRODUCT SEEDER v2.0                ║");
-  console.log("║   DummyJSON + Open Food Facts + Variants     ║");
+  console.log("║           🌟 PRODUCT SEEDER v3.0               ║");
+  console.log("║  DummyJSON + Tokopedia + Open Food Facts     ║");
   console.log("╚══════════════════════════════════════════════╝");
 
   // --- Step 0: Validate stores exist ---
-  console.log("\n[0/5] Checking stores...");
+  console.log("\n[0/6] Checking stores...");
   const stores = await prisma.store.findMany();
   if (stores.length === 0) {
     throw new Error("No stores found in database! Create at least one store first.");
@@ -340,19 +609,25 @@ async function main() {
   }
 
   // --- Step 1: Ensure categories ---
-  console.log("\n[1/5] Ensuring categories...");
+  console.log("\n[1/6] Ensuring categories...");
   const categoryMap = await ensureCategories();
   console.log(`  ✓ ${Object.keys(categoryMap).length} categories ready`);
   for (const [name, id] of Object.entries(categoryMap)) {
     console.log(`    • ${name} (ID: ${id})`);
   }
 
-  // --- Step 2: Fetch DummyJSON all products ---
-  const djProducts = await fetchDummyJSON();
-  let totalCreated = 0;
+  // --- Step 2: Load Tokopedia CSV products ---
+  const tokopediaCsvPath = process.env.TOKOPEDIA_CSV_PATH || DEFAULT_TOKOPEDIA_CSV;
+  console.log("\n[2/6] Loading Tokopedia products from Kaggle dataset...");
+  const tokopediaProducts = await loadTokopediaProducts(tokopediaCsvPath, categoryMap, stores);
+  const tokopediaCreated = await insertProducts(tokopediaProducts, "Tokopedia Products");
+  let totalCreated = tokopediaCreated;
 
-  // --- Step 3: Process DummyJSON base + variants ---
-  console.log("\n[2/5] Processing DummyJSON products with variants...");
+  // --- Step 3: Fetch DummyJSON all products ---
+  const djProducts = await fetchDummyJSON();
+
+  // --- Step 4: Process DummyJSON base + variants ---
+  console.log("\n[4/6] Processing DummyJSON products with variants...");
 
   const djToInsert = [];
 
@@ -412,8 +687,8 @@ async function main() {
   const djCreated = await insertProducts(djToInsert, "DummyJSON + Variants");
   totalCreated += djCreated;
 
-  // --- Step 4: Fetch Open Food Facts ---
-  console.log("\n[3/5] Fetching Open Food Facts products...");
+  // --- Step 5: Fetch Open Food Facts ---
+  console.log("\n[5/6] Fetching Open Food Facts products...");
 
   let offAll = [];
   for (const cat of OFF_CATEGORIES) {
@@ -449,7 +724,8 @@ async function main() {
   const offCreated = await insertProducts(offAll, "Open Food Facts");
   totalCreated += offCreated;
 
-  // --- Step 5: Summary ---
+  // --- Step 6: Summary ---
+  console.log("\n[6/6] Generating final summary...");
   console.log("\n════════════════════════════════════════════════");
   console.log("            📊 FINAL SUMMARY");
   console.log("════════════════════════════════════════════════");
@@ -457,6 +733,11 @@ async function main() {
   const total = await prisma.product.count();
   console.log(`  Total products in DB  : ${total}`);
   console.log(`  Newly created         : ${totalCreated}`);
+
+  console.log(`\n  Breakdown by source:`);
+  console.log(`    • Tokopedia CSV    : ${tokopediaCreated} products`);
+  console.log(`    • DummyJSON+Variant: ${djCreated} products`);
+  console.log(`    • Open Food Facts  : ${offCreated} products`);
 
   const cats = await prisma.category.findMany();
   console.log(`\n  Per-category breakdown:`);
@@ -466,11 +747,8 @@ async function main() {
     console.log(`    ${target} ${c.categoryName}: ${count} products`);
   }
 
-  const belowTarget = cats.filter(
-    (c) => c.categoryName !== "Makanan & Minuman"
-  );
   const below100 = [];
-  for (const c of belowTarget) {
+  for (const c of cats) {
     const count = await prisma.product.count({ where: { categoryId: c.id } });
     if (count < 100) below100.push(`${c.categoryName} (${count})`);
   }

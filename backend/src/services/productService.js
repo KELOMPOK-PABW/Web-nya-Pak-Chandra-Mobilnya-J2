@@ -50,9 +50,16 @@ const getAllProducts = async ({ page = 1, limit = 10, categoryId, keyword, minPr
   const skip = (page - 1) * limit;
   const take = limit;
 
+  // Split multi-word search queries into individual tokens so "laptop apple"
+  // searches for products matching "laptop" OR "apple" instead of the literal
+  // substring "laptop apple" (which would miss "MacBook Apple Pro").
+  const keywords = keyword
+    ? keyword.split(/\s+/).filter(Boolean)
+    : undefined;
+
   const [products, totalItems] = await Promise.all([
-    productRepository.getAllProducts({ skip, take, categoryId, keyword, minPrice, maxPrice }),
-    productRepository.countProducts({ categoryId, keyword, minPrice, maxPrice }),
+    productRepository.getAllProducts({ skip, take, categoryId, keyword, keywords, minPrice, maxPrice }),
+    productRepository.countProducts({ categoryId, keyword, keywords, minPrice, maxPrice }),
   ]);
 
   if (!products || products.length === 0) {

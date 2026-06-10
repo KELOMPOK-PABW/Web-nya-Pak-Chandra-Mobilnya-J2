@@ -2,28 +2,47 @@ const chatRepository = require("../repository/chatRepository");
 const productRepository = require("../repository/productRepository");
 const productService = require("./productService");
 const llmService = require("./llmService");
+const { expandKeywords, detectKeywordsViaSynonyms } = require("../utils/synonyms");
 
 const CATALOG_SNAPSHOT_SIZE = 50;
 const CATALOG_FILTERED_SIZE = 100;
 const HISTORY_SIZE = 10;
 const MAX_SESSIONS_PER_USER = 5;
 
-// Common product keywords to detect in user messages for catalog filtering
+// Brand + product type keywords for catalog filtering.
+// Covers Indonesian + English terms and major brand names so queries like
+// "apple computer" or "sepatu nike" match all relevant tokens.
 const PRODUCT_KEYWORDS = [
-  "laptop", "smartphone", "hp", "sepatu", "baju", "kaos", "kemeja", "dress",
-  "tas", "jam", "parfum", "fragrance", "furniture", "meja", "kursi",
-  "makeup", "skincare", "kecantikan", "motor", "mobil", "aksesoris",
-  "olahraga", "sports", "elektronik", "komputer", "tablet", "iphone",
-  "samsung", "xiaomi", "macbook", "asus", "lenovo", "acer", "gaming",
+  // ── Product types (Indonesian + English) ──
+  "laptop", "komputer", "computer", "smartphone", "hp", "handphone", "phone",
+  "sepatu", "shoes", "sneakers", "baju", "clothes", "kaos", "kemeja", "dress",
+  "tas", "bag", "jam", "watch", "parfum", "fragrance",
+  "furniture", "meja", "kursi",
+  "makeup", "skincare", "kecantikan",
+  "motor", "mobil",
+  "aksesoris", "accessories",
+  "olahraga", "sports",
+  "elektronik", "electronics", "tablet", "gaming",
+  // ── Brand names ──
+  "iphone", "macbook", "apple",
+  "samsung", "xiaomi", "oppo", "vivo", "google", "microsoft",
+  "asus", "lenovo", "acer", "dell", "hp",
+  "sony", "nintendo", "playstation",
+  "nike", "adidas", "puma", "converse", "h&m", "zara", "uniqlo",
 ];
 
-const detectKeyword = (message) => {
-  if (!message) return null;
-  const msg = message.toLowerCase();
-  for (const kw of PRODUCT_KEYWORDS) {
-    if (msg.includes(kw)) return kw;
-  }
-  return null;
+/**
+ * Find ALL brand/product-type keywords present in the message — including synonyms.
+ *
+ * Uses synonym-aware matching: "notebook" maps to "laptop", "pc" maps to "komputer",
+ * so user queries using variant terms still trigger the right catalog filter.
+ *
+ * Returns an array of matched canonical keywords (empty = no match).
+ * All matches are returned so multi-token queries like "apple computer" or "sepatu nike"
+ * expand the catalog search scope.
+ */
+const detectKeywords = (message) => {
+  return detectKeywordsViaSynonyms(message, PRODUCT_KEYWORDS);
 };
 
 const formatMessage = (msg, hydratedProducts, entities) => ({
@@ -39,10 +58,10 @@ const formatMessage = (msg, hydratedProducts, entities) => ({
 
 const fetchProductsContext = async (message) => {
   try {
-    const keyword = detectKeyword(message);
+    const keywords = detectKeywords(message);
     const opts = { skip: 0, take: CATALOG_SNAPSHOT_SIZE };
-    if (keyword) {
-      opts.keyword = keyword;
+    if (keywords.length > 0) {
+      opts.keywords = keywords;
       opts.take = CATALOG_FILTERED_SIZE;
     }
     return await productRepository.getAllProducts(opts);

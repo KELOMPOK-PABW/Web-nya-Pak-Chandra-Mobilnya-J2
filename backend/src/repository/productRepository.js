@@ -1,4 +1,5 @@
 const prisma = require("../config/database")
+const { expandKeywords } = require("../utils/synonyms")
 
 const findProductById = async (productId) => {
   return prisma.product.findUnique({
@@ -14,10 +15,45 @@ const findProductById = async (productId) => {
   });
 };
 
-const getAllProducts = async ({ skip, take, categoryId, keyword, minPrice, maxPrice }) => {
-  const where = {};
+/**
+ * Build a Prisma WHERE clause for keyword(s) search.
+ * - Single `keyword`: searches `name` only (backward compat with productService).
+ * - Multi `keywords` array: searches `name` AND `desc` with OR across all keywords
+ *   AND their synonyms, catching products no matter which term variant the user typed
+ *   (e.g. "notebook" expands to "laptop/notebook/ultrabook/chromebook").
+ */
+const buildKeywordWhere = (keyword, keywords) => {
+  if (keywords && Array.isArray(keywords) && keywords.length >= 2) {
+    // Expand with synonyms, then OR across name + description for each term
+    const expanded = expandKeywords(keywords);
+    return {
+      OR: expanded.flatMap((term) => [
+        { name: { contains: term } },
+        { desc: { contains: term } },
+      ]),
+    };
+  }
+  if (keywords && Array.isArray(keywords) && keywords.length === 1) {
+    const expanded = expandKeywords(keywords);
+    if (expanded.length >= 2) {
+      return {
+        OR: expanded.flatMap((term) => [
+          { name: { contains: term } },
+          { desc: { contains: term } },
+        ]),
+      };
+    }
+    return { name: { contains: expanded[0] } };
+  }
+  if (keyword) {
+    return { name: { contains: keyword } };
+  }
+  return {};
+};
+
+const getAllProducts = async ({ skip, take, categoryId, keyword, keywords, minPrice, maxPrice }) => {
+  const where = { ...buildKeywordWhere(keyword, keywords) };
   if (categoryId) where.categoryId = Number(categoryId);
-  if (keyword) where.name = { contains: keyword };
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};
     if (minPrice !== undefined) where.price.gte = Number(minPrice);
@@ -37,10 +73,9 @@ const getAllProducts = async ({ skip, take, categoryId, keyword, minPrice, maxPr
   });
 };
 
-const countProducts = async ({ categoryId, keyword, minPrice, maxPrice } = {}) => {
-  const where = {};
+const countProducts = async ({ categoryId, keyword, keywords, minPrice, maxPrice } = {}) => {
+  const where = { ...buildKeywordWhere(keyword, keywords) };
   if (categoryId) where.categoryId = Number(categoryId);
-  if (keyword) where.name = { contains: keyword };
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};
     if (minPrice !== undefined) where.price.gte = Number(minPrice);
