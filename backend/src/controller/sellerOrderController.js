@@ -9,25 +9,23 @@ const getOrders = async (req, res) => {
   }
 };
 
-const processOrder = async (req, res) => {
+const processOrder = async (req, res, next) => {
   try {
     const { orderItemId } = req.params;
     const result = await sellerOrderService.processOrderItem(orderItemId, req.user.id);
     return res.status(200).json({ success: true, message: "Pesanan diproses", data: result });
   } catch (error) {
-    const statusCode = error.message === "Order item tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const readyToShip = async (req, res) => {
+const readyToShip = async (req, res, next) => {
   try {
     const { orderItemId } = req.params;
     const result = await sellerOrderService.readyToShipOrderItem(orderItemId, req.user.id);
     return res.status(200).json({ success: true, message: "Pesanan siap dikirim", data: result });
   } catch (error) {
-    const statusCode = error.message === "Order item tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 

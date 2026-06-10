@@ -13,14 +13,13 @@ const getUsers = async (req, res) => {
   }
 };
 
-const getUserDetail = async (req, res) => {
+const getUserDetail = async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = await adminService.getUserDetail(id);
     return res.status(200).json({ success: true, data: user });
   } catch (error) {
-    const statusCode = error.message === "User tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 

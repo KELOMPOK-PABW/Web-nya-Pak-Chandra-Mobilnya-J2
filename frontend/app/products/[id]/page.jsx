@@ -6,8 +6,7 @@ import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
 import { ReviewList } from "@/components/reviews/ReviewList";
-
-const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
+import { formatPrice } from "@/utils/format";
 
 export default function ProductDetailPage() {
   const { id } = useParams();

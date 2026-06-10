@@ -12,7 +12,7 @@ import ConfirmationCard from "@/components/chat/ConfirmationCard";
 import MemoryPanel from "@/components/chat/MemoryPanel";
 
 const STORAGE_KEY = "chat_session_id";
-const fmt = (n) => "Rp " + Number(n).toLocaleString("id-ID");
+import { formatPrice as fmt } from "@/utils/format";
 
 /**
  * Slide-in chat sidebar rendered as a block element in the document flow.

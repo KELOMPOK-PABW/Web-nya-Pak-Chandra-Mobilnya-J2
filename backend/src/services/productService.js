@@ -1,5 +1,6 @@
 const productRepository = require("../repository/productRepository");
 const categoryRepository = require("../repository/categoryRepository");
+const AppError = require("../utils/AppError");
 
 const formatProductResponse = (product) => {
   return {
@@ -71,7 +72,7 @@ const getProductById = async (productId) => {
 
   const product = await productRepository.findProductById(Number(productId));
   if (!product) {
-    throw new Error("Produk tidak ditemukan");
+    throw new AppError("Produk tidak ditemukan", 404);
   }
 
   return formatProductByIdResponse(product);
@@ -82,7 +83,7 @@ const createProduct = async (data, sellerId) => {
 
   if (category_id) {
     const category = await categoryRepository.findById(Number(category_id));
-    if (!category) throw new Error("Kategori tidak ditemukan");
+    if (!category) throw new AppError("Kategori tidak ditemukan", 404);
   }
 
   const store = await productRepository.findStoreByUserId(sellerId);
@@ -106,10 +107,10 @@ const createProduct = async (data, sellerId) => {
 
 const updateProduct = async (productId, data, sellerId) => {
   const existingProduct = await productRepository.findProductById(Number(productId));
-  if (!existingProduct) throw new Error("Produk tidak ditemukan");
+  if (!existingProduct) throw new AppError("Produk tidak ditemukan", 404);
 
   const store = await productRepository.findStoreByUserId(sellerId);
-  if (!store || existingProduct.storeId !== store.id) throw new Error("Akses ditolak: bukan produk Anda");
+  if (!store || existingProduct.storeId !== store.id) throw new AppError("Akses ditolak: bukan produk Anda", 403);
 
   const updateData = {};
   if (data.name !== undefined) updateData.name = data.name;
@@ -122,7 +123,7 @@ const updateProduct = async (productId, data, sellerId) => {
   if (data.price !== undefined) updateData.price = Number(data.price);
   if (data.category_id !== undefined) {
     const category = await categoryRepository.findById(Number(data.category_id));
-    if (!category) throw new Error("Kategori tidak ditemukan");
+    if (!category) throw new AppError("Kategori tidak ditemukan", 404);
     updateData.categoryId = Number(data.category_id);
   }
 
@@ -132,10 +133,10 @@ const updateProduct = async (productId, data, sellerId) => {
 
 const deleteProduct = async (productId, sellerId) => {
   const existingProduct = await productRepository.findProductById(Number(productId));
-  if (!existingProduct) throw new Error("Produk tidak ditemukan");
+  if (!existingProduct) throw new AppError("Produk tidak ditemukan", 404);
 
   const store = await productRepository.findStoreByUserId(sellerId);
-  if (!store || existingProduct.storeId !== store.id) throw new Error("Akses ditolak: bukan produk Anda");
+  if (!store || existingProduct.storeId !== store.id) throw new AppError("Akses ditolak: bukan produk Anda", 403);
 
   return await productRepository.deleteProduct(Number(productId));
 };

@@ -25,10 +25,10 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
-    const isClientError = error.message === "Email sudah terdaftar";
-    res.status(isClientError ? 400 : 500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
-      message: isClientError ? error.message : "Gagal melakukan registrasi",
+      message: statusCode < 500 ? error.message : "Gagal melakukan registrasi",
       error: error.message,
     });
   }
@@ -54,10 +54,10 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    const isClientError = error.message === "Email atau password salah";
-    res.status(isClientError ? 401 : 500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
-      message: isClientError ? error.message : "Gagal melakukan login",
+      message: statusCode < 500 ? error.message : "Gagal melakukan login",
       error: error.message,
     });
   }
@@ -81,10 +81,10 @@ const getMe = async (req, res) => {
       },
     });
   } catch (error) {
-    const isClientError = error.message === "User tidak ditemukan";
-    res.status(isClientError ? 404 : 500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
-      message: isClientError ? error.message : "Gagal mengambil data user",
+      message: statusCode < 500 ? error.message : "Gagal mengambil data user",
       error: error.message,
     });
   }

@@ -9,7 +9,7 @@ import { productService } from "@/services/productService";
 
 // (dummy data removed) 
 
-const formatPrice = (value) => `Rp ${value.toLocaleString("id-ID")}`;
+import { formatPrice } from "@/utils/format";
 
 export default function ProductsListPage() {
   const pathname = usePathname();

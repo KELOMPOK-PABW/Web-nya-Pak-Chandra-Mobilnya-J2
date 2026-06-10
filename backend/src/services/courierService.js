@@ -1,5 +1,6 @@
 const courierRepository = require("../repository/courierRepository");
 const sellerOrderRepository = require("../repository/sellerOrderRepository");
+const AppError = require("../utils/AppError");
 
 const getTasks = async (kurirId) => {
   const assignments = await courierRepository.findAssignmentsByKurirId(kurirId);
@@ -22,7 +23,7 @@ const getTasks = async (kurirId) => {
 
 const getTaskDetail = async (assignmentId) => {
   const a = await courierRepository.findAssignmentById(Number(assignmentId));
-  if (!a) throw new Error("Tugas tidak ditemukan");
+  if (!a) throw new AppError("Tugas tidak ditemukan", 404);
 
   return {
     assignment_id: a.id,
@@ -43,8 +44,8 @@ const getTaskDetail = async (assignmentId) => {
 
 const pickup = async (assignmentId, kurirId) => {
   const a = await courierRepository.findAssignmentById(Number(assignmentId));
-  if (!a) throw new Error("Tugas tidak ditemukan");
-  if (a.kurirId !== Number(kurirId)) throw new Error("Akses ditolak");
+  if (!a) throw new AppError("Tugas tidak ditemukan", 404);
+  if (a.kurirId !== Number(kurirId)) throw new AppError("Akses ditolak", 403);
   if (a.pickupAt) throw new Error("Sudah di-pickup");
 
   await courierRepository.updatePickup(a.id);
@@ -60,8 +61,8 @@ const pickup = async (assignmentId, kurirId) => {
 
 const deliver = async (assignmentId, kurirId) => {
   const a = await courierRepository.findAssignmentById(Number(assignmentId));
-  if (!a) throw new Error("Tugas tidak ditemukan");
-  if (a.kurirId !== Number(kurirId)) throw new Error("Akses ditolak");
+  if (!a) throw new AppError("Tugas tidak ditemukan", 404);
+  if (a.kurirId !== Number(kurirId)) throw new AppError("Akses ditolak", 403);
   if (!a.pickupAt) throw new Error("Belum di-pickup");
   if (a.deliveredAt) throw new Error("Sudah diantar");
 

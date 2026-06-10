@@ -9,36 +9,33 @@ const getTasks = async (req, res) => {
   }
 };
 
-const getTaskDetail = async (req, res) => {
+const getTaskDetail = async (req, res, next) => {
   try {
     const { id } = req.params;
     const task = await courierService.getTaskDetail(id);
     return res.status(200).json({ success: true, data: task });
   } catch (error) {
-    const statusCode = error.message === "Tugas tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const pickup = async (req, res) => {
+const pickup = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await courierService.pickup(id, req.user.id);
     return res.status(200).json({ success: true, message: "Pickup berhasil", data: result });
   } catch (error) {
-    const statusCode = error.message === "Tugas tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const deliver = async (req, res) => {
+const deliver = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await courierService.deliver(id, req.user.id);
     return res.status(200).json({ success: true, message: "Pengiriman berhasil", data: result });
   } catch (error) {
-    const statusCode = error.message === "Tugas tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 

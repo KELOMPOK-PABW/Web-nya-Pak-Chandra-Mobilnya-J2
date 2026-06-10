@@ -14,10 +14,9 @@ const getAllOrders = async (req, res) => {
       message: error.message,
     });
   }
-  console.log("wow")
 };
 
-const getOrderById = async (req, res) => {
+const getOrderById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await orderService.getOrderById(Number(id), req.user.id);
@@ -28,15 +27,11 @@ const getOrderById = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-const getOrderItems = async (req, res) => {
+const getOrderItems = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await orderService.getOrderItems(Number(id), req.user.id);
@@ -46,11 +41,7 @@ const getOrderItems = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 

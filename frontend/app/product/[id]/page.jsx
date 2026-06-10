@@ -14,8 +14,7 @@ import ChatPopup from "@/components/chat/ChatPopup";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import ProactivePrompt from "@/components/chat/ProactivePrompt";
 import useStruggleDetection from "@/hooks/useStruggleDetection";
-
-const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
+import { formatPrice } from "@/utils/format";
 
 export default function ProductDetailPage() {
   const { id } = useParams();

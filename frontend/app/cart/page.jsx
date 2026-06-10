@@ -12,12 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import ProactivePrompt from "@/components/chat/ProactivePrompt";
 
-const formatRupiah = (value) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
+import { formatPrice as formatRupiah } from "@/utils/format";
 
 const getProductImage = (item) => {
   const imageUrl = item?.product?.image_url || item?.product?.image || item?.image;
