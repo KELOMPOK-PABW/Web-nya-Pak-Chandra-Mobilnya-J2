@@ -55,7 +55,7 @@ function ProductCard({ product }) {
         {product.image_url ? (
           <img src={product.image_url} alt={product.name}
             className="w-full h-full object-cover"
-            onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+            onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width="40" height="40" stroke="#A5D6D0" fill="none" stroke-width="1"><path d="M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12"/></svg>'; }} />
         ) : (
           <Package size={40} strokeWidth={1} color="#A5D6D0" />
         )}
@@ -86,7 +86,7 @@ export default function HomePage() {
   const [aiResult, setAiResult] = useState(null);
   const [aiSearchQuery, setAiSearchQuery] = useState("");
   const [chatSessionId, setChatSessionId] = useState(null);
-  const [searchMode, setSearchMode] = useState("auto"); // 'auto' | 'search' | 'ai'
+  const [searchMode, setSearchMode] = useState("ai"); // default AI
 
   // Real API state
   const [products, setProducts] = useState([]);
@@ -147,7 +147,6 @@ export default function HomePage() {
     const q = searchInput.trim();
     if (!q) return;
 
-    // Decide mode: auto-detect NL, or respect explicit mode
     const useAi = searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(q));
 
     if (useAi) {
@@ -199,7 +198,6 @@ export default function HomePage() {
         products: result.suggested_products || [],
       });
     } catch {
-      // Fallback: search by keyword if LLM fails
       setSearch(msg);
       setSearchInput(msg);
       setAiResult({ message: `Menampilkan hasil untuk "${msg}"`, products: [] });
@@ -219,34 +217,37 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#f5f5f5]"
       style={{ fontFamily: "'DM Sans','Inter',sans-serif" }}>
 
-      {/* ── NAVBAR (unified) ── */}
+      {/* ── NAVBAR ── */}
       <Navbar onSearchOpen={() => setShowMobileSearch(true)} />
 
       {/* ── SEARCH BAR ── */}
       <div className="bg-white border-b border-[#EBEBEB] shadow-sm">
         <div className="max-w-[1280px] mx-auto px-5 py-3">
+
           {/* Desktop search */}
-          <form onSubmit={handleSearch} className="hidden md:flex">
+          <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2">
             <div className="relative flex-1">
+              {/* Badge AI permanen di kiri */}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none z-10">
+                <div className="flex items-center gap-1 bg-[#1A3C34] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <Sparkles size={9} strokeWidth={2.5} />
+                  AI
+                </div>
+              </div>
               <input
                 value={searchInput}
                 onChange={e => {
                   setSearchInput(e.target.value);
-                  if (searchMode === "auto" && isNaturalLanguage(e.target.value)) {
-                    setSearchMode("auto");
-                  }
                 }}
-                placeholder="Cari produk impianmu..."
-                className="w-full h-11 pl-12 pr-24 rounded-full bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 transition-all text-[15px] outline-none"
+                placeholder='Carikan saya baju ukuran L dengan harga dibawah 30rb'
+                className="w-full h-11 pl-[72px] pr-24 rounded-full bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 transition-all text-[14px] outline-none"
               />
-              <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
-                <Search size={18} color="#888" />
-              </button>
+              {/* Toggle mode (tetap ada buat user yang mau keyword biasa) */}
               {searchInput.trim() && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setSearchMode(searchMode === "ai" ? "auto" : "ai")}
+                    onClick={() => setSearchMode(searchMode === "ai" ? "search" : "ai")}
                     className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${
                       searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(searchInput))
                         ? "bg-[#0D2B26] text-white border-[#0D2B26]"
@@ -254,12 +255,12 @@ export default function HomePage() {
                     }`}
                   >
                     {searchMode === "ai" || isNaturalLanguage(searchInput) ? (
-                      <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                         <Sparkles size={11} strokeWidth={2.5} />
                         AI
                       </span>
                     ) : (
-                      <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
                         <Search size={11} strokeWidth={2.5} />
                         Cari
                       </span>
@@ -268,31 +269,37 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+            {/* <button
+              type="submit"
+              className="h-11 px-5 rounded-full bg-[#1A3C34] text-white text-[13px] font-bold flex items-center gap-1.5 hover:bg-[#2D6A5E] transition-colors flex-shrink-0"
+            >
+              <Search size={14} strokeWidth={2.5} />
+              Cari
+            </button> */}
           </form>
 
-          {/* Mobile search (toggled by Navbar search icon) */}
+          {/* Mobile search */}
           {showMobileSearch && (
             <form onSubmit={handleSearch} className="md:hidden relative">
+              {/* Badge AI permanen di kiri */}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-[#1A3C34] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full pointer-events-none z-10">
+                <Sparkles size={9} strokeWidth={2.5} />
+                AI
+              </div>
               <input
                 value={searchInput}
                 onChange={e => {
                   setSearchInput(e.target.value);
-                  if (searchMode === "auto" && isNaturalLanguage(e.target.value)) {
-                    setSearchMode("auto");
-                  }
                 }}
-                placeholder="Cari produk impianmu..."
+                placeholder='"Sepatu lari di bawah 500rb"'
                 autoFocus
-                className="w-full h-11 pl-12 pr-24 rounded-full bg-[#F5F5F5] border border-[#E5E7EB] focus:border-[#0D2B26]/30 focus:ring-2 focus:ring-[#0D2B26]/10 transition-all text-[15px] outline-none"
+                className="w-full h-11 pl-[60px] pr-20 rounded-full bg-[#F5F5F5] border border-[#E5E7EB] focus:border-[#0D2B26]/30 focus:ring-2 focus:ring-[#0D2B26]/10 transition-all text-[14px] outline-none"
               />
-              <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
-                <Search size={18} color="#888" />
-              </button>
               {searchInput && (
                 <>
                   <button
                     type="button"
-                    onClick={() => setSearchMode(searchMode === "ai" ? "auto" : "ai")}
+                    onClick={() => setSearchMode(searchMode === "ai" ? "search" : "ai")}
                     className={`absolute right-12 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-1 rounded-full border transition-colors cursor-pointer ${
                       searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(searchInput))
                         ? "bg-[#0D2B26] text-white border-[#0D2B26]"
@@ -330,24 +337,26 @@ export default function HomePage() {
         <h1 style={{ color: "#fff", fontSize: 20, fontWeight: 700, marginBottom: 4, position: "relative" }}>
           Selamat datang di PABW Shop
         </h1>
-        <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginBottom: 20, position: "relative" }}>
-          Temukan produk impianmu dengan bantuan AI
-        </p>
+        {/* <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginBottom: 20, position: "relative" }}>
+          Ketik apa yang kamu butuhkan — AI kami akan bantu carikan
+        </p> */}
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, position: "relative" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 16, position: "relative" }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg, #4DB6AC, #26A69A)",
+            background: "rgba(77,182,172,0.2)",
+            border: "1px solid rgba(77,182,172,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
           }}>
-            <Sparkles size={18} color="white" />
+            <Sparkles size={18} color="#4DB6AC" />
           </div>
           <div>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 1.4 }}>
-              Coba tanya AI untuk rekomendasi produk — atau langsung
-              <span style={{ color: "#4DB6AC", fontWeight: 600 }}> cari </span>
-              di kolom pencarian di atas
+            <p style={{ color: "#4DB6AC", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
+              Contoh yang bisa kamu tanyakan:
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.5 }}>
+              Klik salah satu di bawah, atau ketik sendiri di kolom pencarian
             </p>
           </div>
         </div>
@@ -359,18 +368,20 @@ export default function HomePage() {
                 background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)",
                 borderRadius: 99, padding: "6px 14px", fontSize: 12,
                 color: "rgba(255,255,255,0.85)", cursor: aiLoading ? "not-allowed" : "pointer",
-                  fontFamily: "inherit", whiteSpace: "nowrap", opacity: aiLoading ? 0.5 : 1,
-                }}>
-                {q}
-              </button>
-            ))}
-          </div>
+                fontFamily: "inherit", whiteSpace: "nowrap", opacity: aiLoading ? 0.5 : 1,
+              }}>
+              {q}
+            </button>
+          ))}
+        </div>
+
         <style>{`
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        @keyframes typingDot{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
-        .scrollbar-hide::-webkit-scrollbar{display:none}
-        .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
-      `}</style>
+          @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+          @keyframes typingDot{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+          @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+          .scrollbar-hide::-webkit-scrollbar{display:none}
+          .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
+        `}</style>
       </div>
 
       <div className="max-w-[1280px] mx-auto px-5 py-6">
@@ -378,10 +389,8 @@ export default function HomePage() {
         {/* ── AI RESULT ── */}
         {showAiResult && (
           <div className="mb-8">
-            {/* ── AI response header ── */}
             {aiLoading ? (
               <div className="bg-white rounded-xl border border-[#EBEBEB] py-8 text-center">
-                {/* Animated gradient bar instead of dots */}
                 <div style={{
                   maxWidth: 240, margin: "0 auto 16px",
                   height: 4, borderRadius: 2, overflow: "hidden",
@@ -403,7 +412,7 @@ export default function HomePage() {
               </div>
             ) : aiResult && (
               <>
-                {/* ── AI message bubble ── */}
+                {/* AI message bubble */}
                 <div className="bg-gradient-to-br from-[#1A3C34] to-[#2D6A5E] rounded-2xl px-5 py-4 mb-5 flex items-start gap-3 shadow-lg shadow-emerald-900/15">
                   <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5 backdrop-blur-sm">
                     <Bot size={16} color="white" />
@@ -422,7 +431,7 @@ export default function HomePage() {
                   </button>
                 </div>
 
-                {/* ── AI product grid ── */}
+                {/* AI product grid */}
                 {aiResult.products.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -438,7 +447,7 @@ export default function HomePage() {
                             {p.image_url ? (
                               <img src={p.image_url} alt={p.name}
                                 className="w-full h-full object-cover"
-                                onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+                                onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width="40" height="40" stroke="#A5D6D0" fill="none" stroke-width="1"><path d="M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12"/></svg>'; }} />
                             ) : (
                               <Package size={40} strokeWidth={1} color="#A5D6D0" />
                             )}
@@ -454,7 +463,7 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {/* ── Empty state ── */}
+                {/* Empty state */}
                 {aiResult.products.length === 0 && (
                   <div className="bg-white rounded-xl border border-[#EBEBEB] py-12 text-center text-gray-400">
                     <Search size={40} strokeWidth={1} className="mx-auto mb-3 opacity-40" />
@@ -613,5 +622,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-
