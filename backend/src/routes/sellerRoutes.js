@@ -12,6 +12,7 @@ router.delete("/products/:id", sellerProductController.deleteProduct);
 
 // Seller Orders (from HEAD)
 router.get("/orders", sellerOrderController.getOrders);
+router.get("/orders/:id", sellerOrderController.getOrderById);
 router.put("/orders/:orderItemId/process", sellerOrderController.processOrder);
 router.put("/orders/:orderItemId/ready-to-ship", sellerOrderController.readyToShip);
 
