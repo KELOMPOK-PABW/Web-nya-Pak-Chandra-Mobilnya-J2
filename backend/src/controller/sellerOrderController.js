@@ -1,11 +1,27 @@
 const sellerOrderService = require("../services/sellerOrderService");
 
-const getOrders = async (req, res) => {
+const getOrders = async (req, res, next) => {
   try {
-    const orders = await sellerOrderService.getSellerOrders(req.user.id);
-    return res.status(200).json({ success: true, data: orders });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const result = await sellerOrderService.getSellerOrders(req.user.id, { page, limit });
+
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      meta: result.meta,
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
+  }
+};
+
+const getOrderById = async (req, res, next) => {
+  try {
+    const result = await sellerOrderService.getSellerOrderById(req.params.id, req.user.id);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -29,4 +45,4 @@ const readyToShip = async (req, res, next) => {
   }
 };
 
-module.exports = { getOrders, processOrder, readyToShip };
+module.exports = { getOrders, getOrderById, processOrder, readyToShip };
