@@ -1,8 +1,8 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { apiUrl } from "./apiClient";
 
 export const authService = {
   async register({ full_name, email, password, role = "buyer" }) {
-    const res = await fetch(`${BASE_URL}/auth/register`, {
+    const res = await fetch(apiUrl(`/auth/register`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ full_name, email, password, role }),
@@ -15,7 +15,7 @@ export const authService = {
   },
 
   async login({ email, password }) {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(apiUrl(`/auth/login`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),

@@ -30,9 +30,11 @@ const getTransactions = async (userId) => {
 
 const topup = async (userId, amount) => {
   const result = await walletRepository.callTopupSP(userId, amount);
-
-  if (result.message.startsWith("ERROR")) {
-    throw new Error(result.message.replace("ERROR: ", ""));
+  if (result.message && result.message.startsWith("ERROR")) {
+    const err = new Error(result.message.replace("ERROR: ", ""));
+    err.status = 400;
+    err.expose = true;
+    throw err;
   }
 
   return { balance_after: Number(result.balance_after) };
@@ -40,9 +42,11 @@ const topup = async (userId, amount) => {
 
 const refund = async (userId, orderId) => {
   const result = await walletRepository.callRefundSP(userId, orderId);
-
-  if (result.message.startsWith("ERROR")) {
-    throw new Error(result.message.replace("ERROR: ", ""));
+  if (result.message && result.message.startsWith("ERROR")) {
+    const err = new Error(result.message.replace("ERROR: ", ""));
+    err.status = 400;
+    err.expose = true;
+    throw err;
   }
 
   return { balance_after: Number(result.balance_after) };
