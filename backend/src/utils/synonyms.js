@@ -10,18 +10,18 @@
  */
 const SYNONYM_MAP = {
   // ── Computing & Electronics ──
-  laptop: ["notebook", "ultrabook", "chromebook", "netbook"],
+  laptop: ["notebook", "ultrabook", "chromebook", "netbook", "macbook", "thinkpad", "zenbook", "matebook", "ideapad", "pavilion", "envy", "spectre", "surface pro", "vaio", "legion", "predator", "rog", "tuf", "inspiron", "xps", "latitude", "thinkbook", "gram", "swift", "vivobook", "expertbook"],
   komputer: ["computer", "pc", "desktop", "all-in-one", "workstation"],
   computer: ["komputer", "pc", "desktop", "all-in-one", "workstation"],
-  smartphone: ["hp", "handphone", "ponsel", "android", "smart phone"],
+  smartphone: ["hp", "handphone", "ponsel", "android", "smart phone", "iphone", "galaxy", "redmi", "poco", "realme", "oppo", "vivo", "infinix", "techno"],
   hp: ["smartphone", "handphone", "ponsel", "android", "telpon"],
   handphone: ["smartphone", "hp", "ponsel", "android"],
   phone: ["smartphone", "hp", "handphone", "ponsel"],
-  tablet: ["ipad", "tab", "table", "tablet pc"],
+  tablet: ["ipad", "tab", "table", "tablet pc", "galaxy tab", "surface", "kindle", "matepad", "lenovo tab"],
   gaming: ["game", "gamer", "console", "playstation", "nintendo", "xbox"],
 
   // ── Fashion ──
-  sepatu: ["shoes", "sneakers", "loafers", "boots", "sandal", "slip-on", "kasual"],
+  sepatu: ["shoes", "sneakers", "loafers", "boots", "sandal", "slip-on", "kasual", "air max", "ultraboost", "converse", "vans", "reebok", "new balance", "nike", "adidas"],
   shoes: ["sepatu", "sneakers", "loafers", "boots", "sandal"],
   sneakers: ["sepatu", "shoes", "kets", "olahraga"],
   baju: ["clothes", "pakaian", "atasan", "blouse", "kaos", "kemeja"],
@@ -31,8 +31,8 @@ const SYNONYM_MAP = {
   dress: ["gaun", "rok", "gown"],
   tas: ["bag", "backpack", "ransel", "tote", "slingbag", "selempang"],
   bag: ["tas", "backpack", "ransel", "tote", "slingbag"],
-  jam: ["watch", "arloji", "jam tangan"],
-  watch: ["jam", "arloji", "jam tangan"],
+  jam: ["watch", "arloji", "jam tangan", "rolex", "casio", "seiko", "fossil", "smartwatch", "apple watch", "g-shock"],
+  watch: ["jam", "arloji", "jam tangan", "rolex", "casio", "seiko", "fossil", "smartwatch", "apple watch", "g-shock"],
 
   // ── Beauty & Fragrance ──
   parfum: ["fragrance", "wewangian", "perfume", "minyak wangi", "body mist"],

@@ -22,28 +22,29 @@ const findProductById = async (productId) => {
  *   AND their synonyms, catching products no matter which term variant the user typed
  *   (e.g. "notebook" expands to "laptop/notebook/ultrabook/chromebook").
  */
+/**
+ * Build the OR conditions for a list of expanded search terms.
+ * Searches name, description, AND category name so products like
+ * "MacBook Pro" (in the "Laptop" category) match a "laptop" query.
+ */
+const buildTermConditions = (terms) =>
+  terms.flatMap((term) => [
+    { name: { contains: term } },
+    { desc: { contains: term } },
+    { category: { categoryName: { contains: term } } },
+  ]);
+
 const buildKeywordWhere = (keyword, keywords) => {
   if (keywords && Array.isArray(keywords) && keywords.length >= 2) {
-    // Expand with synonyms, then OR across name + description for each term
     const expanded = expandKeywords(keywords);
-    return {
-      OR: expanded.flatMap((term) => [
-        { name: { contains: term } },
-        { desc: { contains: term } },
-      ]),
-    };
+    return { OR: buildTermConditions(expanded) };
   }
   if (keywords && Array.isArray(keywords) && keywords.length === 1) {
     const expanded = expandKeywords(keywords);
     if (expanded.length >= 2) {
-      return {
-        OR: expanded.flatMap((term) => [
-          { name: { contains: term } },
-          { desc: { contains: term } },
-        ]),
-      };
+      return { OR: buildTermConditions(expanded) };
     }
-    return { name: { contains: expanded[0] } };
+    return { OR: buildTermConditions(expanded) };
   }
   if (keyword) {
     return { name: { contains: keyword } };
