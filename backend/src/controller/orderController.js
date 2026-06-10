@@ -14,7 +14,6 @@ const getAllOrders = async (req, res) => {
       message: error.message,
     });
   }
-  console.log("wow")
 };
 
 const getOrderById = async (req, res) => {
