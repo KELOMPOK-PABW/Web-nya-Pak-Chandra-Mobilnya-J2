@@ -6,8 +6,7 @@ import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
 import { ReviewList } from "@/components/reviews/ReviewList";
-
-const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
+import { formatPrice } from "@/utils/format";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -81,10 +80,14 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-6">
               <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
-                <div
-                  className="rounded-3xl h-72 flex items-center justify-center text-6xl bg-[#F3F4F6]"
-                >
-                  📦
+                <div className="rounded-3xl h-72 flex items-center justify-center bg-[#F3F4F6] overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name}
+                      className="w-full h-full object-cover"
+                      onError={e => { e.target.style.display = "none"; e.target.parentElement.innerText = "📦"; }} />
+                  ) : (
+                    <span className="text-6xl">📦</span>
+                  )}
                 </div>
               </div>
 

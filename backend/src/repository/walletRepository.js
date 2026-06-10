@@ -8,7 +8,7 @@ const findWalletByUserId = async (userId) => {
 
 const findTransactionsByWalletId = async (walletId) => {
   return prisma.walletTransaction.findMany({
-    where: { walletId },
+    where: { eWalletId: walletId },
     orderBy: { createdAt: "desc" },
   });
 };

@@ -4,25 +4,20 @@ const findProductById = async (productId) => {
   return prisma.product.findUnique({
     where: { id: productId },
     include: {
-      seller: {
-        select: { id: true, full_name: true },
+      store: {
+        include: {
+          user: { select: { id: true, fullName: true } },
+        },
       },
-      category: {
-        select: { id: true, name: true },
-      },
+      category: { select: { id: true, categoryName: true } },
     },
   });
 };
 
 const getAllProducts = async ({ skip, take, categoryId, keyword, minPrice, maxPrice }) => {
   const where = {};
-
-  if (categoryId) {
-    where.categoryId = Number(categoryId);
-  }
-  if (keyword) {
-    where.name = { contains: keyword };
-  }
+  if (categoryId) where.categoryId = Number(categoryId);
+  if (keyword) where.name = { contains: keyword };
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};
     if (minPrice !== undefined) where.price.gte = Number(minPrice);
@@ -30,16 +25,14 @@ const getAllProducts = async ({ skip, take, categoryId, keyword, minPrice, maxPr
   }
 
   return prisma.product.findMany({
-    skip,
-    take,
-    where,
+    skip, take, where,
     include: {
-      seller: {
-        select: { id: true, full_name: true },
+      store: {
+        include: {
+          user: { select: { id: true, fullName: true } },
+        },
       },
-      category: {
-        select: { id: true, name: true },
-      },
+      category: { select: { id: true, categoryName: true } },
     },
   });
 };
@@ -60,12 +53,12 @@ const createProduct = async (data) => {
   return prisma.product.create({
     data,
     include: {
-      seller: {
-        select: { id: true, full_name: true },
+      store: {
+        include: {
+          user: { select: { id: true, fullName: true } },
+        },
       },
-      category: {
-        select: { id: true, name: true },
-      },
+      category: { select: { id: true, categoryName: true } },
     },
   });
 };
@@ -75,48 +68,38 @@ const updateProduct = async (productId, data) => {
     where: { id: productId },
     data,
     include: {
-      seller: {
-        select: { id: true, full_name: true },
+      store: {
+        include: {
+          user: { select: { id: true, fullName: true } },
+        },
       },
-      category: {
-        select: { id: true, name: true },
-      },
+      category: { select: { id: true, categoryName: true } },
     },
   });
 };
 
 const deleteProduct = async (productId) => {
-  return prisma.product.delete({
-    where: { id: productId },
-  });
+  return prisma.product.delete({ where: { id: productId } });
 };
 
-const getProductsBySellerId = async (sellerId, { skip, take }) => {
+const findStoreByUserId = async (userId) => {
+  return prisma.store.findUnique({ where: { userId: Number(userId) } });
+};
+
+const getProductsByStoreId = async (storeId, { skip, take }) => {
   return prisma.product.findMany({
-    where: { sellerId },
-    skip,
-    take,
-    include: {
-      category: {
-        select: { id: true, name: true },
-      },
-    },
+    where: { storeId },
+    skip, take,
+    include: { category: { select: { id: true, categoryName: true } } },
   });
 };
 
-const countProductsBySellerId = async (sellerId) => {
-  return prisma.product.count({
-    where: { sellerId },
-  });
+const countProductsByStoreId = async (storeId) => {
+  return prisma.product.count({ where: { storeId } });
 };
 
 module.exports = {
-  findProductById,
-  getAllProducts,
-  countProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getProductsBySellerId,
-  countProductsBySellerId,
+  findProductById, getAllProducts, countProducts, createProduct,
+  updateProduct, deleteProduct, findStoreByUserId,
+  getProductsByStoreId, countProductsByStoreId,
 };

@@ -1,4 +1,5 @@
 const orderRepository = require("../repository/orderRepository");
+const AppError = require("../utils/AppError");
 
 const getAllOrders = async (buyerId) => {
   const orders = await orderRepository.findOrdersByBuyerId(buyerId);
@@ -18,7 +19,7 @@ const getOrderById = async (orderId, buyerId) => {
   const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
 
   if (!order) {
-    throw new Error("Order tidak ditemukan");
+    throw new AppError("Order tidak ditemukan", 404);
   }
 
   return {
@@ -32,7 +33,7 @@ const getOrderById = async (orderId, buyerId) => {
       : null,
     items: order.items.map((item) => ({
       product_name: item.productNameSnap,
-      store_name: item.seller ? item.seller.full_name : "-",
+      store_name: item.seller ? item.seller.fullName : "-",
       qty: item.qty,
       price: Number(item.priceSnap),
     })),
@@ -48,7 +49,7 @@ const getOrderItems = async (orderId, buyerId) => {
   const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
 
   if (!order) {
-    throw new Error("Order tidak ditemukan");
+    throw new AppError("Order tidak ditemukan", 404);
   }
 
   const items = await orderRepository.findOrderItemsByOrderId(Number(orderId));

@@ -4,13 +4,25 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
+import { BottomBar } from "@/components/layout/BottomBar";
 import {
-  Send, Star, Plus, Search, Bot, Home,
+  Sparkles, Star, Plus, Search, Bot, Home,
   ShoppingCart, User, Package, ChevronLeft, ChevronRight,
   Tag, Zap, MessageCircle,
 } from "lucide-react";
 import { productService } from "@/services/productService";
 import { authService } from "@/services/authService";
+
+/* ── Natural language detection ── */
+function isNaturalLanguage(query) {
+  const trimmed = query.trim();
+  if (!trimmed) return false;
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length >= 3) return true;
+  const nlTriggers = ["cari", "butuh", "rekomendasi", "rekomendasiin", "saran", "tanya", "yang", "mirip", "terbaik", "murah"];
+  const lower = trimmed.toLowerCase();
+  return nlTriggers.some(t => lower.startsWith(t) || lower.includes(` ${t}`));
+}
 
 const QUICK_PROMPTS = [
   "Cari sepatu lari di bawah 500rb",
@@ -21,26 +33,32 @@ const QUICK_PROMPTS = [
 ];
 
 const CATEGORY_ICONS = {
-  Fashion: "👕",
-  Gadget: "📱",
-  Rumah: "🏠",
-  Makanan: "🍕",
-  Olahraga: "🏃",
-  Kecantikan: "💄",
-  Elektronik: "💻",
-  Otomotif: "🚗",
+  "Kecantikan": "💄",
+  "Parfum": "🧴",
+  "Rumah Tangga": "🏠",
+  "Makanan & Minuman": "🍕",
+  "Elektronik": "💻",
+  "Pakaian": "👕",
+  "Olahraga": "🏃",
+  "Otomotif": "🚗",
+  "Aksesoris": "⌚",
+  "Kesehatan": "💊",
 };
 
-function fmt(n) {
-  return "Rp " + Number(n).toLocaleString("id-ID");
-}
+import { formatPrice as fmt } from "@/utils/format";
 
 function ProductCard({ product }) {
   return (
     <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}
       className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors">
-      <div className="h-28 flex items-center justify-center bg-[#F0FBF8]">
-        <Package size={40} strokeWidth={1} color="#A5D6D0" />
+      <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name}
+            className="w-full h-full object-cover"
+            onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+        ) : (
+          <Package size={40} strokeWidth={1} color="#A5D6D0" />
+        )}
       </div>
       <div className="p-3">
         <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1">{product.name}</p>
@@ -60,12 +78,15 @@ export default function HomePage() {
   const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [page, setPage] = useState(1);
-  const [prompt, setPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [showAiResult, setShowAiResult] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const [chatSessionId, setChatSessionId] = useState(null);
+  const [searchMode, setSearchMode] = useState("auto"); // 'auto' | 'search' | 'ai'
 
   // Real API state
   const [products, setProducts] = useState([]);
@@ -123,10 +144,20 @@ export default function HomePage() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setSearch(searchInput);
-    setPage(1);
-    setActiveCategory(null);
-    setShowAiResult(false);
+    const q = searchInput.trim();
+    if (!q) return;
+
+    // Decide mode: auto-detect NL, or respect explicit mode
+    const useAi = searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(q));
+
+    if (useAi) {
+      handleAiSendMessage(q);
+    } else {
+      setSearch(q);
+      setPage(1);
+      setActiveCategory(null);
+      setShowAiResult(false);
+    }
   };
 
   const handleCategoryClick = (catId) => {
@@ -142,7 +173,7 @@ export default function HomePage() {
     setAiLoading(true);
     setShowAiResult(true);
     setAiResult(null);
-    setPrompt("");
+    setAiSearchQuery(msg);
 
     try {
       const token = authService.getToken();
@@ -152,13 +183,17 @@ export default function HomePage() {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({
+          message: msg,
+          ...(chatSessionId ? { session_id: chatSessionId } : {}),
+        }),
       });
       const json = await res.json();
       if (!res.ok || json.success === false) {
         throw new Error(json.message || "Gagal mendapatkan respons AI");
       }
       const result = json.data;
+      if (result.session_id) setChatSessionId(result.session_id);
       setAiResult({
         message: result.reply || `Menampilkan hasil untuk "${msg}"`,
         products: result.suggested_products || [],
@@ -173,52 +208,119 @@ export default function HomePage() {
     }
   };
 
-  const handleAiSend = () => handleAiSendMessage(prompt);
+  const handleQuickPrompt = (q) => {
+    setSearchInput(q);
+    setSearchMode("ai");
+    setShowMobileSearch(false);
+    handleAiSendMessage(q);
+  };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pb-20"
+    <div className="min-h-screen bg-[#f5f5f5]"
       style={{ fontFamily: "'DM Sans','Inter',sans-serif" }}>
 
-      {/* ── NAVBAR with search ── */}
-      <header className="sticky top-0 z-40 w-full bg-white border-b border-[#EBEBEB] shadow-sm">
-        <div className="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-between gap-6">
-          <Link href="/home" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#1A3C34]">
-              <ShoppingCart size={18} color="white" strokeWidth={1.8} />
-            </div>
-            <span className="font-bold text-lg text-[#1A3C34] tracking-tight hidden sm:block">
-              PABW Shop
-            </span>
-          </Link>
+      {/* ── NAVBAR (unified) ── */}
+      <Navbar onSearchOpen={() => setShowMobileSearch(true)} />
 
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl relative hidden md:flex">
-            <input
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              placeholder="Cari produk impianmu..."
-              className="w-full h-11 pl-11 pr-4 rounded-full bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 transition-all text-[15px] outline-none"
-            />
-            <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
-              <Search size={18} color="#888" />
-            </button>
+      {/* ── SEARCH BAR ── */}
+      <div className="bg-white border-b border-[#EBEBEB] shadow-sm">
+        <div className="max-w-[1280px] mx-auto px-5 py-3">
+          {/* Desktop search */}
+          <form onSubmit={handleSearch} className="hidden md:flex">
+            <div className="relative flex-1">
+              <input
+                value={searchInput}
+                onChange={e => {
+                  setSearchInput(e.target.value);
+                  if (searchMode === "auto" && isNaturalLanguage(e.target.value)) {
+                    setSearchMode("auto");
+                  }
+                }}
+                placeholder="Cari produk impianmu..."
+                className="w-full h-11 pl-12 pr-24 rounded-full bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 transition-all text-[15px] outline-none"
+              />
+              <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
+                <Search size={18} color="#888" />
+              </button>
+              {searchInput.trim() && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode(searchMode === "ai" ? "auto" : "ai")}
+                    className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                      searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(searchInput))
+                        ? "bg-[#0D2B26] text-white border-[#0D2B26]"
+                        : "bg-white text-[#888] border-[#E5E7EB] hover:border-[#0D2B26]"
+                    }`}
+                  >
+                    {searchMode === "ai" || isNaturalLanguage(searchInput) ? (
+                      <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                        <Sparkles size={11} strokeWidth={2.5} />
+                        AI
+                      </span>
+                    ) : (
+                      <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                        <Search size={11} strokeWidth={2.5} />
+                        Cari
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </form>
 
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <Link href="/chat" className="p-2 text-[#555] hover:text-[#1A3C34] transition-colors" title="AI Shopping Assistant">
-              <Bot size={22} strokeWidth={1.8} />
-            </Link>
-            <Link href="/cart" className="relative p-2 text-[#555] hover:text-[#1A3C34] transition-colors">
-              <ShoppingCart size={22} strokeWidth={1.8} />
-            </Link>
-            <div className="h-6 w-px bg-[#EBEBEB]" />
-            <Link href="/profile" className="flex items-center gap-2 hover:bg-[#F9FAFB] p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-[#E5E7EB]">
-              <div className="w-8 h-8 rounded-full bg-[#E0F2F1] text-[#1A3C34] flex items-center justify-center font-bold text-sm">
-                <User size={16} color="#1A3C34" />
-              </div>
-            </Link>
-          </div>
+          {/* Mobile search (toggled by Navbar search icon) */}
+          {showMobileSearch && (
+            <form onSubmit={handleSearch} className="md:hidden relative">
+              <input
+                value={searchInput}
+                onChange={e => {
+                  setSearchInput(e.target.value);
+                  if (searchMode === "auto" && isNaturalLanguage(e.target.value)) {
+                    setSearchMode("auto");
+                  }
+                }}
+                placeholder="Cari produk impianmu..."
+                autoFocus
+                className="w-full h-11 pl-12 pr-24 rounded-full bg-[#F5F5F5] border border-[#E5E7EB] focus:border-[#0D2B26]/30 focus:ring-2 focus:ring-[#0D2B26]/10 transition-all text-[15px] outline-none"
+              />
+              <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">
+                <Search size={18} color="#888" />
+              </button>
+              {searchInput && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode(searchMode === "ai" ? "auto" : "ai")}
+                    className={`absolute right-12 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                      searchMode === "ai" || (searchMode === "auto" && isNaturalLanguage(searchInput))
+                        ? "bg-[#0D2B26] text-white border-[#0D2B26]"
+                        : "bg-white text-[#888] border-[#E5E7EB]"
+                    }`}
+                  >
+                    {searchMode === "ai" || isNaturalLanguage(searchInput) ? (
+                      <Sparkles size={10} strokeWidth={2.5} />
+                    ) : (
+                      <Search size={10} strokeWidth={2.5} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSearchInput(""); setSearch(""); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </>
+              )}
+            </form>
+          )}
         </div>
-      </header>
+      </div>
 
       {/* ── HERO + AI ── */}
       <div style={{ background: "#1A3C34", padding: "24px 20px 28px", position: "relative", overflow: "hidden" }}>
@@ -232,119 +334,135 @@ export default function HomePage() {
           Temukan produk impianmu dengan bantuan AI
         </p>
 
-        <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: 16, border: "1px solid rgba(255,255,255,0.15)", position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: "0.8px", textTransform: "uppercase" }}>
-              AI Shopping Assistant
-            </span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, position: "relative" }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "linear-gradient(135deg, #4DB6AC, #26A69A)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <Sparkles size={18} color="white" />
           </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAiSend()}
-              placeholder="Contoh: sepatu lari wanita di bawah 500rb..."
-              style={{
-                flex: 1, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14,
-                fontFamily: "inherit", outline: "none",
-              }}
-            />
-            <button onClick={handleAiSend}
-              disabled={aiLoading || !prompt.trim()}
-              style={{
-                width: 44, height: 44, borderRadius: 10, background: "#4DB6AC", border: "none",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: aiLoading || !prompt.trim() ? "not-allowed" : "pointer",
-                opacity: aiLoading || !prompt.trim() ? 0.6 : 1, flexShrink: 0,
-              }}>
-              <Send size={16} color="white" />
-            </button>
+          <div>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 1.4 }}>
+              Coba tanya AI untuk rekomendasi produk — atau langsung
+              <span style={{ color: "#4DB6AC", fontWeight: 600 }}> cari </span>
+              di kolom pencarian di atas
+            </p>
           </div>
+        </div>
 
-          <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-            {QUICK_PROMPTS.map((q, i) => (
-              <button key={i} onClick={() => handleAiSendMessage(q)} disabled={aiLoading}
-                style={{
-                  background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 99, padding: "5px 12px", fontSize: 12,
-                  color: "rgba(255,255,255,0.8)", cursor: aiLoading ? "not-allowed" : "pointer",
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {QUICK_PROMPTS.map((q, i) => (
+            <button key={i} onClick={() => handleQuickPrompt(q)} disabled={aiLoading}
+              style={{
+                background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 99, padding: "6px 14px", fontSize: 12,
+                color: "rgba(255,255,255,0.85)", cursor: aiLoading ? "not-allowed" : "pointer",
                   fontFamily: "inherit", whiteSpace: "nowrap", opacity: aiLoading ? 0.5 : 1,
                 }}>
                 {q}
               </button>
             ))}
           </div>
-        </div>
-        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+        <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes typingDot{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+        .scrollbar-hide::-webkit-scrollbar{display:none}
+        .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
+      `}</style>
       </div>
 
       <div className="max-w-[1280px] mx-auto px-5 py-6">
 
         {/* ── AI RESULT ── */}
         {showAiResult && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#E0F2F1] flex items-center justify-center">
-                  <Bot size={14} color="#1A3C34" />
-                </div>
-                <span className="text-[15px] font-bold text-[#1A1A1A]">Hasil AI</span>
-              </div>
-              <button onClick={() => { setShowAiResult(false); setAiResult(null); }}
-                className="text-[12px] font-semibold text-gray-400 hover:text-red-500 transition-colors">
-                Hapus hasil
-              </button>
-            </div>
-
+          <div className="mb-8">
+            {/* ── AI response header ── */}
             {aiLoading ? (
-              <div className="bg-white rounded-xl border border-[#EBEBEB] py-12 text-center">
-                <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 10 }}>
-                  {[0, 1, 2].map(i => (
-                    <div key={i} style={{
-                      width: 8, height: 8, borderRadius: "50%", background: "#1A3C34",
-                      animation: `pulse 1.2s ${i * 0.2}s infinite`,
-                    }} />
-                  ))}
+              <div className="bg-white rounded-xl border border-[#EBEBEB] py-8 text-center">
+                {/* Animated gradient bar instead of dots */}
+                <div style={{
+                  maxWidth: 240, margin: "0 auto 16px",
+                  height: 4, borderRadius: 2, overflow: "hidden",
+                  background: "#E5E7EB",
+                }}>
+                  <div style={{
+                    width: "40%", height: "100%", borderRadius: 2,
+                    background: "linear-gradient(90deg, #4DB6AC, #1A3C34, #4DB6AC)",
+                    backgroundSize: "200% 100%",
+                    animation: "shimmer 1.5s ease-in-out infinite",
+                  }} />
                 </div>
-                <p className="text-sm text-gray-400">AI sedang mencari produk...</p>
+                <p className="text-sm font-semibold text-[#1A1A1A] mb-1">
+                  Mencari &ldquo;{aiSearchQuery.length > 50 ? aiSearchQuery.slice(0, 50) + "…" : aiSearchQuery}&rdquo;
+                </p>
+                <p className="text-xs text-gray-400">
+                  {chatSessionId ? "Melanjutkan percakapan…" : "AI sedang menganalisis permintaan…"}
+                </p>
               </div>
             ) : aiResult && (
               <>
-                <div className="bg-[#F0FBF8] border border-[#C8EDE8] rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-[#1A3C34] flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot size={14} color="white" />
+                {/* ── AI message bubble ── */}
+                <div className="bg-gradient-to-br from-[#1A3C34] to-[#2D6A5E] rounded-2xl px-5 py-4 mb-5 flex items-start gap-3 shadow-lg shadow-emerald-900/15">
+                  <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5 backdrop-blur-sm">
+                    <Bot size={16} color="white" />
                   </div>
-                  <p className="text-[13px] text-[#1A3C34] font-medium leading-relaxed">
-                    {aiResult.message}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-[13px] text-white/90 font-medium leading-relaxed">
+                      {aiResult.message}
+                    </p>
+                  </div>
+                  <button onClick={() => { setShowAiResult(false); setAiResult(null); setSearch(""); setSearchInput(""); }}
+                    className="flex-shrink-0 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
                 </div>
-                {aiResult.products.length === 0 ? (
+
+                {/* ── AI product grid ── */}
+                {aiResult.products.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-[15px] font-bold text-[#1A1A1A]">Rekomendasi AI</h2>
+                      <span className="text-[11px] text-gray-400">{aiResult.products.length} produk</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {aiResult.products.map(p => (
+                        <Link key={p.id} href={`/product/${p.id}`}
+                          style={{ textDecoration: "none" }}
+                          className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] hover:shadow-md transition-all">
+                          <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
+                            {p.image_url ? (
+                              <img src={p.image_url} alt={p.name}
+                                className="w-full h-full object-cover"
+                                onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<svg width=\"40\" height=\"40\" stroke=\"#A5D6D0\" fill=\"none\" stroke-width=\"1\"><path d=\"M20 12v10m0 4v2M4 12h32M4 12l4-8h24l4 8M4 12v16a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V12\"/></svg>'; }} />
+                            ) : (
+                              <Package size={40} strokeWidth={1} color="#A5D6D0" />
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1 line-clamp-2">{p.name}</p>
+                            <p className="text-[11px] text-gray-400 mb-2">{p.store?.store_name}</p>
+                            <p className="text-[13px] font-bold text-[#1A3C34]">{fmt(p.price)}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Empty state ── */}
+                {aiResult.products.length === 0 && (
                   <div className="bg-white rounded-xl border border-[#EBEBEB] py-12 text-center text-gray-400">
                     <Search size={40} strokeWidth={1} className="mx-auto mb-3 opacity-40" />
                     <p className="text-sm font-medium">Produk tidak ditemukan</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {aiResult.products.map(p => (
-                      <Link key={p.id} href={`/product/${p.id}`}
-                        style={{ textDecoration: "none" }}
-                        className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors">
-                        <div className="h-28 flex items-center justify-center bg-[#F0FBF8]">
-                          <Package size={40} strokeWidth={1} color="#A5D6D0" />
-                        </div>
-                        <div className="p-3">
-                          <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1">{p.name}</p>
-                          <p className="text-[11px] text-gray-400 mb-2">{p.store?.store_name}</p>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-[13px] font-bold text-[#1A3C34]">{fmt(p.price)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                    <button onClick={() => { setShowAiResult(false); setAiResult(null); }}
+                      className="mt-3 text-[13px] font-semibold text-[#1A3C34] hover:underline cursor-pointer">
+                      Coba pencarian lain
+                    </button>
                   </div>
                 )}
               </>
@@ -415,11 +533,13 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-[15px] font-bold text-[#1A1A1A]">
-              {search
-                ? `Hasil pencarian "${search}"`
-                : activeCategory
-                  ? `Kategori: ${categories.find(c => c.id === activeCategory)?.category_name || ""}`
-                  : "Produk Populer"}
+              {showAiResult
+                ? "Jelajahi Produk Lainnya"
+                : search
+                  ? `Hasil pencarian "${search}"`
+                  : activeCategory
+                    ? `Kategori: ${categories.find(c => c.id === activeCategory)?.category_name || ""}`
+                    : "Produk Populer"}
             </h2>
             <p className="text-[12px] text-gray-400 mt-0.5">{loading ? "Memuat..." : `${filtered.length} produk ditemukan`}</p>
           </div>
@@ -489,30 +609,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ── BOTTOM NAV ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#EBEBEB]"
-        style={{ boxShadow: "0 -2px 12px rgba(0,0,0,0.06)" }}>
-        <div className="max-w-[1280px] mx-auto flex items-center justify-around px-4 py-2">
-          {[
-            { href: "/home", icon: <Home size={22} strokeWidth={1.8} />, label: "Beranda" },
-            { href: "/products", icon: <Tag size={22} strokeWidth={1.8} />, label: "Produk" },
-            { href: "/chat", icon: <Bot size={22} strokeWidth={1.8} />, label: "AI Chat" },
-            { href: "/cart", icon: <ShoppingCart size={22} strokeWidth={1.8} />, label: "Keranjang" },
-            { href: "/orders", icon: <Package size={22} strokeWidth={1.8} />, label: "Pesanan" },
-            { href: "/profile", icon: <User size={22} strokeWidth={1.8} />, label: "Profil" },
-          ].map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-            <Link key={item.href} href={item.href}
-              className="flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all no-underline"
-              style={{ color: active ? "#1A3C34" : "#9CA3AF" }}>
-              {React.cloneElement(item.icon, { color: active ? "#1A3C34" : "#9CA3AF" })}
-              <span className="text-[10px] font-semibold">{item.label}</span>
-            </Link>
-          );
-        })}
-        </div>
-      </nav>
+      <BottomBar />
     </div>
   );
 }

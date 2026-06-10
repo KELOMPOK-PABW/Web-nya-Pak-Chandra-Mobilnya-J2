@@ -24,7 +24,7 @@ export default function SellerProductsPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", price: "", stock: "", description: "" });
+  const [form, setForm] = useState({ name: "", price: "", stock: "", description: "", image_url: "" });
   const [saving, setSaving] = useState(false);
 
   const loadProducts = async () => {
@@ -46,7 +46,7 @@ export default function SellerProductsPage() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: "", price: "", stock: "", description: "" });
+    setForm({ name: "", price: "", stock: "", description: "", image_url: "" });
     setEditingId(null);
     setShowForm(false);
   };
@@ -57,6 +57,7 @@ export default function SellerProductsPage() {
       price: String(product.price || ""),
       stock: String(product.stock || ""),
       description: product.desc || product.description || "",
+      image_url: product.image_url || "",
     });
     setEditingId(product.id);
     setShowForm(true);
@@ -72,6 +73,7 @@ export default function SellerProductsPage() {
         price: Number(form.price),
         stock: Number(form.stock),
         description: form.description,
+        image_url: form.image_url || "",
       };
 
       if (editingId) {
@@ -165,6 +167,22 @@ export default function SellerProductsPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="text-sm font-semibold text-[#374151] block mb-1">URL Gambar</label>
+                  <input
+                    value={form.image_url}
+                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
+                    placeholder="https://example.com/gambar.jpg"
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-sm outline-none focus:border-[#1A3C34]"
+                  />
+                  {form.image_url && (
+                    <div className="mt-2 w-16 h-16 rounded-xl border border-[#E5E7EB] overflow-hidden">
+                      <img src={form.image_url} alt="preview"
+                        className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display = "none" }} />
+                    </div>
+                  )}
+                </div>
+                <div>
                   <label className="text-sm font-semibold text-[#374151] block mb-1">Deskripsi</label>
                   <textarea
                     value={form.description}
@@ -213,8 +231,14 @@ export default function SellerProductsPage() {
               {products.map(product => (
                 <div key={product.id} className="bg-white border border-[#EBEBEB] rounded-2xl p-5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#F0FBF8] flex items-center justify-center text-xl">
-                      📦
+                    <div className="w-12 h-12 rounded-xl bg-[#F0FBF8] flex items-center justify-center overflow-hidden">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={e => { e.target.style.display = "none"; e.target.parentElement.textContent = "📦"; }} />
+                      ) : (
+                        <span className="text-xl">📦</span>
+                      )}
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-[#1A1A1A]">{product.name}</p>

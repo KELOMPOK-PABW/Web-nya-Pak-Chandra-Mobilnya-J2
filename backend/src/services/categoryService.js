@@ -1,4 +1,5 @@
 const categoryRepository = require("../repository/categoryRepository");
+const AppError = require("../utils/AppError");
 
 const getAllCategories = async () => {
   const categories = await categoryRepository.findAll();
@@ -12,7 +13,7 @@ const getCategoryById = async (id) => {
 
   const category = await categoryRepository.findById(Number(id));
   if (!category) {
-    throw new Error("Kategori tidak ditemukan");
+    throw new AppError("Kategori tidak ditemukan", 404);
   }
 
   return formatCategoryResponse(category);
@@ -37,7 +38,7 @@ const updateCategory = async (id, data) => {
 
   const existing = await categoryRepository.findById(Number(id));
   if (!existing) {
-    throw new Error("Kategori tidak ditemukan");
+    throw new AppError("Kategori tidak ditemukan", 404);
   }
 
   const { category_name } = data;
@@ -56,8 +57,22 @@ const updateCategory = async (id, data) => {
 const formatCategoryResponse = (category) => {
   return {
     id: category.id,
-    category_name: category.name,
+    category_name: category.categoryName,
   };
+};
+
+const deleteCategory = async (id) => {
+  if (!id || isNaN(id)) {
+    throw new Error("Category ID tidak valid");
+  }
+
+  const existing = await categoryRepository.findById(Number(id));
+  if (!existing) {
+    throw new AppError("Kategori tidak ditemukan", 404);
+  }
+
+  await categoryRepository.deleteById(Number(id));
+  return { message: "Kategori berhasil dihapus" };
 };
 
 module.exports = {
@@ -65,4 +80,5 @@ module.exports = {
   getCategoryById,
   createCategory,
   updateCategory,
+  deleteCategory,
 };

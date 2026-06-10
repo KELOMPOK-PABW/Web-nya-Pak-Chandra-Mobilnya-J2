@@ -66,7 +66,9 @@ const payPayment = async (paymentId) => {
       walletId: wallet.id,
       type: "payment",
       amount,
+      balanceBefore: balance,
       balanceAfter: newBalance,
+      orderId: payment.order.id,
     });
   });
 
