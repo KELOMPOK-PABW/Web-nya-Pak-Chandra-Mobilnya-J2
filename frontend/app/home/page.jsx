@@ -49,7 +49,7 @@ import { formatPrice as fmt } from "@/utils/format";
 
 function ProductCard({ product }) {
   return (
-    <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}
+    <Link href={`/products/${product.id}`} style={{ textDecoration: "none" }}
       className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors">
       <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
         {product.image_url ? (
@@ -440,7 +440,7 @@ export default function HomePage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       {aiResult.products.map(p => (
-                        <Link key={p.id} href={`/product/${p.id}`}
+                        <Link key={p.id} href={`/products/${p.id}`}
                           style={{ textDecoration: "none" }}
                           className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] hover:shadow-md transition-all">
                           <div className="h-28 flex items-center justify-center bg-[#F0FBF8] overflow-hidden">
