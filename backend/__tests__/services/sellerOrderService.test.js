@@ -14,8 +14,9 @@ describe("SellerOrderService", () => {
       sellerOrderRepository.findOrderItemsBySellerId.mockResolvedValue([
         {
           id: 200,
-          order: { id: 100, buyer: { fullName: "Rahmi" } },
-          product: { name: "Laptop Gaming" },
+          orderId: 100,
+          order: { id: 100, buyer: { fullName: "Rahmi" }, address: { city: "Balikpapan" } },
+          product: { id: 1, name: "Laptop Gaming" },
           productNameSnap: "Laptop Gaming",
           qty: 1,
           priceSnap: 8000000,
@@ -23,6 +24,7 @@ describe("SellerOrderService", () => {
           createdAt,
         },
       ]);
+      sellerOrderRepository.countOrderItemsBySellerId.mockResolvedValue(1);
 
       const result = await sellerOrderService.getSellerOrders(5, { page: 1, limit: 10 });
 
@@ -30,33 +32,39 @@ describe("SellerOrderService", () => {
         skip: 0,
         take: 10,
       });
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         data: [
           {
+            id: 100,
             order_id: 100,
             order_item_id: 200,
             product_name: "Laptop Gaming",
             qty: 1,
             price: 8000000,
+            subtotal: 8000000,
+            total: 8000000,
             buyer_name: "Rahmi",
             status: "pending",
+            raw_status: "menunggu_penjual",
             created_at: createdAt,
           },
         ],
-        meta: { page: 1, limit: 10 },
+        meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
       });
     });
   });
 
   describe("getSellerOrderById", () => {
     it("should return seller order detail per API contract", async () => {
+      sellerOrderRepository.findOrderItemById.mockResolvedValue(null);
       sellerOrderRepository.findOrderByIdForSeller.mockResolvedValue({
         id: 100,
-        buyer: { fullName: "Rahmi", phone: "08123456789" },
+        buyer: { fullName: "Rahmi", phone: "08123456789", email: "rahmi@example.com" },
         address: { address: "Jl. Merdeka", city: "Balikpapan" },
         items: [
           {
             id: 200,
+            product: { id: 1, name: "Laptop Gaming" },
             productNameSnap: "Laptop Gaming",
             qty: 1,
             priceSnap: 8000000,
@@ -67,12 +75,18 @@ describe("SellerOrderService", () => {
 
       const result = await sellerOrderService.getSellerOrderById(100, 5);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
+        id: 100,
         order_id: 100,
-        buyer: {
-          name: "Rahmi",
-          phone: "08123456789",
-        },
+        order_item_id: 200,
+        buyer_name: "Rahmi",
+        buyer_email: "rahmi@example.com",
+        buyer_phone: "08123456789",
+        product_name: "Laptop Gaming",
+        qty: 1,
+        price: 8000000,
+        subtotal: 8000000,
+        total: 8000000,
         items: [
           {
             order_item_id: 200,
@@ -82,12 +96,14 @@ describe("SellerOrderService", () => {
             status: "pending",
           },
         ],
-        shipping_address: "Balikpapan",
+        shipping_address: "Jl. Merdeka, Balikpapan",
         status: "pending",
+        raw_status: "menunggu_penjual",
       });
     });
 
     it("should throw 404 when order has no seller items", async () => {
+      sellerOrderRepository.findOrderItemById.mockResolvedValue(null);
       sellerOrderRepository.findOrderByIdForSeller.mockResolvedValue({
         id: 100,
         buyer: { fullName: "Rahmi", phone: "08123456789" },
@@ -112,6 +128,7 @@ describe("SellerOrderService", () => {
       });
       sellerOrderRepository.updateOrderItemStatus.mockResolvedValue({
         id: 200,
+        orderId: 10,
         status: "diproses_penjual",
       });
       sellerOrderRepository.createStatusHistory.mockResolvedValue({});
@@ -125,8 +142,10 @@ describe("SellerOrderService", () => {
         updatedBy: 5,
       });
       expect(result).toEqual({
+        order_id: 10,
         order_item_id: 200,
         status: "processing",
+        raw_status: "diproses_penjual",
       });
     });
 
@@ -169,6 +188,7 @@ describe("SellerOrderService", () => {
       });
       sellerOrderRepository.updateOrderItemStatus.mockResolvedValue({
         id: 200,
+        orderId: 10,
         status: "menunggu_kurir",
       });
       sellerOrderRepository.createStatusHistory.mockResolvedValue({});
@@ -182,8 +202,10 @@ describe("SellerOrderService", () => {
         updatedBy: 5,
       });
       expect(result).toEqual({
+        order_id: 10,
         order_item_id: 200,
         status: "ready_to_ship",
+        raw_status: "menunggu_kurir",
       });
     });
 
