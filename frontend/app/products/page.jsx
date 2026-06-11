@@ -139,7 +139,7 @@ export default function ProductsListPage() {
                   <p className="text-lg font-bold text-[#1A3C34] mt-3">{formatPrice(product.price)}</p>
                 </div>
                 <Link
-                  href={`/product/${product.id}`}
+                  href={`/products/${product.id}`}
                   className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#1A3C34] text-white text-sm font-semibold py-2.5 hover:bg-[#16332C] transition-colors"
                 >
                   Lihat Detail
