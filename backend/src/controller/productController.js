@@ -24,7 +24,7 @@ const getAllProducts = async (req, res) => {
   }
 };
 
-const getProductById = async (req, res) => {
+const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await productService.getProductById(id);
@@ -34,11 +34,7 @@ const getProductById = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Produk tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 

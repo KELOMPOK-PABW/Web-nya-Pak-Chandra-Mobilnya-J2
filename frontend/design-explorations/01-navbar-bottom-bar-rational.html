@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction 1 · Rational — PABW Shop Navigation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    color: #1A1A1A;
+  }
+  .header-info {
+    max-width: 800px;
+    width: 100%;
+    margin-bottom: 32px;
+  }
+  .header-info h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1A3C34;
+    margin-bottom: 4px;
+  }
+  .header-info .subtitle {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+  .header-info .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #E8F5E9;
+    color: #1A3C34;
+    margin-bottom: 16px;
+  }
+  .header-info .principle {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 10px;
+    border-left: 3px solid #1A3C34;
+  }
+  .showcase {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ── Phone frame ── */
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    border-radius: 44px;
+    background: #fff;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.06);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-frame .notch {
+    width: 160px;
+    height: 16px;
+    background: #1A1A1A;
+    border-radius: 0 0 10px 10px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 50;
+  }
+  .phone-frame .notch-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 22px 16px 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    background: #fff;
+  }
+  .phone-frame .notch-inner .time { color: #1A1A1A; font-weight: 700; }
+  .phone-frame .notch-inner .icons { margin-left: auto; display: flex; gap: 4px; }
+
+  /* Status bar */
+  .status-bar {
+    padding: 10px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1A1A1A;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  /* Content area */
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    background: #F7F8FA;
+    padding: 20px 20px 8px;
+  }
+
+  /* ── NAVBAR VARIANT A: "Thin Green" ── */
+  .navbar-a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    background: #1A3C34;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .navbar-a-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .navbar-a-logo {
+    width: 30px;
+    height: 30px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .navbar-a-logo svg { width: 16px; height: 16px; stroke: #fff; fill: none; }
+  .navbar-a-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+  .navbar-a-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .navbar-a-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .navbar-a-btn:hover { background: rgba(255,255,255,0.15); }
+  .navbar-a-btn svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.9); fill: none; stroke-width: 1.8; }
+  .navbar-a-badge {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 16px;
+    height: 16px;
+    background: #FF6B6B;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #1A3C34;
+  }
+  /* AI chip in navbar */
+  .navbar-a-ai-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px 4px 6px;
+    border-radius: 20px;
+    background: rgba(77, 182, 172, 0.2);
+    border: 1px solid rgba(77, 182, 172, 0.3);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    transition: background 0.15s;
+    margin-right: 2px;
+  }
+  .navbar-a-ai-chip:hover { background: rgba(77, 182, 172, 0.35); }
+  .navbar-a-ai-chip svg { width: 14px; height: 14px; stroke: #4DB6AC; fill: none; }
+
+  /* ── SEARCH BAR (inline) ── */
+  .search-inline {
+    display: flex;
+    align-items: center;
+    padding: 0 20px 12px;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .search-inline-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #F2F3F5;
+    border-radius: 10px;
+    padding: 0 12px;
+    height: 40px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .search-inline-box:focus-within {
+    border-color: #1A3C34;
+    background: #fff;
+  }
+  .search-inline-box svg { width: 16px; height: 16px; stroke: #999; margin-right: 8px; flex-shrink: 0; }
+  .search-inline-box input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1A1A1A;
+    outline: none;
+  }
+  .search-inline-box input::placeholder { color: #aaa; }
+  .search-ai-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1A3C34;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(26, 60, 52, 0.08);
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 6px;
+    transition: background 0.15s;
+  }
+  .search-ai-toggle:hover { background: rgba(26, 60, 52, 0.14); }
+  .search-ai-toggle.active { background: #1A3C34; color: #fff; }
+
+  /* ── Content filler ── */
+  .content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 0;
+    background: #F7F8FA;
+  }
+  .hero-card {
+    background: linear-gradient(135deg, #1A3C34 0%, #2D6A5E 100%);
+    border-radius: 16px;
+    padding: 20px;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .hero-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .hero-card p { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 16px; }
+  .hero-card .ai-input {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: 13px;
+    width: 100%;
+    font-family: inherit;
+    outline: none;
+  }
+  .hero-card .ai-input::placeholder { color: rgba(255,255,255,0.4); }
+  .hero-card .chips {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .hero-card .chip {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .section-title h3 { font-size: 15px; font-weight: 700; color: #1A1A1A; }
+  .section-title a { font-size: 12px; font-weight: 600; color: #1A3C34; text-decoration: none; }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .cat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #EDEDED;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .cat-item:hover { border-color: #1A3C34; }
+  .cat-item .icon { font-size: 20px; }
+  .cat-item .label { font-size: 10px; font-weight: 600; color: #374151; text-align: center; }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .product-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #EDEDED;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .product-card:hover { border-color: #1A3C34; }
+  .product-card .thumb {
+    height: 100px;
+    background: #F0FBF8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .product-card .info {
+    padding: 10px;
+  }
+  .product-card .info .name { font-size: 12px; font-weight: 600; color: #1A1A1A; margin-bottom: 2px; }
+  .product-card .info .store { font-size: 10px; color: #999; margin-bottom: 4px; }
+  .product-card .info .price { font-size: 13px; font-weight: 700; color: #1A3C34; }
+
+  /* ── BOTTOM BAR VARIANT A: "4-Tab + FAB" ── */
+  .bottombar-a {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 6px 12px 12px;
+    background: #fff;
+    border-top: 1px solid #EDEDED;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+  .bottombar-a-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 10px;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .bottombar-a-item svg { width: 22px; height: 22px; stroke-width: 1.8; fill: none; transition: stroke 0.15s; }
+  .bottombar-a-item span { font-size: 10px; font-weight: 600; transition: color 0.15s; }
+  .bottombar-a-item.active svg { stroke: #1A3C34; }
+  .bottombar-a-item.active span { color: #1A3C34; }
+  .bottombar-a-item.inactive svg { stroke: #9CA3AF; }
+  .bottombar-a-item.inactive span { color: #9CA3AF; }
+  .bottombar-a-badge {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    background: #FF6B6B;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+  }
+
+  /* AI FAB (floating action button) */
+  .bottombar-a-fab {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #1A3C34;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(26, 60, 52, 0.35);
+    transition: all 0.2s;
+    margin-top: -18px;
+    position: relative;
+  }
+  .bottombar-a-fab:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(26, 60, 52, 0.4); }
+  .bottombar-a-fab svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2; }
+  .bottombar-a-fab .pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    background: rgba(77, 182, 172, 0.3);
+    animation: fabPulse 2s ease-out infinite;
+  }
+  @keyframes fabPulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* ── Desktop frame ── */
+  .desktop-frame {
+    width: 1024px;
+    height: 640px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 60px;
+    background: #1A3C34;
+    flex-shrink: 0;
+  }
+  .desktop-nav-left { display: flex; align-items: center; gap: 32px; }
+  .desktop-nav-brand { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 800; font-size: 16px; }
+  .desktop-nav-search {
+    width: 360px;
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 0 12px;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .desktop-nav-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .desktop-nav-search input::placeholder { color: rgba(255,255,255,0.4); }
+  .desktop-nav-search svg { width: 16px; height: 16px; stroke: rgba(255,255,255,0.5); margin-right: 8px; }
+  .desktop-nav-right { display: flex; align-items: center; gap: 12px; }
+  .desktop-nav-link {
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .desktop-nav-link:hover { background: rgba(255,255,255,0.08); }
+  .desktop-nav-link.active { background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; }
+  .desktop-content {
+    flex: 1;
+    display: flex;
+  }
+  .desktop-main {
+    flex: 1;
+    padding: 24px 32px;
+    overflow-y: auto;
+  }
+
+  .legend {
+    max-width: 1024px;
+    width: 100%;
+    margin-top: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #555;
+  }
+  .legend-item .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .label-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+
+  hr { border: none; border-top: 1px solid #E5E5E5; margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<div class="header-info">
+  <div class="tag">✦ Direction 1 · Rational</div>
+  <h1>Information Architecture Driven</h1>
+  <div class="subtitle">Clear hierarchy · Predictable · Low cognitive load</div>
+  <div class="principle">
+    <strong>Design philosophy:</strong> Navigation should follow Fitts' Law and Hick's Law. Reduce choices per viewport. 
+    Mobile gets 4 tabs + AI FAB (floating action button). Desktop gets a unified search-anchored top nav. 
+    The AI assistant is promoted to a persistent FAB — highest discoverability, zero navigation cost.<br>
+    <strong>Key decisions:</strong> (1) Notifications bell removed for buyers — moved to profile. 
+    (2) Search moves to all pages — embedded in navbar on desktop, modal on mobile. 
+    (3) Bottom bar capped at 4 items — "Orders" tucked under Profile tab.
+  </div>
+</div>
+
+<!-- Mobile View -->
+<div class="label-tag">📱 Mobile (390×844)</div>
+<div class="phone-frame">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <span>📶 🔋</span>
+  </div>
+
+  <!-- Navbar -->
+  <div class="navbar-a">
+    <a href="#" class="navbar-a-brand">
+      <div class="navbar-a-logo">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <span class="navbar-a-name">PABW</span>
+    </a>
+    <div class="navbar-a-actions">
+      <div class="navbar-a-ai-chip">
+        <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M8 14v2a4 4 0 0 0 8 0v-2"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+        AI
+      </div>
+      <button class="navbar-a-btn" aria-label="Search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="navbar-a-btn" aria-label="Cart">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="navbar-a-badge">3</span>
+      </button>
+      <button class="navbar-a-btn" aria-label="Profile">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content-scroll">
+    <div class="hero-card">
+      <h2>Halo, Rama 👋</h2>
+      <p>Temukan produk impianmu dengan AI</p>
+      <input class="ai-input" placeholder="Cari dengan AI — contoh: 'sepatu lari di bawah 500rb'" value="">
+      <div class="chips">
+        <button class="chip">🎧 Headphone wireless</button>
+        <button class="chip">👟 Sepatu lari</button>
+        <button class="chip">💻 Laptop gaming</button>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h3>Kategori</h3>
+      <a href="#">Lihat semua</a>
+    </div>
+    <div class="cat-grid">
+      <div class="cat-item"><span class="icon">👕</span><span class="label">Fashion</span></div>
+      <div class="cat-item"><span class="icon">📱</span><span class="label">Gadget</span></div>
+      <div class="cat-item"><span class="icon">🏠</span><span class="label">Rumah</span></div>
+      <div class="cat-item"><span class="icon">🍕</span><span class="label">Makanan</span></div>
+    </div>
+
+    <div class="section-title">
+      <h3>Produk Populer</h3>
+      <a href="#">Lihat semua</a>
+    </div>
+    <div class="product-grid">
+      <div class="product-card">
+        <div class="thumb">👟</div>
+        <div class="info">
+          <div class="name">Nike Air Max 270</div>
+          <div class="store">Nike Official</div>
+          <div class="price">Rp 2.499.000</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="thumb">🎧</div>
+        <div class="info">
+          <div class="name">Sony WH-1000XM5</div>
+          <div class="store">Sony Indonesia</div>
+          <div class="price">Rp 3.999.000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottombar-a">
+    <a href="#" class="bottombar-a-item active">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Beranda</span>
+    </a>
+    <a href="#" class="bottombar-a-item inactive">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Produk</span>
+    </a>
+
+    <!-- FAB -->
+    <button class="bottombar-a-fab" aria-label="AI Assistant">
+      <div class="pulse"></div>
+      <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M8 14v2a4 4 0 0 0 8 0v-2"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+    </button>
+
+    <a href="#" class="bottombar-a-item inactive">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Keranjang</span>
+      <span class="bottombar-a-badge">3</span>
+    </a>
+    <a href="#" class="bottombar-a-item inactive">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profil</span>
+    </a>
+  </div>
+</div>
+
+<div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+  <div class="legend-item"><div class="swatch" style="background:#1A3C34"></div> Primary (#1A3C34)</div>
+  <div class="legend-item"><div class="swatch" style="background:#4DB6AC"></div> Accent (#4DB6AC)</div>
+  <div class="legend-item"><div class="swatch" style="background:#FF6B6B"></div> Badge (#FF6B6B)</div>
+  <div class="legend-item"><span style="font-size:12px;">⬆ FAB = AI Assistant entry point</span></div>
+</div>
+
+<hr>
+
+<!-- Desktop View -->
+<div class="label-tag">🖥️ Desktop (1024×640)</div>
+<div class="desktop-frame">
+  <!-- Desktop Nav -->
+  <div class="desktop-nav">
+    <div class="desktop-nav-left">
+      <a href="#" class="desktop-nav-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke="#fff" fill="none" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>PABW Shop</span>
+      </a>
+      <div class="desktop-nav-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Cari produk atau tanya AI..." value="sepatu lari">
+      </div>
+    </div>
+    <div class="desktop-nav-right">
+      <a href="#" class="desktop-nav-link active">Beranda</a>
+      <a href="#" class="desktop-nav-link">Produk</a>
+      <a href="#" class="desktop-nav-link">AI Chat</a>
+      <a href="#" class="desktop-nav-link">Pesanan</a>
+      <a href="#" class="desktop-nav-link" style="display:flex; align-items:center; gap:4px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Keranjang
+      </a>
+      <button style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.8)" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Desktop Content -->
+  <div class="desktop-content">
+    <div class="desktop-main">
+      <div style="display:flex; gap:24px;">
+        <div style="flex:1;">
+          <div style="background:linear-gradient(135deg,#1A3C34,#2D6A5E);border-radius:16px;padding:24px;color:#fff;margin-bottom:20px;">
+            <h2 style="font-size:22px;font-weight:700;margin-bottom:4px;">Selamat datang di PABW Shop</h2>
+            <p style="font-size:13px;color:rgba(255,255,255,0.6);">Temukan produk impianmu dengan bantuan AI</p>
+          </div>
+          <div class="section-title"><h3>Kategori</h3><a href="#">Lihat semua</a></div>
+          <div class="cat-grid" style="grid-template-columns:repeat(8,1fr);">
+            <div class="cat-item"><span class="icon">👕</span><span class="label">Fashion</span></div>
+            <div class="cat-item"><span class="icon">📱</span><span class="label">Gadget</span></div>
+            <div class="cat-item"><span class="icon">🏠</span><span class="label">Rumah</span></div>
+            <div class="cat-item"><span class="icon">🍕</span><span class="label">Makanan</span></div>
+            <div class="cat-item"><span class="icon">🏃</span><span class="label">Olahraga</span></div>
+            <div class="cat-item"><span class="icon">💄</span><span class="label">Kecantikan</span></div>
+            <div class="cat-item"><span class="icon">💻</span><span class="label">Elektronik</span></div>
+            <div class="cat-item"><span class="icon">🚗</span><span class="label">Otomotif</span></div>
+          </div>
+        </div>
+        <div style="width:260px;flex-shrink:0;">
+          <div style="background:#fff;border-radius:12px;border:1px solid #EDEDED;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;color:#1A1A1A;margin-bottom:12px;">💡 AI Rekomendasi</h4>
+            <p style="font-size:12px;color:#666;margin-bottom:12px;">Berdasarkan pencarian "sepatu lari"</p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:10px;padding:8px;background:#F0FBF8;border-radius:8px;">
+                <div style="width:40px;height:40px;border-radius:8px;background:#D8F5F0;display:flex;align-items:center;justify-content:center;font-size:20px;">👟</div>
+                <div><div style="font-size:11px;font-weight:600;">Nike Pegasus 40</div><div style="font-size:10px;color:#1A3C34;font-weight:700;">Rp 1.999.000</div></div>
+              </div>
+              <div style="display:flex;gap:10px;padding:8px;background:#F0FBF8;border-radius:8px;">
+                <div style="width:40px;height:40px;border-radius:8px;background:#D8F5F0;display:flex;align-items:center;justify-content:center;font-size:20px;">👟</div>
+                <div><div style="font-size:11px;font-weight:600;">Adidas Ultraboost</div><div style="font-size:10px;color:#1A3C34;font-weight:700;">Rp 2.499.000</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:1024px;width:100%;margin-top:24px;font-size:13px;color:#666;line-height:1.6;">
+  <strong>🔑 Key design decisions:</strong>
+  <ul style="margin-top:4px;padding-left:20px;">
+    <li><strong>Unified top bar:</strong> Same component on every page — dark green with search embedded.</li>
+    <li><strong>Mobile: 4 tabs + AI FAB</strong> — Home, Products, Cart, Profile. Orders accessible from Profile. FAB = persistent AI entry, always visible, zero navigation cost.</li>
+    <li><strong>Desktop: Nav links + search bar</strong> — all navigation in one row. Search is the hero action.</li>
+    <li><strong>No bottom bar on desktop.</strong></li>
+    <li><strong>Notifications removed from navbar</strong> — merchant notification bell only shows on seller dashboard.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -1,3 +1,5 @@
+const { SYNONYM_MAP } = require("../../utils/synonyms");
+
 const INTENTS = [
   "search_product",
   "add_to_cart",
@@ -56,6 +58,15 @@ const buildSystemInstruction = (productsContext) => {
    - "order_id": ID order (number)
    - "user_id": ID user (number, untuk admin)
    - "role": role user — "buyer" | "seller" | "kurir" (string, untuk admin change_role)
+
+PANDUAN SINONIM PRODUK — gunakan saat mencocokkan nama produk:
+${(() => {
+    const rows = Object.entries(SYNONYM_MAP)
+      .map(([canonical, variants]) => `   - "${canonical}" juga dikenal sebagai: ${variants.join(", ")}`)
+      .join("\n");
+    return rows || "   - (tidak ada sinonima)";
+  })()}
+Contoh: jika katalog memiliki "MacBook Pro" dan pengguna mencari "notebook", cocokkan karena "notebook" = "laptop" dan "MacBook" adalah laptop.
 
 Katalog produk saat ini:
 ${catalog || "(katalog kosong)"}

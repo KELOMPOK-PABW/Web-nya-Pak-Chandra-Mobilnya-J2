@@ -134,6 +134,16 @@ export default function CheckoutPage() {
 
   /* place order */
   const handlePlaceOrder = async () => {
+<<<<<<< HEAD
+=======
+    // Validate address — skip if a saved address is selected
+    if (!selectedAddressId) {
+      if (!address.detail.trim() || !address.city.trim() || !address.name.trim()) {
+        setAddressError("Lengkapi alamat pengiriman (nama, detail, dan kota).");
+        return;
+      }
+    }
+>>>>>>> 5fc73df7a67ee9abae6915ec34ba9f36b63685d6
     setAddressError("");
     setError("");
 
@@ -159,8 +169,41 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
+<<<<<<< HEAD
       const result = await checkoutService.createOrder({
         cart_id: Number(cartId),
+=======
+      const token = authService.getToken();
+      // Get cart_id from the count endpoint
+      const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/count`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      });
+
+      if (!countRes.ok) {
+        const errData = await countRes.json().catch(() => ({}));
+        throw new Error(errData.message || "Gagal mendapatkan informasi cart");
+      }
+
+      const countData = await countRes.json();
+      const cartId = countData?.data?.cart_id;
+
+      if (!cartId) {
+        if (cartItems.length === 0) {
+          throw new Error("Keranjang kosong");
+        }
+        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
+      }
+
+      if (!cartId) {
+        if (cartItems.length === 0) {
+          throw new Error("Keranjang kosong");
+        }
+        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
+      }
+
+      const checkoutData = await checkoutService.createOrder({
+        cart_id: cartId,
+>>>>>>> 5fc73df7a67ee9abae6915ec34ba9f36b63685d6
         address_id: Number(selectedAddressId || 1),
         payment_method: "ewallet",
       });
