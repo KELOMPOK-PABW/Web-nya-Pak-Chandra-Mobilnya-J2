@@ -444,6 +444,10 @@ export default function ChatPage() {
 
   const sendMessage = useCallback(async (msg) => {
     if (!msg.trim() || loading) return;
+    if (msg.trim().length > 2000) {
+      setError("Pesan terlalu panjang");
+      return;
+    }
 
     setError(null);
     setCartFeedback(null);
@@ -498,6 +502,10 @@ export default function ChatPage() {
   const handleSend = () => {
     const msg = input.trim();
     if (!msg) return;
+    if (msg.length > 2000) {
+      setError("Pesan terlalu panjang");
+      return;
+    }
     setInput("");
     sendMessage(msg);
   };
@@ -860,6 +868,7 @@ export default function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder="Ketik pesan..."
               disabled={loading}
+              maxLength={2000}
               className="flex-1 bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 rounded-xl px-4 py-3 text-[14px] outline-none transition-all disabled:opacity-50 placeholder:text-gray-400"
             />
             <button onClick={handleSend}
