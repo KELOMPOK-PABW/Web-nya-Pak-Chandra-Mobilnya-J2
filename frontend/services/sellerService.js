@@ -75,6 +75,16 @@ function normalizeApplication(application = {}) {
 function normalizeOrder(order = {}) {
   const items = order.items ?? order.order_items ?? (order.product ? [order] : []);
   const firstItem = Array.isArray(items) ? items[0] : null;
+  const rawStatus = order.status ?? firstItem?.status ?? "menunggu_penjual";
+  const statusMap = {
+    menunggu_penjual: "menunggu_penjual",
+    diproses_penjual: "processing",
+    menunggu_kurir: "ready_to_ship",
+    sedang_dikirim: "shipped",
+    sampai_di_tujuan: "delivered",
+    diterima_pembeli: "completed",
+    transaksi_gagal: "cancelled",
+  };
 
   return {
     ...order,
@@ -107,8 +117,15 @@ function normalizeOrder(order = {}) {
       firstItem?.subtotal ??
       firstItem?.price ??
       0,
-    status: order.status ?? firstItem?.status ?? "pending",
+    rawStatus,
+    status: statusMap[rawStatus] ?? rawStatus,
     createdAt: order.createdAt ?? order.created_at ?? order.order_date ?? null,
+    address:
+      typeof order.address === "string"
+        ? order.address
+        : order.address?.address
+          ? `${order.address.address}${order.address.city ? `, ${order.address.city}` : ""}${order.address.postal_code ? ` ${order.address.postal_code}` : ""}`
+          : "-",
   };
 }
 
