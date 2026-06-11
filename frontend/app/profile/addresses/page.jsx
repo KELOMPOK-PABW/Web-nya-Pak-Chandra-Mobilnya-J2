@@ -50,6 +50,22 @@ export default function AddressesPage() {
     setSuccess("");
   };
 
+  const validateAddress = () => {
+    const address = form.address.trim();
+    const city = form.city.trim();
+    const postalCode = form.postal_code.trim();
+
+    if (!address) return "Alamat wajib diisi";
+    if (address.length < 10) return "Alamat terlalu pendek";
+    if (address.length > 255) return "Alamat terlalu panjang";
+    if (!city) return "Kota wajib diisi";
+    if (city.length > 100) return "Kota terlalu panjang";
+    if (!postalCode) return "Kode pos wajib diisi";
+    if (!/^\d+$/.test(postalCode)) return "Kode pos harus angka";
+    if (postalCode.length !== 5) return "Kode pos harus 5 digit";
+    return "";
+  };
+
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
@@ -68,8 +84,9 @@ export default function AddressesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.address.trim() || !form.city.trim()) {
-      setError("Alamat dan kota wajib diisi.");
+    const validationError = validateAddress();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
