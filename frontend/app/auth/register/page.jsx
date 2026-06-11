@@ -5,15 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 
-const ROLES = [
-  { value: "buyer",  label: "Pembeli", desc: "Cari & beli produk" },
-  { value: "seller", label: "Penjual", desc: "Jual produk kamu" },
-  { value: "kurir",  label: "Kurir",   desc: "Antar pesanan" },
-];
-
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", password: "", role: "buyer" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -253,29 +247,6 @@ export default function RegisterPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Role Selector */}
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "8px", fontFamily: "inherit" }}>Daftar sebagai</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ROLES.map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setForm({ ...form, role: r.value })}
-                        style={{ fontFamily: "inherit", transition: "all 0.15s" }}
-                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center ${
-                          form.role === r.value
-                            ? "border-[#1A3C34] bg-[#1A3C34]/5 text-[#1A3C34]"
-                            : "border-[#E5E2DB] bg-[#FAFAF8] text-[#777] hover:border-[#1A3C34]/30"
-                        }`}
-                      >
-                        <span style={{ fontSize: "12px", fontWeight: 800, color: "#1A3C34" }}>{r.label}</span>
-                        <span style={{ fontSize: "10px", lineHeight: 1.3, opacity: 0.7 }}>{r.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Full Name */}
                 <div>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "7px", fontFamily: "inherit" }}>Nama lengkap</label>
