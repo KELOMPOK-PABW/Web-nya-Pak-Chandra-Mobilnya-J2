@@ -4,7 +4,7 @@ const create = async (data) => {
   return prisma.review.create({
     data,
     include: {
-      reviewer: { select: { id: true, full_name: true } },
+      reviewer: { select: { id: true, fullName: true } },
       product: { select: { id: true, name: true } },
     },
   });
@@ -14,7 +14,7 @@ const findById = async (id) => {
   return prisma.review.findUnique({
     where: { id: Number(id) },
     include: {
-      reviewer: { select: { id: true, full_name: true } },
+      reviewer: { select: { id: true, fullName: true } },
       product: { select: { id: true, name: true } },
     },
   });
@@ -26,7 +26,7 @@ const findAll = async ({ skip, take }) => {
     take,
     orderBy: { createdAt: "desc" },
     include: {
-      reviewer: { select: { id: true, full_name: true } },
+      reviewer: { select: { id: true, fullName: true } },
       product: { select: { id: true, name: true } },
     },
   });
@@ -61,7 +61,7 @@ const findByProductId = async (productId, { skip, take }) => {
     take,
     orderBy: { createdAt: "desc" },
     include: {
-      reviewer: { select: { id: true, full_name: true } },
+      reviewer: { select: { id: true, fullName: true } },
     },
   });
 };
@@ -90,7 +90,7 @@ const update = async (id, data) => {
     where: { id: Number(id) },
     data,
     include: {
-      reviewer: { select: { id: true, full_name: true } },
+      reviewer: { select: { id: true, fullName: true } },
       product: { select: { id: true, name: true } },
     },
   });

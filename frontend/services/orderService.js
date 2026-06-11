@@ -1,8 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse } from "./apiClient";
-
-function unwrapData(payload) {
-  return payload?.data ?? payload;
-}
+import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
 
 /**
  * Normalise raw order object from BE.
@@ -22,10 +18,10 @@ function normalizeOrder(order = {}) {
     ...order,
     id: order.id ?? order.order_id,
     orderId: order.orderId ?? order.order_id ?? order.id,
-    // Prefer payment_status (detail) over status (list)
-    status: order.payment_status ?? order.status ?? order.paymentStatus ?? "pending",
+    status: order.status ?? order.order_status ?? order.payment_status ?? order.paymentStatus ?? "pending",
     total: order.total ?? order.total_price ?? order.totalAmount ?? totalFromItems,
     createdAt: order.createdAt ?? order.created_at ?? order.order_date ?? null,
+    itemCount: order.itemCount ?? order.item_count ?? items.length,
     items,
   };
 }

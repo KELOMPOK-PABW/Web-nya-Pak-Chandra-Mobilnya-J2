@@ -1,8 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse } from "./apiClient";
-
-function unwrapData(payload) {
-  return payload?.data ?? payload;
-}
+import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
 
 export const addressService = {
   async list() {
@@ -12,14 +8,6 @@ export const addressService = {
     const data = await handleResponse(res);
     const list = unwrapData(data);
     return Array.isArray(list) ? list : [];
-  },
-
-  async get(id) {
-    const res = await fetch(apiUrl(`/addresses/${id}`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
-    return unwrapData(data);
   },
 
   async create({ address, city, postal_code }) {

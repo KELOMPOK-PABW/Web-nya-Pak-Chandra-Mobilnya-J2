@@ -1,7 +1,7 @@
 const categoryService = require("../services/categoryService");
 const { createCategorySchema, updateCategorySchema } = require("../validations/categoryValidation");
 
-const getAllCategories = async (req, res) => {
+const getAllCategories = async (req, res, next) => {
   try {
     const result = await categoryService.getAllCategories();
     return res.status(200).json({
@@ -9,14 +9,11 @@ const getAllCategories = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-const getCategoryById = async (req, res) => {
+const getCategoryById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await categoryService.getCategoryById(id);
@@ -25,11 +22,7 @@ const getCategoryById = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Kategori tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
@@ -57,7 +50,7 @@ const createCategory = async (req, res) => {
   }
 };
 
-const updateCategory = async (req, res) => {
+const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { error, value } = updateCategorySchema.validate(req.body);
@@ -75,11 +68,20 @@ const updateCategory = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const statusCode = error.message === "Kategori tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message,
+    next(error);
+  }
+};
+
+const deleteCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await categoryService.deleteCategory(id);
+    return res.status(200).json({
+      success: true,
+      message: result.message,
     });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -88,4 +90,5 @@ module.exports = {
   getCategoryById,
   createCategory,
   updateCategory,
+  deleteCategory,
 };

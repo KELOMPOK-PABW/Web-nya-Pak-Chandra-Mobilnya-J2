@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PABW Shop · Navigation Redesign</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    background: #f5f5f5;
+    color: #1A1A1A;
+    padding: 32px 24px 64px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  /* Header */
+  .header { margin-bottom: 40px; }
+  .header h1 { font-size: 28px; font-weight: 800; color: #1A3C34; letter-spacing: -0.3px; }
+  .header p { font-size: 14px; color: #777; margin-top: 8px; max-width: 600px; line-height: 1.5; }
+  .header .tag {
+    display: inline-block; background: #E0F2F1; color: #1A3C34;
+    font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 99px;
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;
+  }
+
+  /* Problem / Solution */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+  @media (max-width: 768px) { .split { grid-template-columns: 1fr; } }
+  .card {
+    background: white; border-radius: 16px; padding: 24px;
+    border: 1px solid #EBEBEB;
+  }
+  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .card ul { list-style: none; }
+  .card ul li {
+    font-size: 13px; padding: 6px 0; border-bottom: 1px solid #F5F5F5;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .card ul li:last-child { border: none; }
+  .problem li::before { content: "✕"; color: #EF4444; font-weight: 700; font-size: 12px; }
+  .solution li::before { content: "✓"; color: #10B981; font-weight: 700; font-size: 12px; }
+
+  /* Variations Grid */
+  .variations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 48px; }
+  @media (max-width: 900px) { .variations { grid-template-columns: 1fr; } }
+
+  .variant {
+    background: white; border-radius: 20px; overflow: hidden;
+    border: 1px solid #EBEBEB; transition: all 0.2s;
+  }
+  .variant:hover { border-color: #1A3C34; box-shadow: 0 4px 20px rgba(26,60,52,0.08); }
+  .variant-header {
+    padding: 16px 20px; border-bottom: 1px solid #F0F0F0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .variant-header .name { font-weight: 800; font-size: 16px; }
+  .variant-header .badge {
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px;
+    letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .badge-rational { background: #E0F2F1; color: #1A3C34; }
+  .badge-warm { background: #FFF3E0; color: #E65100; }
+  .badge-bold { background: #1A3C34; color: white; }
+
+  .variant-preview {
+    padding: 20px; min-height: 280px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .variant-preview .label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.8px; }
+  .variant-preview .phone-frame {
+    width: 100%; border-radius: 12px; overflow: hidden;
+    border: 1px solid #E5E7EB; background: #FAFAFA;
+  }
+  .variant-preview .mock-nav, .variant-preview .mock-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .variant-preview .mock-nav { background: var(--nav-bg, #1A3C34); color: white; }
+  .variant-preview .mock-bottom { background: white; border-top: 1px solid #EBEBEB; }
+
+  .pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .pill-white { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9); }
+  .pill-green { background: #E0F2F1; color: #1A3C34; }
+  .pill-amber { background: #FFF3E0; color: #E65100; }
+
+  .variant-desc {
+    padding: 0 20px 20px; font-size: 12px; color: #666; line-height: 1.6;
+  }
+  .variant-desc strong { color: #1A3C34; }
+
+  .btn-view {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 0 20px 20px; padding: 8px 16px; border-radius: 10px;
+    background: #1A3C34; color: white; text-decoration: none;
+    font-size: 12px; font-weight: 700; transition: all 0.15s;
+  }
+  .btn-view:hover { background: #2D6A5E; }
+
+  /* Architecture Diagram */
+  .arch { margin-bottom: 48px; }
+  .arch h2 { font-size: 18px; font-weight: 800; color: #1A3C34; margin-bottom: 16px; }
+  .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .arch-grid { grid-template-columns: 1fr; } }
+  .arch-card {
+    background: white; border-radius: 16px; padding: 24px;
+    border: 1px solid #EBEBEB;
+  }
+  .arch-card .title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .arch-card .sub { font-size: 11px; color: #999; margin-bottom: 16px; }
+  .arch-card .flow { font-family: monospace; font-size: 12px; line-height: 2; color: #555; }
+  .arch-card .flow .hl { color: #1A3C34; font-weight: 700; }
+
+  .arch-card .tab-bar {
+    display: flex; gap: 6px; margin-top: 12px; padding: 8px;
+    background: #F5F5F5; border-radius: 10px;
+  }
+  .arch-card .tab {
+    flex: 1; text-align: center; padding: 6px 4px; border-radius: 8px;
+    font-size: 10px; font-weight: 600; color: #999; transition: all 0.15s;
+  }
+  .arch-card .tab.active { background: white; color: #1A3C34; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <span class="tag">Huashu-Design · Proposal</span>
+    <h1>PABW Shop &mdash; Navigation Redesign</h1>
+    <p>Unified navigation architecture for an AI-powered marketplace. 3 directions exploring different trade-offs between discoverability, density, and brand expression.</p>
+  </div>
+
+  <!-- Problems → Solutions -->
+  <div class="split">
+    <div class="card">
+      <h3 style="color:#EF4444;">Problems</h3>
+      <ul class="problem">
+        <li>Home page has its own header — other pages use a different Navbar</li>
+        <li>Bottom bar only exists on home page; mobile users on PDP/cart get lost</li>
+        <li>6 tabs on mobile = cramped touch targets below 44px</li>
+        <li>Bottom bar shows on desktop too — wastes vertical space</li>
+        <li>AI assistant entry is a tiny icon — poor discoverability</li>
+        <li>Notification bell in Navbar is inert (no dropdown for regular users)</li>
+        <li>Search only available on home page header</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="color:#10B981;">Proposed Solution</h3>
+      <ul class="solution">
+        <li>Unified Navbar component across ALL buyer pages (home + PDP + cart + profile)</li>
+        <li>Responsive: mobile = compact top bar + 4-tab bottom bar; desktop = full top nav</li>
+        <li>4 primary tabs + floating AI FAB (replaces 6th tab, elevates assistant)</li>
+        <li>Desktop: no bottom bar; top nav carries all navigation</li>
+        <li>AI entry point becomes a prominent FAB or dedicated tab</li>
+        <li>Notification bell → contextual badge + simple slide-down panel</li>
+        <li>Search moves into the unified Navbar (collapsible on mobile)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3 Variations -->
+  <h2 style="font-size:18px;font-weight:800;color:#1A3C34;margin-bottom:16px;">3 Design Directions</h2>
+  <p style="font-size:13px;color:#777;margin-bottom:24px;">
+    Each direction reimagines the navbar + bottom bar as a unified system. Click "Open Prototype" for an interactive demo.
+  </p>
+
+  <div class="variations">
+
+    <!-- V1: Rational -->
+    <div class="variant">
+      <div class="variant-header">
+        <span class="name" style="color:#1A3C34;">Rational</span>
+        <span class="badge badge-rational">by-the-book</span>
+      </div>
+      <div class="variant-preview" style="--nav-bg:#1A3C34;">
+        <div class="phone-frame">
+          <div class="mock-nav">
+            <span style="font-size:13px;font-weight:700;">PABW Shop</span>
+            <div style="display:flex;gap:12px;">
+              <span style="font-size:11px;opacity:0.6;">🔍</span>
+              <span style="font-size:11px;opacity:0.6;">💬</span>
+              <span style="font-size:11px;opacity:0.6;">🛒</span>
+            </div>
+          </div>
+          <div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ccc;">
+            content area
+          </div>
+          <div class="mock-bottom">
+            <span class="pill pill-green">🏠</span>
+            <span class="pill pill-white">📦</span>
+            <span class="pill pill-white" style="background:#1A3C34;color:white;">✦</span>
+            <span class="pill pill-white">🛒</span>
+            <span class="pill pill-white">👤</span>
+          </div>
+        </div>
+      </div>
+      <div class="variant-desc">
+        <strong>Information Architecture driven.</strong> Maximum clarity through strict hierarchy. Dark green top bar, 4-icon bottom with a centered AI FAB. Familiar e-commerce pattern — lowest learning curve.<br>
+        <span style="color:#999;">Keywords: clean, restrained, proven</span>
+      </div>
+      <a href="01-navbar-bottom-bar-rational.html" class="btn-view" target="_blank">Open Prototype →</a>
+    </div>
+
+    <!-- V2: Warm -->
+    <div class="variant">
+      <div class="variant-header">
+        <span class="name" style="color:#E65100;">Warm</span>
+        <span class="badge badge-warm">concierge</span>
+      </div>
+      <div class="variant-preview" style="--nav-bg:#FFFFFF;">
+        <div class="phone-frame">
+          <div class="mock-nav" style="background:white;color:#1A3C34;border-bottom:1px solid #EBEBEB;">
+            <span style="font-size:13px;font-weight:700;">PABW</span>
+            <div style="display:flex;gap:12px;">
+              <span style="font-size:11px;color:#1A3C34;">🔍</span>
+              <span style="font-size:11px;color:#1A3C34;">💬</span>
+              <span style="font-size:11px;color:#1A3C34;">🛒</span>
+            </div>
+          </div>
+          <div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ccc;">
+            content area
+          </div>
+          <div class="mock-bottom" style="background:#F5F0EB;">
+            <span class="pill" style="background:#1A3C34;color:white;">🏠</span>
+            <span class="pill" style="background:transparent;color:#888;">🔍</span>
+            <span style="width:36px;height:36px;border-radius:50%;background:#2D6A5E;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;">✦</span>
+            <span class="pill" style="background:transparent;color:#888;">🛒</span>
+            <span class="pill" style="background:transparent;color:#888;">👤</span>
+          </div>
+        </div>
+      </div>
+      <div class="variant-desc">
+        <strong>Concierge / Hospitality driven.</strong> Cream white top bar with soft green AI accent. Bottom bar sits on a warm sand background — feels like a boutique. Search is promoted to a bottom tab. The AI FAB uses a softer, rounded form.<br>
+        <span style="color:#999;">Keywords: warm, tactile, personal</span>
+      </div>
+      <a href="02-navbar-bottom-bar-warm.html" class="btn-view" target="_blank">Open Prototype →</a>
+    </div>
+
+    <!-- V3: Bold -->
+    <div class="variant">
+      <div class="variant-header">
+        <span class="name" style="color:#1A3C34;">Bold</span>
+        <span class="badge badge-bold">ai-first</span>
+      </div>
+      <div class="variant-preview" style="--nav-bg:#0D2B26;">
+        <div class="phone-frame">
+          <div class="mock-nav" style="background:#0D2B26;">
+            <span style="font-size:13px;font-weight:700;">PABW</span>
+            <div style="display:flex;gap:12px;">
+              <span style="font-size:11px;opacity:0.6;">🔍</span>
+              <span style="font-size:11px;opacity:0.6;">🛒</span>
+            </div>
+          </div>
+          <div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ccc;">
+            content area
+          </div>
+          <div class="mock-bottom" style="background:#0D2B26;border-top:1px solid rgba(255,255,255,0.06);">
+            <span class="pill" style="background:#4DB6AC;color:#0D2B26;">🏠</span>
+            <span class="pill" style="background:transparent;color:rgba(255,255,255,0.5);">📦</span>
+            <span style="width:40px;height:40px;border-radius:16px;background:linear-gradient(135deg,#4DB6AC,#26A69A);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;box-shadow:0 4px 12px rgba(77,182,172,0.4);">✦</span>
+            <span class="pill" style="background:transparent;color:rgba(255,255,255,0.5);">🛒</span>
+            <span class="pill" style="background:transparent;color:rgba(255,255,255,0.5);">👤</span>
+          </div>
+        </div>
+      </div>
+      <div class="variant-desc">
+        <strong>AI-First / Tech-forward driven.</strong> Dark immersive bottom bar with the AI FAB as the hero element — glowing, elevated. The brand doubles down on its AI differentiator. Highest visual tension. Best for a younger, tech-savvy audience.<br>
+        <span style="color:#999;">Keywords: bold, immersive, confident</span>
+      </div>
+      <a href="03-navbar-bottom-bar-bold.html" class="btn-view" target="_blank">Open Prototype →</a>
+    </div>
+
+  </div>
+
+  <!-- Navigation Architecture -->
+  <div class="arch">
+    <h2>Unified Navigation Architecture</h2>
+    <div class="arch-grid">
+
+      <div class="arch-card">
+        <div class="title">Desktop (≥768px)</div>
+        <div class="sub">Full-width top navigation · No bottom bar</div>
+        <div class="flow">
+          <span class="hl">[Logo]</span> · Search (full-width, AI toggle) · Chat · Cart · Profile
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:8px 12px;background:#F0FBF8;border-radius:10px;">
+          <span style="font-size:10px;color:#1A3C34;">💡</span>
+          <span style="font-size:11px;color:#1A3C34;">Search + AI live in the nav bar — always accessible</span>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="title">Mobile (&lt;768px)</div>
+        <div class="sub">Compact top bar + 4-tab bottom bar + AI FAB</div>
+        <div class="flow">
+          <span class="hl">Top:</span> Logo · [Search icon → overlay] · Cart badge<br>
+          <span class="hl">Bottom:</span> Home · Produk · <span style="color:#4DB6AC;">✦ AI</span> · Akun
+        </div>
+        <div class="tab-bar">
+          <span class="tab active">🏠</span>
+          <span class="tab">📦</span>
+          <span class="tab" style="background:#4DB6AC;color:white;box-shadow:0 2px 8px rgba(77,182,172,0.3);">✦</span>
+          <span class="tab">👤</span>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="title">Seller / Courier Dashboard</div>
+        <div class="sub">Top bar + Left sidebar (no bottom bar)</div>
+        <div class="flow">
+          <span class="hl">Top:</span> · · · menu · Logo · Store name · Notifications<br>
+          <span class="hl">Sidebar:</span> Dashboard · Products · Orders · Profile
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:#888;">
+          Bottom bar is hidden on dashboard — sidebar takes over. Top bar is thiner (48px).
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <div class="title">Guest / Unauthenticated</div>
+        <div class="sub">Same layout, reduced actions</div>
+        <div class="flow">
+          <span class="hl">Top:</span> Logo · Search · <span style="text-decoration:line-through;opacity:0.5;">Chat</span> · <span style="text-decoration:line-through;opacity:0.5;">Cart</span> · Login<br>
+          <span class="hl">Bottom:</span> Home · Produk · <span style="color:#4DB6AC;">✦ AI</span> · Login
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:#888;">
+          Cart tab replaces with "Masuk". Tapping triggers login modal — not redirect.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Motion Notes -->
+  <div style="background:white;border-radius:16px;padding:24px;border:1px solid #EBEBEB;margin-bottom:32px;">
+    <h3 style="font-size:15px;font-weight:700;color:#1A3C34;margin-bottom:12px;">Motion &amp; Interaction Notes</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px;color:#555;line-height:1.6;">
+      <div>
+        <strong style="color:#1A3C34;">Navbar → scroll</strong><br>
+        On scroll down: top nav shrinks 8px, shadow deepens. On scroll up: springs back.<br><br>
+        <strong style="color:#1A3C34;">Bottom bar → hide on scroll</strong><br>
+        Scroll down = bar slides down (hidden). Scroll up = springs back. Prevents content occlusion during reading.
+      </div>
+      <div>
+        <strong style="color:#1A3C34;">AI FAB → pulse on idle</strong><br>
+        After 8s of inactivity, the FAB does a subtle pulse. On first visit, a shimmer draws attention for 3s.<br><br>
+        <strong style="color:#1A3C34;">Tab switch → no flash</strong><br>
+        Active tab uses scale(1) + color fill. Inactive → scale(0.92) + muted. No full-page reload feel.
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:16px 0;font-size:11px;color:#BBB;">
+    PABW Shop · Navigation Redesign · Huashu-Design Proposal
+  </div>
+
+</div>
+</body>
+</html>

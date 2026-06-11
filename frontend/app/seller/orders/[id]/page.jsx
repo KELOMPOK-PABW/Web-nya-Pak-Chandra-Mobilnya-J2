@@ -14,6 +14,8 @@ const SELLER_MENUS = [
     { label: "Dashboard", href: "/seller/dashboard" },
     { label: "Produk", href: "/seller/products" },
     { label: "Pesanan", href: "/seller/orders" },
+    { label: "Toko Saya", href: "/stores/me" },
+    { label: "Status Pengajuan", href: "/seller/application" },
 ];
 
 const STATUS_META = {
@@ -67,19 +69,8 @@ export default function SellerOrderDetailPage() {
             setOrder(data);
         } catch (err) {
             console.error(err);
-            setError("Gagal mengambil detail pesanan. Menampilkan data statis untuk preview.");
-            // Mock data for UI preview as requested (static UI)
-            setOrder({
-                id: id,
-                orderItemId: id,
-                buyerName: "User Contoh",
-                productName: "Produk Simulasi",
-                qty: 1,
-                total: 150000,
-                status: "paid",
-                createdAt: new Date().toISOString(),
-                address: "Jl. Contoh Alamat No. 123, Jakarta Selatan",
-            });
+            setOrder(null);
+            setError(err.message || "Gagal mengambil detail pesanan. Pastikan backend sudah berjalan.");
         } finally {
             setIsLoading(false);
         }
@@ -94,10 +85,10 @@ export default function SellerOrderDetailPage() {
         setFeedback("");
         try {
             if (type === "process") {
-                await sellerService.processOrder(id);
+                await sellerService.processOrder(order?.orderItemId || id);
                 setFeedback("Status berhasil diubah menjadi: Diproses");
             } else {
-                await sellerService.readyToShipOrder(id);
+                await sellerService.readyToShipOrder(order?.orderItemId || id);
                 setFeedback("Status berhasil diubah menjadi: Siap Dikirim");
             }
             await loadOrderDetail();
@@ -155,6 +146,16 @@ export default function SellerOrderDetailPage() {
                         </div>
                     )}
 
+                    {!order ? (
+                        <Card style={{ padding: "48px", textAlign: "center" }}>
+                            <p style={{ fontSize: "42px", margin: "0 0 12px" }}>📦</p>
+                            <p style={{ fontSize: "16px", fontWeight: 700, color: "#1A1A1A", margin: "0 0 6px" }}>Pesanan tidak ditemukan</p>
+                            <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 18px" }}>Coba kembali ke daftar pesanan dan pilih pesanan lain.</p>
+                            <Link href="/seller/orders">
+                                <Button variant="outline">Kembali ke Pesanan</Button>
+                            </Link>
+                        </Card>
+                    ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                         {/* Informasi Utama */}
                         <Card style={{ padding: "24px" }}>
@@ -214,6 +215,7 @@ export default function SellerOrderDetailPage() {
                             </Button>
                         </div>
                     </div>
+                    )}
                 </main>
             </div>
         </div>

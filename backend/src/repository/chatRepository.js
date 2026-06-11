@@ -78,11 +78,13 @@ const deleteOldestSession = async (userId) => {
     orderBy: { updatedAt: "asc" },
   });
   if (oldest) {
+    await prisma.chatMessage.deleteMany({ where: { sessionId: oldest.id } });
     await prisma.chatSession.deleteMany({ where: { id: oldest.id, userId } });
   }
 };
 
 const deleteSession = async (id, userId) => {
+  await prisma.chatMessage.deleteMany({ where: { sessionId: id } });
   return prisma.chatSession.deleteMany({
     where: { id, userId },
   });
