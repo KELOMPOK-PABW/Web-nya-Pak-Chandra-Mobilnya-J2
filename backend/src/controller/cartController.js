@@ -124,6 +124,13 @@ const clearCart = async (req, res) => {
 
 const validateCart = async(req,res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Akses ditolak. Token tidak valid.",
+        data: null,
+      });
+    }
     const userId = req.user.id;
     const results = await cartService.validateCart({ userId })
     return res.status(results.statusCode).json({
@@ -142,6 +149,13 @@ const validateCart = async(req,res) => {
 
 const countCartItems = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Akses ditolak. Token tidak valid.",
+        data: null,
+      });
+    }
     const userId = req.user.id;
     const result = await cartService.countCartItems({ userId });
 

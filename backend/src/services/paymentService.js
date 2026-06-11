@@ -4,12 +4,18 @@ const paymentRepository = require("../repository/paymentRepository");
 const createPayment = async ({ order_id }) => {
   const order = await paymentRepository.findOrderById(order_id);
   if (!order) {
-    throw new Error("Order tidak ditemukan");
+    const err = new Error("Order tidak ditemukan");
+    err.status = 404;
+    err.expose = true;
+    throw err;
   }
 
   const existing = await paymentRepository.findPaymentByOrderId(order_id);
   if (existing) {
-    throw new Error("Payment untuk order ini sudah ada");
+    const err = new Error("Payment untuk order ini sudah ada");
+    err.status = 409;
+    err.expose = true;
+    throw err;
   }
 
   const payment = await paymentRepository.createPayment({
@@ -28,16 +34,25 @@ const createPayment = async ({ order_id }) => {
 const payPayment = async (paymentId) => {
   const payment = await paymentRepository.findPaymentById(paymentId);
   if (!payment) {
-    throw new Error("Payment tidak ditemukan");
+    const err = new Error("Payment tidak ditemukan");
+    err.status = 404;
+    err.expose = true;
+    throw err;
   }
   if (payment.status !== "pending") {
-    throw new Error("Payment sudah diproses");
+    const err = new Error("Payment sudah diproses");
+    err.status = 400;
+    err.expose = true;
+    throw err;
   }
 
   const userId = payment.order.buyerId;
   const wallet = await paymentRepository.findWalletByUserId(userId);
   if (!wallet) {
-    throw new Error("Wallet user tidak ditemukan");
+    const err = new Error("Wallet user tidak ditemukan");
+    err.status = 404;
+    err.expose = true;
+    throw err;
   }
 
   const amount = Number(payment.amount);
@@ -47,6 +62,7 @@ const payPayment = async (paymentId) => {
     await paymentRepository.setPaymentFailed(payment.id);
     const err = new Error("Saldo tidak mencukupi");
     err.code = "INSUFFICIENT_BALANCE";
+    err.status = 400;
     throw err;
   }
 
@@ -66,7 +82,9 @@ const payPayment = async (paymentId) => {
       walletId: wallet.id,
       type: "payment",
       amount,
+      balanceBefore: balance,
       balanceAfter: newBalance,
+      orderId: payment.order.id,
     });
   });
 
@@ -79,7 +97,10 @@ const payPayment = async (paymentId) => {
 const getPaymentByOrderId = async (orderId) => {
   const payment = await paymentRepository.findPaymentByOrderId(orderId);
   if (!payment) {
-    throw new Error("Payment tidak ditemukan");
+    const err = new Error("Payment tidak ditemukan");
+    err.status = 404;
+    err.expose = true;
+    throw err;
   }
 
   return {

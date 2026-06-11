@@ -1,35 +1,4 @@
-import { authService } from "./authService";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-async function handleResponse(res) {
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok || data.success === false) {
-    throw new Error(data.message || `Request failed with status ${res.status}`);
-  }
-
-  return data;
-}
-
-function buildAuthHeaders(isJson = false) {
-  const token = authService.getToken();
-  const headers = {};
-
-  if (isJson) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-}
-
-function unwrapData(payload) {
-  return payload?.data ?? payload;
-}
+import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
 
 function normalizeStore(store = {}) {
   return {
@@ -137,7 +106,7 @@ function normalizeList(payload, mapper) {
 
 export const sellerService = {
   async getMyStore() {
-    const res = await fetch(`${BASE_URL}/stores/me`, {
+    const res = await fetch(apiUrl("/stores/me"), {
       headers: buildAuthHeaders(),
     });
     const payload = await handleResponse(res);
@@ -145,7 +114,7 @@ export const sellerService = {
   },
 
   async updateMyStore(payload) {
-    const res = await fetch(`${BASE_URL}/stores/me`, {
+    const res = await fetch(apiUrl("/stores/me"), {
       method: "PUT",
       headers: buildAuthHeaders(true),
       body: JSON.stringify({
@@ -158,7 +127,7 @@ export const sellerService = {
   },
 
   async submitApplication(payload) {
-    const res = await fetch(`${BASE_URL}/seller/apply`, {
+    const res = await fetch(apiUrl("/seller/apply"), {
       method: "POST",
       headers: buildAuthHeaders(true),
       body: JSON.stringify({
@@ -171,7 +140,7 @@ export const sellerService = {
   },
 
   async getApplicationStatus() {
-    const res = await fetch(`${BASE_URL}/seller/application`, {
+    const res = await fetch(apiUrl("/seller/application"), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
@@ -181,7 +150,7 @@ export const sellerService = {
   },
 
   async getSellerApplications() {
-    const res = await fetch(`${BASE_URL}/seller/application`, {
+    const res = await fetch(apiUrl("/seller/application"), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
@@ -189,7 +158,7 @@ export const sellerService = {
   },
 
   async approveApplication(id) {
-    const res = await fetch(`${BASE_URL}/seller/application/${id}/approve`, {
+    const res = await fetch(apiUrl(`/seller/application/${id}/approve`), {
       method: "PUT",
       headers: buildAuthHeaders(),
     });
@@ -198,7 +167,7 @@ export const sellerService = {
   },
 
   async rejectApplication(id, reason) {
-    const res = await fetch(`${BASE_URL}/seller/application/${id}/reject`, {
+    const res = await fetch(apiUrl(`/seller/application/${id}/reject`), {
       method: "PUT",
       headers: buildAuthHeaders(true),
       body: JSON.stringify({ reason }),
@@ -208,7 +177,7 @@ export const sellerService = {
   },
 
   async getSellerOrders() {
-    const res = await fetch(`${BASE_URL}/seller/orders`, {
+    const res = await fetch(apiUrl("/seller/orders"), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
@@ -216,7 +185,7 @@ export const sellerService = {
   },
 
   async getSellerOrderById(id) {
-    const res = await fetch(`${BASE_URL}/seller/orders/${id}`, {
+    const res = await fetch(apiUrl(`/seller/orders/${id}`), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
@@ -224,7 +193,7 @@ export const sellerService = {
   },
 
   async processOrder(orderItemId) {
-    const res = await fetch(`${BASE_URL}/seller/orders/${orderItemId}/process`, {
+    const res = await fetch(apiUrl(`/seller/orders/${orderItemId}/process`), {
       method: "PUT",
       headers: buildAuthHeaders(),
     });
@@ -233,7 +202,7 @@ export const sellerService = {
   },
 
   async readyToShipOrder(orderItemId) {
-    const res = await fetch(`${BASE_URL}/seller/orders/${orderItemId}/ready-to-ship`, {
+    const res = await fetch(apiUrl(`/seller/orders/${orderItemId}/ready-to-ship`), {
       method: "PUT",
       headers: buildAuthHeaders(),
     });

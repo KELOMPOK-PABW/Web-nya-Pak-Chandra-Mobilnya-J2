@@ -1,55 +1,46 @@
 const sellerOrderService = require("../services/sellerOrderService");
 
-const getSellerOrders = async (req, res) => {
+const getOrders = async (req, res, next) => {
   try {
-    const result = await sellerOrderService.getSellerOrders(req.user.id);
-    return res.status(200).json({ success: true, data: result });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const result = await sellerOrderService.getSellerOrders(req.user.id, { page, limit });
+
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      meta: result.meta,
+    });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const getSellerOrderById = async (req, res) => {
+const getOrderById = async (req, res, next) => {
   try {
     const result = await sellerOrderService.getSellerOrderById(req.params.id, req.user.id);
     return res.status(200).json({ success: true, data: result });
   } catch (error) {
-    const statusCode = error.message === "Pesanan tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const processOrder = async (req, res) => {
+const processOrder = async (req, res, next) => {
   try {
-    const result = await sellerOrderService.processOrder(req.params.id, req.user.id);
-    return res.status(200).json({
-      success: true,
-      message: "Pesanan berhasil diproses",
-      data: result,
-    });
+    const result = await sellerOrderService.processOrderItem(req.params.orderItemId, req.user.id);
+    return res.status(200).json({ success: true, message: "Pesanan diproses", data: result });
   } catch (error) {
-    const statusCode = error.message === "Pesanan tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const readyToShipOrder = async (req, res) => {
+const readyToShip = async (req, res, next) => {
   try {
-    const result = await sellerOrderService.readyToShipOrder(req.params.id, req.user.id);
-    return res.status(200).json({
-      success: true,
-      message: "Pesanan siap dikirim",
-      data: result,
-    });
+    const result = await sellerOrderService.readyToShipOrderItem(req.params.orderItemId, req.user.id);
+    return res.status(200).json({ success: true, message: "Pesanan siap dikirim", data: result });
   } catch (error) {
-    const statusCode = error.message === "Pesanan tidak ditemukan" ? 404 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-module.exports = {
-  getSellerOrders,
-  getSellerOrderById,
-  processOrder,
-  readyToShipOrder,
-};
+module.exports = { getOrders, getOrderById, processOrder, readyToShip };

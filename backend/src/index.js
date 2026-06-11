@@ -24,8 +24,12 @@ const categoryRoutes = require("./routes/categoryRoutes")
 const reviewRoutes = require("./routes/reviewRoutes")
 const chatRoutes = require("./routes/chatRoutes")
 const llmRoutes = require("./routes/llmRoutes")
+const courierRoutes = require("./routes/courierRoutes")
+const adminRoutes = require("./routes/adminRoutes")
+const addressRoutes = require("./routes/addressRoutes")
 const authController = require("./controller/authController")
 const reviewController = require("./controller/reviewController")
+const storeController = require("./controller/storeController")
 const { authenticate } = require("./middleware/authMiddleware")
 
 // Middleware
@@ -40,8 +44,8 @@ app.use(helmet({
 app.use(compression());
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX,
     message: { success: false, message: "Terlalu banyak permintaan, coba lagi nanti" },
   })
 );
@@ -56,6 +60,7 @@ app.use("/api/auth", authRoutes)
 // Protected routes (require authentication)
 app.use("/api/users", authenticate, userRoutes)
 app.use("/api/cart", authenticate, cartRoutes)
+app.use("/api/addresses", authenticate, addressRoutes)
 app.use("/api/checkout", authenticate, checkoutRoutes)
 app.use("/api/orders", authenticate, orderRoutes)
 app.use("/api/wallet", authenticate, walletRoutes)
@@ -64,8 +69,13 @@ app.use("/api/seller", authenticate, sellerRoutes)
 app.use("/api/reviews", authenticate, reviewRoutes)
 app.use("/api/chat", authenticate, chatRoutes)
 app.use("/api/llm", authenticate, llmRoutes)
+app.use("/api/courier", authenticate, courierRoutes)
+app.use("/api/admin", authenticate, adminRoutes)
+app.get("/api/stores/me", authenticate, storeController.getMyStore)
+app.put("/api/stores/me", authenticate, storeController.updateMyStore)
 app.get("/api/my/reviews", authenticate, reviewController.getMyReviews)
 app.get("/api/me", authenticate, authController.getMe)
+app.put("/api/me", authenticate, authController.updateMe)
 
 // Error handling
 app.use(notFound);

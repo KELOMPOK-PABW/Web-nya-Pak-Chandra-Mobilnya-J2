@@ -1,55 +1,42 @@
-import { authService } from "./authService";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-async function handleResponse(res) {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.success === false) {
-    throw new Error(data.message || `Request failed with status ${res.status}`);
-  }
-  return data;
-}
+import { apiUrl, buildAuthHeaders, handleResponse } from "./apiClient";
 
 export const productService = {
   async getProducts(params = {}) {
-    const url = new URL(`${BASE_URL}/products`);
+    const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
+      if (v !== undefined && v !== null && v !== "") searchParams.set(k, v);
     });
-    const res = await fetch(url.toString());
+    const qs = searchParams.toString();
+    const url = apiUrl(`/products${qs ? `?${qs}` : ''}`);
+    const res = await fetch(url);
     const data = await handleResponse(res);
     return { data: data.data, meta: data.meta };
   },
 
   async getProductById(id) {
-    const res = await fetch(`${BASE_URL}/products/${id}`);
+    const res = await fetch(apiUrl(`/products/${id}`));
     const data = await handleResponse(res);
     return data.data;
   },
 
   async getCategories() {
-    const res = await fetch(`${BASE_URL}/categories`);
+    const res = await fetch(apiUrl("/categories"));
     const data = await handleResponse(res);
     return data.data;
   },
 
   async getSellerProducts() {
-    const token = authService.getToken();
-    const res = await fetch(`${BASE_URL}/seller/products`, {
-      headers: { Authorization: token ? `Bearer ${token}` : "" },
+    const res = await fetch(apiUrl("/seller/products"), {
+      headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
     return { data: data.data, meta: data.meta };
   },
 
   async createProduct(payload) {
-    const token = authService.getToken();
-    const res = await fetch(`${BASE_URL}/seller/products`, {
+    const res = await fetch(apiUrl("/seller/products"), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+      headers: buildAuthHeaders(true),
       body: JSON.stringify(payload),
     });
     const data = await handleResponse(res);
@@ -57,13 +44,9 @@ export const productService = {
   },
 
   async updateProduct(id, payload) {
-    const token = authService.getToken();
-    const res = await fetch(`${BASE_URL}/seller/products/${id}`, {
+    const res = await fetch(apiUrl(`/seller/products/${id}`), {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+      headers: buildAuthHeaders(true),
       body: JSON.stringify(payload),
     });
     const data = await handleResponse(res);
@@ -71,10 +54,9 @@ export const productService = {
   },
 
   async deleteProduct(id) {
-    const token = authService.getToken();
-    const res = await fetch(`${BASE_URL}/seller/products/${id}`, {
+    const res = await fetch(apiUrl(`/seller/products/${id}`), {
       method: "DELETE",
-      headers: { Authorization: token ? `Bearer ${token}` : "" },
+      headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
     return data;

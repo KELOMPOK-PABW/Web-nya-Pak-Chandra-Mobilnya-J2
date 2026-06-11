@@ -1,8 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse } from "./apiClient";
-
-function unwrapData(payload) {
-  return payload?.data ?? payload;
-}
+import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
 
 function normalizeReview(review = {}) {
   return {
