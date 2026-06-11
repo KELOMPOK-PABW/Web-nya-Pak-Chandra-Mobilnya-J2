@@ -17,13 +17,40 @@ export default function RegisterPage() {
     setError("");
   };
 
+  const validateForm = () => {
+    const fullName = form.full_name.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const password = form.password;
+
+    if (!fullName) return "Nama wajib diisi";
+    if (fullName.length < 3) return "Nama minimal 3 karakter";
+    if (!email) return "Email wajib diisi";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Format email tidak valid";
+    if (!password) return "Password wajib diisi";
+    if (password.length < 8) return "Password minimal 8 karakter";
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return "Password harus mengandung huruf dan angka";
+    if (phone && !/^\d+$/.test(phone)) return "Nomor telepon harus angka";
+    if (phone && phone.length < 10) return "Nomor telepon minimal 10 digit";
+    if (phone && phone.length > 15) return "Nomor telepon maksimal 15 digit";
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.full_name || !form.email || !form.password) { setError("Semua field wajib diisi."); return; }
-    if (form.password.length < 6) { setError("Password minimal 6 karakter."); return; }
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setLoading(true);
     try {
-      await authService.register(form);
+      await authService.register({
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
       router.push("/auth/login?registered=1");
     } catch (err) {
       setError(err.message || "Register gagal. Coba lagi.");
@@ -305,7 +332,7 @@ export default function RegisterPage() {
                       )}
                     </button>
                   </div>
-                  <p style={{ fontSize: "12px", color: "#AAAAAA", marginTop: "6px", fontFamily: "inherit" }}>Minimal 6 karakter untuk keamanan yang lebih baik</p>
+                  <p style={{ fontSize: "12px", color: "#AAAAAA", marginTop: "6px", fontFamily: "inherit" }}>Minimal 8 karakter, berisi huruf dan angka</p>
                 </div>
 
                 {/* Submit */}
