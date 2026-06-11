@@ -17,6 +17,11 @@ const STATUS_LABELS = {
   completed: "Selesai",
   cancelled: "Dibatalkan",
   canceled: "Dibatalkan",
+  transaksi_gagal: "Dibatalkan",
+  diterima_pembeli: "Diterima Pembeli",
+  sampai_di_tujuan: "Sampai Tujuan",
+  sedang_dikirim: "Dikirim",
+  diproses_penjual: "Diproses",
 };
 
 const STATUS_COLORS = {
@@ -29,6 +34,11 @@ const STATUS_COLORS = {
   completed: { color: "#059669", bg: "#A7F3D0" },
   cancelled: { color: "#EF4444", bg: "#FEE2E2" },
   canceled: { color: "#EF4444", bg: "#FEE2E2" },
+  transaksi_gagal: { color: "#EF4444", bg: "#FEE2E2" },
+  diterima_pembeli: { color: "#059669", bg: "#A7F3D0" },
+  sampai_di_tujuan: { color: "#059669", bg: "#A7F3D0" },
+  sedang_dikirim: { color: "#10B981", bg: "#D1FAE5" },
+  diproses_penjual: { color: "#8B5CF6", bg: "#EDE9FE" },
 };
 
 const TABS = [
@@ -225,7 +235,7 @@ export default function OrdersPage() {
           filtered.map(order => {
             const orderId = order.orderId ?? order.id;
             const dateStr = fmtDate(order.createdAt);
-            const itemCount = order.items?.length ?? 0;
+            const itemCount = order.itemCount ?? order.items?.length ?? 0;
             return (
               <Link key={orderId} href={`/orders/${orderId}`} style={{ textDecoration: "none", display: "block" }}>
                 <div style={{

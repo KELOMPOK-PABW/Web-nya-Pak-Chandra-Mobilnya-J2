@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { checkoutService } from "@/services/checkoutService";
+import { addressService } from "@/services/addressService";
 
 /* ── helpers ── */
 function fmt(n) {
@@ -151,17 +152,35 @@ export default function CheckoutPage() {
       return;
     }
 
-    const cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
-    if (!cartId) {
-      setError("Cart ID tidak ditemukan. Coba refresh halaman.");
-      return;
-    }
-
     setSubmitting(true);
     try {
+      let checkoutAddressId = selectedAddressId;
+      if (addressMode === "manual") {
+        const createdAddress = await addressService.create({
+          address: manualAddress.detail,
+          city: manualAddress.city,
+          postal_code: manualAddress.zip,
+        });
+        checkoutAddressId = createdAddress?.address_id ?? createdAddress?.id;
+      }
+
+      if (!checkoutAddressId) {
+        throw new Error("Alamat pengiriman tidak ditemukan.");
+      }
+
+      let cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
+      if (!cartId) {
+        const cartCount = await cartService.countCartItems();
+        cartId = cartCount?.cart_id ?? cartCount?.cartId;
+      }
+
+      if (!cartId) {
+        throw new Error("Cart ID tidak ditemukan. Coba refresh halaman.");
+      }
+
       const result = await checkoutService.createOrder({
         cart_id: Number(cartId),
-        address_id: Number(selectedAddressId || 1),
+        address_id: Number(checkoutAddressId),
         payment_method: "ewallet",
       });
 
