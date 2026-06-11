@@ -76,13 +76,6 @@ const createStore = async (data, prismaTransaction = prisma) => {
   });
 };
 
-const updateUserRole = async (userId, role, prismaTransaction = prisma) => {
-  return await prismaTransaction.user.update({
-    where: { id: Number(userId) },
-    data: { role }
-  });
-};
-
 const getRoleByName = async (roleName) => {
   return await prisma.role.findFirst({
     where: { nameRole: roleName }
@@ -90,7 +83,7 @@ const getRoleByName = async (roleName) => {
 };
 
 const addUserRoleMap = async (userId, roleId, prismaTransaction = prisma) => {
-  const existing = await prismaTransaction.userRoleMap.findUnique({
+  const existing = await prismaTransaction.userRole.findUnique({
     where: {
       userId_roleId: {
         userId: Number(userId),
@@ -99,7 +92,7 @@ const addUserRoleMap = async (userId, roleId, prismaTransaction = prisma) => {
     }
   });
   if (!existing) {
-    return await prismaTransaction.userRoleMap.create({
+    return await prismaTransaction.userRole.create({
       data: {
         userId: Number(userId),
         roleId: Number(roleId)
@@ -126,7 +119,6 @@ module.exports = {
   getApplicationByUserId,
   updateApplicationStatus,
   createStore,
-  updateUserRole,
   getRoleByName,
   addUserRoleMap,
   $transaction,

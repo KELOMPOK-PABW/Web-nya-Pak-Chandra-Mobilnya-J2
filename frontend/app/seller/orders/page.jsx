@@ -13,6 +13,8 @@ const SELLER_MENUS = [
   { label: "Dashboard", href: "/seller/dashboard" },
   { label: "Produk", href: "/seller/products" },
   { label: "Pesanan", href: "/seller/orders" },
+  { label: "Toko Saya", href: "/stores/me" },
+  { label: "Status Pengajuan", href: "/seller/application" },
 ];
 
 const STATUS_META = {
@@ -86,7 +88,7 @@ export default function SellerOrdersPage() {
   const summary = useMemo(() => ({
     total: orders.length,
     needProcess: orders.filter(o => ["paid", "pending", "menunggu_penjual"].includes(String(o.status).toLowerCase())).length,
-    processing: orders.filter(o => ["processing", "ready_to_ship"].includes(String(o.status).toLowerCase())).length,
+    processing: orders.filter(o => ["processing", "ready_to_ship", "shipped"].includes(String(o.status).toLowerCase())).length,
     completed: orders.filter(o => ["completed", "delivered"].includes(String(o.status).toLowerCase())).length,
   }), [orders]);
 
@@ -113,7 +115,7 @@ export default function SellerOrdersPage() {
             {[
               { label: "Semua Pesanan", value: summary.total, color: "#1A3C34" },
               { label: "Perlu Diproses", value: summary.needProcess, color: "#F59E0B" },
-              { label: "Sedang Dikirim", value: summary.processing, color: "#3B82F6" },
+              { label: "Dalam Proses", value: summary.processing, color: "#3B82F6" },
               { label: "Selesai", value: summary.completed, color: "#059669" },
             ].map(s => (
               <Card key={s.label} style={{ padding: "18px" }}>
@@ -128,7 +130,7 @@ export default function SellerOrdersPage() {
             {[
               { id: "all", label: "Semua" },
               { id: "need_process", label: "Perlu Diproses" },
-              { id: "processing", label: "Dalam Pengiriman" },
+              { id: "processing", label: "Dalam Proses" },
               { id: "completed", label: "Selesai" },
               { id: "cancelled", label: "Dibatalkan" },
             ].map(f => (

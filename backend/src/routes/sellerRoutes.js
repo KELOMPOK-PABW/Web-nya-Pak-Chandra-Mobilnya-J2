@@ -10,7 +10,7 @@ router.post("/products", sellerProductController.createProduct);
 router.put("/products/:id", sellerProductController.updateProduct);
 router.delete("/products/:id", sellerProductController.deleteProduct);
 
-// Seller Orders (from HEAD)
+// Seller Orders
 router.get("/orders", sellerOrderController.getOrders);
 router.get("/orders/:id", sellerOrderController.getOrderById);
 router.put("/orders/:orderItemId/process", sellerOrderController.processOrder);

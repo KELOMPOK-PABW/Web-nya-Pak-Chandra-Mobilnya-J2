@@ -11,8 +11,6 @@ const apply = async (userId, data) => {
     userId,
     storeName: data.store_name,
     phone: data.phone || null,
-    address: data.address || null,
-    city: data.city || null,
     status: 'pending'
   };
 
@@ -82,8 +80,6 @@ const approve = async (id) => {
       phone: app.phone,
       isActive: true
     }, prisma);
-
-    await repository.updateUserRole(app.userId, 'seller', prisma);
 
     const sellerRole = await repository.getRoleByName('seller');
     if (sellerRole) {

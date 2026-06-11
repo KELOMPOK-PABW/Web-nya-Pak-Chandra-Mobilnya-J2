@@ -69,8 +69,26 @@ const getUserById = async (id) => {
   return user;
 };
 
+const updateUserProfile = async (id, userData) => {
+  const existingUser = await authRepository.findUserById(id);
+  if (!existingUser) {
+    throw new AppError("User tidak ditemukan", 404);
+  }
+
+  const fullName = String(userData.full_name || "").trim();
+  if (!fullName) {
+    throw new AppError("Nama lengkap wajib diisi", 400);
+  }
+
+  return authRepository.updateUserById(id, {
+    full_name: fullName,
+    phone: userData.phone ? String(userData.phone).trim() : null,
+  });
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserById,
+  updateUserProfile,
 };

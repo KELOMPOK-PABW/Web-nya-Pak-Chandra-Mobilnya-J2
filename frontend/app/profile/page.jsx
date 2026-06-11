@@ -5,11 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { authService } from "@/services/authService";
-<<<<<<< HEAD
-import { apiUrl, buildAuthHeaders, handleResponse } from "@/services/apiClient";
-=======
+import { profileService } from "@/services/profileService";
 import { useToast } from "@/components/ui/Toast";
->>>>>>> 5fc73df7a67ee9abae6915ec34ba9f36b63685d6
 
 const ROLE_LABELS = {
   buyer: "Pembeli",
@@ -37,11 +34,8 @@ export default function ProfilePage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(apiUrl("/me"), {
-          headers: buildAuthHeaders(),
-        });
-        const data = await handleResponse(res);
-        setProfile(data.data ?? data);
+        const data = await profileService.getMe();
+        setProfile(data);
       } catch (err) {
         setError(err.message || "Gagal memuat data profil");
       } finally {

@@ -16,7 +16,7 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-const getOrderById = async (req, res, next) => {
+const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await orderService.getOrderById(Number(id), req.user.id);
@@ -27,11 +27,15 @@ const getOrderById = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    next(error);
+    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const getOrderItems = async (req, res, next) => {
+const getOrderItems = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await orderService.getOrderItems(Number(id), req.user.id);
@@ -41,64 +45,67 @@ const getOrderItems = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
-    next(error);
+    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const getStatusHistory = async (req, res, next) => {
+const getOrderHistory = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await orderService.getStatusHistory(Number(id), req.user.id);
+    const result = await orderService.getOrderHistory(Number(id), req.user.id);
 
     return res.status(200).json({
       success: true,
       data: result,
     });
   } catch (error) {
-    next(error);
+    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const cancelOrder = async (req, res, next) => {
+const cancelOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await orderService.cancelOrder(Number(id), req.user.id);
 
     return res.status(200).json({
-      message: "Pesanan dibatalkan",
+      success: true,
+      message: "Pesanan berhasil dibatalkan",
       data: result,
     });
   } catch (error) {
-    next(error);
+    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const confirmOrder = async (req, res, next) => {
+const confirmOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await orderService.confirmOrder(Number(id), req.user.id);
 
     return res.status(200).json({
-      message: "Pesanan diterima",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const completeOrderItem = async (req, res, next) => {
-  try {
-    const { orderItemId } = req.params;
-    const result = await orderService.completeOrderItem(Number(orderItemId), req.user.id);
-
-    return res.status(200).json({
       success: true,
-      message: "Pesanan telah diselesaikan",
+      message: "Pesanan berhasil dikonfirmasi diterima",
       data: result,
     });
   } catch (error) {
-    next(error);
+    const statusCode = error.message === "Order tidak ditemukan" ? 404 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -106,8 +113,7 @@ module.exports = {
   getAllOrders,
   getOrderById,
   getOrderItems,
-  getStatusHistory,
+  getOrderHistory,
   cancelOrder,
   confirmOrder,
-  completeOrderItem,
 };

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { checkoutService } from "@/services/checkoutService";
+import { addressService } from "@/services/addressService";
 
 /* ── helpers ── */
 function fmt(n) {
@@ -134,16 +135,6 @@ export default function CheckoutPage() {
 
   /* place order */
   const handlePlaceOrder = async () => {
-<<<<<<< HEAD
-=======
-    // Validate address — skip if a saved address is selected
-    if (!selectedAddressId) {
-      if (!address.detail.trim() || !address.city.trim() || !address.name.trim()) {
-        setAddressError("Lengkapi alamat pengiriman (nama, detail, dan kota).");
-        return;
-      }
-    }
->>>>>>> 5fc73df7a67ee9abae6915ec34ba9f36b63685d6
     setAddressError("");
     setError("");
 
@@ -161,50 +152,35 @@ export default function CheckoutPage() {
       return;
     }
 
-    const cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
-    if (!cartId) {
-      setError("Cart ID tidak ditemukan. Coba refresh halaman.");
-      return;
-    }
-
     setSubmitting(true);
     try {
-<<<<<<< HEAD
+      let checkoutAddressId = selectedAddressId;
+      if (addressMode === "manual") {
+        const createdAddress = await addressService.create({
+          address: manualAddress.detail,
+          city: manualAddress.city,
+          postal_code: manualAddress.zip,
+        });
+        checkoutAddressId = createdAddress?.address_id ?? createdAddress?.id;
+      }
+
+      if (!checkoutAddressId) {
+        throw new Error("Alamat pengiriman tidak ditemukan.");
+      }
+
+      let cartId = cartItems[0]?.cart_id || cartItems[0]?.cartId;
+      if (!cartId) {
+        const cartCount = await cartService.countCartItems();
+        cartId = cartCount?.cart_id ?? cartCount?.cartId;
+      }
+
+      if (!cartId) {
+        throw new Error("Cart ID tidak ditemukan. Coba refresh halaman.");
+      }
+
       const result = await checkoutService.createOrder({
         cart_id: Number(cartId),
-=======
-      const token = authService.getToken();
-      // Get cart_id from the count endpoint
-      const countRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/count`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
-      });
-
-      if (!countRes.ok) {
-        const errData = await countRes.json().catch(() => ({}));
-        throw new Error(errData.message || "Gagal mendapatkan informasi cart");
-      }
-
-      const countData = await countRes.json();
-      const cartId = countData?.data?.cart_id;
-
-      if (!cartId) {
-        if (cartItems.length === 0) {
-          throw new Error("Keranjang kosong");
-        }
-        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
-      }
-
-      if (!cartId) {
-        if (cartItems.length === 0) {
-          throw new Error("Keranjang kosong");
-        }
-        throw new Error("Cart ID tidak ditemukan. Data cart mungkin tidak lengkap.");
-      }
-
-      const checkoutData = await checkoutService.createOrder({
-        cart_id: cartId,
->>>>>>> 5fc73df7a67ee9abae6915ec34ba9f36b63685d6
-        address_id: Number(selectedAddressId || 1),
+        address_id: Number(checkoutAddressId),
         payment_method: "ewallet",
       });
 
