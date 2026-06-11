@@ -1,14 +1,39 @@
 const orderRepository = require("../repository/orderRepository");
-const AppError = require("../utils/AppError");
-const { mapStatusForResponse } = require("../utils/orderStatus");
+
+const ORDER_ITEM_FLOW = [
+  "menunggu_penjual",
+  "diproses_penjual",
+  "menunggu_kurir",
+  "sedang_dikirim",
+  "sampai_di_tujuan",
+  "diterima_pembeli",
+];
+
+const deriveOrderStatus = (order) => {
+  if (!order) return "pending";
+  if (order.paymentStatus === "failed") return "cancelled";
+  if (order.paymentStatus === "pending") return "pending";
+
+  const statuses = order.items?.map((item) => item.status) || [];
+  if (statuses.length === 0) return order.paymentStatus || "pending";
+  if (statuses.every((status) => status === "transaksi_gagal")) return "cancelled";
+  if (statuses.every((status) => status === "diterima_pembeli")) return "completed";
+  if (statuses.some((status) => status === "sampai_di_tujuan")) return "delivered";
+  if (statuses.some((status) => status === "sedang_dikirim")) return "shipped";
+  if (statuses.some((status) => status === "menunggu_kurir" || status === "diproses_penjual")) return "processing";
+  return "menunggu_penjual";
+};
 
 const getAllOrders = async (buyerId) => {
   const orders = await orderRepository.findOrdersByBuyerId(buyerId);
 
   return orders.map((order) => ({
     id: order.id,
-    status: order.paymentStatus,
+    status: deriveOrderStatus(order),
+    payment_status: order.paymentStatus,
     total_price: Number(order.totalAmount),
+    created_at: order.createdAt,
+    item_count: order.items?.length || 0,
   }));
 };
 
@@ -20,12 +45,15 @@ const getOrderById = async (orderId, buyerId) => {
   const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
 
   if (!order) {
-    throw new AppError("Order tidak ditemukan", 404);
+    throw new Error("Order tidak ditemukan");
   }
 
   return {
     order_id: order.id,
+    status: deriveOrderStatus(order),
     payment_status: order.paymentStatus,
+    total_price: Number(order.totalAmount),
+    created_at: order.createdAt,
     address: order.address
       ? {
         address: order.address.address,
@@ -37,6 +65,8 @@ const getOrderById = async (orderId, buyerId) => {
       store_name: item.seller ? item.seller.fullName : "-",
       qty: item.qty,
       price: Number(item.priceSnap),
+      subtotal: Number(item.subtotal),
+      status: item.status,
     })),
   };
 };
@@ -46,10 +76,11 @@ const getOrderItems = async (orderId, buyerId) => {
     throw new Error("Order ID tidak valid");
   }
 
+  // Verify order ownership first
   const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
 
   if (!order) {
-    throw new AppError("Order tidak ditemukan", 404);
+    throw new Error("Order tidak ditemukan");
   }
 
   const items = await orderRepository.findOrderItemsByOrderId(Number(orderId));
@@ -61,34 +92,22 @@ const getOrderItems = async (orderId, buyerId) => {
   }));
 };
 
-const getStatusHistory = async (orderId, buyerId) => {
+const getOrderHistory = async (orderId, buyerId) => {
   if (!orderId || isNaN(orderId)) {
     throw new Error("Order ID tidak valid");
   }
 
-  const order = await orderRepository.findOrderMetaByIdForBuyer(Number(orderId), buyerId);
-
+  const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
   if (!order) {
-    throw new AppError("Order tidak ditemukan", 404);
+    throw new Error("Order tidak ditemukan");
   }
 
-  const histories = await orderRepository.findStatusHistoryByOrderId(Number(orderId));
-
-  const events = histories.map((entry) => ({
-    status: mapStatusForResponse(entry.status),
+  const history = await orderRepository.findOrderHistoryByOrderId(Number(orderId));
+  return history.map((entry) => ({
+    id: entry.id,
+    status: entry.status,
     created_at: entry.createdAt,
   }));
-
-  if (order.paidAt) {
-    events.push({
-      status: mapStatusForResponse("paid"),
-      created_at: order.paidAt,
-    });
-  }
-
-  events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-  return events;
 };
 
 const cancelOrder = async (orderId, buyerId) => {
@@ -96,32 +115,26 @@ const cancelOrder = async (orderId, buyerId) => {
     throw new Error("Order ID tidak valid");
   }
 
-  const order = await orderRepository.findOrderWithItemsAndPayment(Number(orderId), buyerId);
-
+  const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
   if (!order) {
-    throw new AppError("Order tidak ditemukan", 404);
+    throw new Error("Order tidak ditemukan");
   }
 
-  if (order.items.every((item) => item.status === "transaksi_gagal")) {
-    throw new AppError("Pesanan sudah dibatalkan");
+  const currentStatus = deriveOrderStatus(order);
+  if (["shipped", "delivered", "completed", "cancelled"].includes(currentStatus)) {
+    throw new Error("Pesanan tidak dapat dibatalkan pada status ini");
   }
 
-  if (order.paymentStatus !== "pending") {
-    throw new AppError("Pesanan tidak dapat dibatalkan karena pembayaran sudah lunas");
-  }
+  await orderRepository.updateOrderItemsStatus(Number(orderId), "transaksi_gagal");
+  await orderRepository.updateOrderPaymentStatus(Number(orderId), "failed");
+  await orderRepository.updatePaymentStatus(Number(orderId), "failed");
+  await orderRepository.createOrderStatusHistory({
+    orderId: Number(orderId),
+    status: "transaksi_gagal",
+    updatedBy: buyerId,
+  });
 
-  if (!order.payment || order.payment.status !== "pending") {
-    throw new AppError("Pesanan tidak dapat dibatalkan karena pembayaran sudah lunas");
-  }
-
-  const hasProcessedItem = order.items.some((item) => item.status !== "menunggu_penjual");
-  if (hasProcessedItem) {
-    throw new AppError("Pesanan tidak dapat dibatalkan karena sudah diproses penjual");
-  }
-
-  await orderRepository.cancelOrder(Number(orderId), buyerId, buyerId);
-
-  return { status: "transaksi gagal" };
+  return getOrderById(Number(orderId), buyerId);
 };
 
 const confirmOrder = async (orderId, buyerId) => {
@@ -129,68 +142,31 @@ const confirmOrder = async (orderId, buyerId) => {
     throw new Error("Order ID tidak valid");
   }
 
-  const order = await orderRepository.findOrderWithItemsAndPayment(Number(orderId), buyerId);
-
+  const order = await orderRepository.findOrderByIdForBuyer(Number(orderId), buyerId);
   if (!order) {
-    throw new AppError("Order tidak ditemukan", 404);
+    throw new Error("Order tidak ditemukan");
   }
 
-  if (order.items.length === 0) {
-    throw new AppError("Pesanan tidak memiliki item");
+  const currentStatus = deriveOrderStatus(order);
+  if (!["shipped", "delivered"].includes(currentStatus)) {
+    throw new Error("Pesanan hanya bisa dikonfirmasi setelah dikirim atau sampai tujuan");
   }
 
-  if (order.items.every((item) => item.status === "diterima_pembeli")) {
-    throw new AppError("Pesanan sudah dikonfirmasi");
-  }
+  await orderRepository.updateOrderItemsStatus(Number(orderId), "diterima_pembeli");
+  await orderRepository.createOrderStatusHistory({
+    orderId: Number(orderId),
+    status: "diterima_pembeli",
+    updatedBy: buyerId,
+  });
 
-  const allArrived = order.items.every((item) => item.status === "sampai_di_tujuan");
-  if (!allArrived) {
-    throw new AppError("Semua item harus sudah sampai di tujuan");
-  }
-
-  await orderRepository.confirmOrderReceived(Number(orderId), buyerId, buyerId);
-
-  return { status: "diterima pembeli" };
-};
-
-const completeOrderItem = async (orderItemId, buyerId) => {
-  if (!orderItemId || isNaN(orderItemId)) {
-    throw new Error("Order item ID tidak valid");
-  }
-
-  const item = await orderRepository.findOrderItemByIdForBuyer(Number(orderItemId), buyerId);
-
-  if (!item) {
-    throw new AppError("Order item tidak ditemukan", 404);
-  }
-
-  if (item.status === "diterima_pembeli") {
-    throw new AppError("Pesanan sudah diselesaikan");
-  }
-
-  if (item.status !== "sampai_di_tujuan") {
-    throw new AppError("Item harus sudah sampai di tujuan");
-  }
-
-  const result = await orderRepository.completeOrderItem(Number(orderItemId), buyerId, buyerId);
-
-  if (!result) {
-    throw new AppError("Order item tidak ditemukan", 404);
-  }
-
-  return {
-    order_item_id: result.item.id,
-    status: "completed",
-    completed_at: result.completedAt,
-  };
+  return getOrderById(Number(orderId), buyerId);
 };
 
 module.exports = {
   getAllOrders,
   getOrderById,
   getOrderItems,
-  getStatusHistory,
+  getOrderHistory,
   cancelOrder,
   confirmOrder,
-  completeOrderItem,
 };
