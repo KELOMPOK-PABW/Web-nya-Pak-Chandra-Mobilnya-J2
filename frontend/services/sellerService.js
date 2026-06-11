@@ -37,7 +37,7 @@ function normalizeApplication(application = {}) {
     bankName: application.bankName ?? application.bank_name ?? "-",
     bankAccountNumber:
       application.bankAccountNumber ?? application.bank_account_number ?? application.account_number ?? "-",
-    status: application.status ?? "pending",
+    status: String(application.status ?? "pending").toLowerCase(),
   };
 }
 
@@ -140,13 +140,12 @@ export const sellerService = {
   },
 
   async getApplicationStatus() {
-    const res = await fetch(apiUrl("/seller/application"), {
+    const res = await fetch(apiUrl("/seller/application/me"), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
     const raw = unwrapData(data);
-    const application = Array.isArray(raw) ? raw[0] : raw;
-    return application ? normalizeApplication(application) : null;
+    return raw ? normalizeApplication(raw) : null;
   },
 
   async getSellerApplications() {

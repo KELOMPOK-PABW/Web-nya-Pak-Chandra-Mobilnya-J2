@@ -13,6 +13,8 @@ const SELLER_MENUS = [
   { label: "Dashboard", href: "/seller/dashboard" },
   { label: "Produk", href: "/seller/products" },
   { label: "Pesanan", href: "/seller/orders" },
+  { label: "Toko Saya", href: "/stores/me" },
+  { label: "Status Pengajuan", href: "/seller/application" },
 ];
 
 function fmt(n) {
@@ -60,7 +62,7 @@ export default function MyStorePage() {
           phone: store.phone || "",
           description: store.description || "",
         });
-        setProducts(productsRes.data || []);
+        setProducts(Array.isArray(productsRes) ? productsRes : productsRes.data || []);
       } catch (err) {
         if (active) setError(err.message || "Gagal mengambil data toko.");
       } finally {
@@ -245,10 +247,10 @@ export default function MyStorePage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {products.slice(0, 5).map(p => (
                       <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px", border: "1px solid #f1f5f9", borderRadius: "12px" }}>
-                        <div style={{ width: "40px", height: "40px", background: "#f0fdf4", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>🛍</div>
+                        <div style={{ width: "40px", height: "40px", background: "#f0fdf4", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 800, color: "#1A3C34" }}>P</div>
                         <div style={{ flex: 1 }}>
                           <p style={{ margin: 0, fontWeight: 600, fontSize: "13px" }}>{p.name}</p>
-                          <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>{fmt(p.price)} · Stok: {p.stock}</p>
+                          <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>{fmt(p.price)} - Stok: {p.stock}</p>
                         </div>
                         <Badge variant={p.stock > 0 ? "success" : "danger"}>{p.stock > 0 ? "Aktif" : "Habis"}</Badge>
                       </div>
