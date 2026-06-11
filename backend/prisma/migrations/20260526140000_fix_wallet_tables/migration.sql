@@ -2,9 +2,8 @@
 -- matching both the Prisma schema (Wallet -> wallets, WalletTransaction -> wallet_transactions)
 -- and the stored procedures (sp_wallet_topup, sp_wallet_refund)
 
--- Drop foreign keys on old tables
-ALTER TABLE `ewallet_transaction` DROP FOREIGN KEY IF EXISTS `ewallet_transaction_e_wallet_id_fkey`;
-ALTER TABLE `ewallet_transaction` DROP FOREIGN KEY IF EXISTS `ewallet_transaction_order_id_fkey`;
+ALTER TABLE `ewallet_transaction` DROP FOREIGN KEY `ewallet_transaction_e_wallet_id_fkey`;
+ALTER TABLE `ewallet_transaction` DROP FOREIGN KEY `ewallet_transaction_order_id_fkey`;
 
 -- Drop old tables
 DROP TABLE IF EXISTS `ewallet_transaction`;

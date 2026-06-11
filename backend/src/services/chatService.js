@@ -2,10 +2,48 @@ const chatRepository = require("../repository/chatRepository");
 const productRepository = require("../repository/productRepository");
 const productService = require("./productService");
 const llmService = require("./llmService");
+const { expandKeywords, detectKeywordsViaSynonyms } = require("../utils/synonyms");
 
-const CATALOG_SNAPSHOT_SIZE = 30;
+const CATALOG_SNAPSHOT_SIZE = 50;
+const CATALOG_FILTERED_SIZE = 100;
 const HISTORY_SIZE = 10;
 const MAX_SESSIONS_PER_USER = 5;
+
+// Brand + product type keywords for catalog filtering.
+// Covers Indonesian + English terms and major brand names so queries like
+// "apple computer" or "sepatu nike" match all relevant tokens.
+const PRODUCT_KEYWORDS = [
+  // ── Product types (Indonesian + English) ──
+  "laptop", "komputer", "computer", "smartphone", "hp", "handphone", "phone",
+  "sepatu", "shoes", "sneakers", "baju", "clothes", "kaos", "kemeja", "dress",
+  "tas", "bag", "jam", "watch", "parfum", "fragrance",
+  "furniture", "meja", "kursi",
+  "makeup", "skincare", "kecantikan",
+  "motor", "mobil",
+  "aksesoris", "accessories",
+  "olahraga", "sports",
+  "elektronik", "electronics", "tablet", "gaming",
+  // ── Brand names ──
+  "iphone", "macbook", "apple",
+  "samsung", "xiaomi", "oppo", "vivo", "google", "microsoft",
+  "asus", "lenovo", "acer", "dell", "hp",
+  "sony", "nintendo", "playstation",
+  "nike", "adidas", "puma", "converse", "h&m", "zara", "uniqlo",
+];
+
+/**
+ * Find ALL brand/product-type keywords present in the message — including synonyms.
+ *
+ * Uses synonym-aware matching: "notebook" maps to "laptop", "pc" maps to "komputer",
+ * so user queries using variant terms still trigger the right catalog filter.
+ *
+ * Returns an array of matched canonical keywords (empty = no match).
+ * All matches are returned so multi-token queries like "apple computer" or "sepatu nike"
+ * expand the catalog search scope.
+ */
+const detectKeywords = (message) => {
+  return detectKeywordsViaSynonyms(message, PRODUCT_KEYWORDS);
+};
 
 const formatMessage = (msg, hydratedProducts, entities) => ({
   id: msg.id,
@@ -18,9 +56,15 @@ const formatMessage = (msg, hydratedProducts, entities) => ({
   created_at: msg.createdAt,
 });
 
-const fetchProductsContext = async () => {
+const fetchProductsContext = async (message) => {
   try {
-    return await productRepository.getAllProducts({ skip: 0, take: CATALOG_SNAPSHOT_SIZE });
+    const keywords = detectKeywords(message);
+    const opts = { skip: 0, take: CATALOG_SNAPSHOT_SIZE };
+    if (keywords.length > 0) {
+      opts.keywords = keywords;
+      opts.take = CATALOG_FILTERED_SIZE;
+    }
+    return await productRepository.getAllProducts(opts);
   } catch (e) {
     return [];
   }
@@ -57,107 +101,10 @@ const enforceSessionLimit = async (userId) => {
   }
 };
 
-const runLlmChat = async ({ userId, message, history, sessionId }) => {
-  if (!message || !message.trim()) {
-    throw new Error("Pesan tidak boleh kosong");
-  }
-
-  let session;
-  let convo = Array.isArray(history) ? history.slice(-HISTORY_SIZE) : [];
-
-  if (sessionId) {
-    session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
-    if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
-    const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
-    convo = messagesToHistory(recent);
-  } else {
-    // Enforce max sessions: auto-delete oldest if at limit
-    await enforceSessionLimit(userId);
-    // Create a new session so the frontend can maintain continuity
-    session = await chatRepository.createSession({
-      userId: Number(userId),
-      title: message.slice(0, 80),
-    });
-  }
-
-  const productsContext = await fetchProductsContext();
-
-  const llmResult = await llmService.classifyAndSuggest({
-    message,
-    history: convo,
-    productsContext,
-  });
-
-  // Safety: add_to_cart without specific product entity → clear suggested IDs (prevent wrong auto-add)
-  if (llmResult.intent === "add_to_cart" && !llmResult.entities?.product) {
-    llmResult.suggested_product_ids = [];
-  }
-
-  // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
-  if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {
-    const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
-    if (fallbackIds.length > 0) {
-      llmResult.suggested_product_ids = fallbackIds;
-    }
-  }
-
-  // Store the user message and assistant message for server-side history
-  await chatRepository.addMessage({
-    sessionId: session.id,
-    role: "user",
-    content: message,
-  });
-
-  await chatRepository.addMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: llmResult.reply,
-    intent: llmResult.intent,
-    suggestedProductIds: llmResult.suggested_product_ids,
-    entities: llmResult.entities,
-  });
-
-  await chatRepository.touchSession(session.id);
-
-  return {
-    session_id: session.id,
-    intent: llmResult.intent,
-    reply: llmResult.reply,
-    entities: llmResult.entities,
-    follow_up_suggestions: llmResult.follow_up_suggestions || [],
-    suggested_products: hydrateProducts(productsContext, llmResult.suggested_product_ids),
-  };
-};
-
-const sendMessage = async ({ userId, sessionId, message }) => {
-  if (!message || !message.trim()) {
-    throw new Error("Pesan tidak boleh kosong");
-  }
-
-  let session;
-  if (sessionId) {
-    session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
-    if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
-  } else {
-    // Enforce max sessions: auto-delete oldest if at limit
-    await enforceSessionLimit(userId);
-    session = await chatRepository.createSession({
-      userId: Number(userId),
-      title: message.slice(0, 80),
-    });
-  }
-
-  const userMessage = await chatRepository.addMessage({
-    sessionId: session.id,
-    role: "user",
-    content: message,
-  });
-
-  const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
-  const history = messagesToHistory(recent.filter((m) => m.id !== userMessage.id));
-
-  const productsContext = await fetchProductsContext();
-
+// ── Shared LLM pipeline ─────────────────────────────────────────────
+// Calls the LLM, applies add_to_cart safety rules, stores the assistant
+// message, touches the session, and hydrates suggested products.
+const _callLlmAndPersist = async ({ session, message, history, productsContext }) => {
   const llmResult = await llmService.classifyAndSuggest({
     message,
     history,
@@ -169,8 +116,12 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     llmResult.suggested_product_ids = [];
   }
 
-  // Fallback: add_to_cart with named product but no IDs from LLM → search catalog by name
-  if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length === 0 && llmResult.entities?.product) {
+  // Fallback: add_to_cart with named product but no IDs → search catalog by name
+  if (
+    llmResult.intent === "add_to_cart" &&
+    llmResult.suggested_product_ids.length === 0 &&
+    llmResult.entities?.product
+  ) {
     const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
     if (fallbackIds.length > 0) {
       llmResult.suggested_product_ids = fallbackIds;
@@ -188,7 +139,93 @@ const sendMessage = async ({ userId, sessionId, message }) => {
 
   await chatRepository.touchSession(session.id);
 
-  const hydrated = hydrateProducts(productsContext, llmResult.suggested_product_ids);
+  return {
+    llmResult,
+    assistantMessage,
+    hydrated: hydrateProducts(productsContext, llmResult.suggested_product_ids),
+  };
+};
+
+// ── Resolve (or create) a chat session for a user ──────────────────
+const _resolveSession = async ({ userId, sessionId, message }) => {
+  if (sessionId) {
+    const session = await chatRepository.findSessionByIdForUser(Number(sessionId), Number(userId));
+    if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
+    return session;
+  }
+
+  await enforceSessionLimit(userId);
+  return chatRepository.createSession({
+    userId: Number(userId),
+    title: message.slice(0, 80),
+  });
+};
+
+// ── Public API ─────────────────────────────────────────────────────
+
+const runLlmChat = async ({ userId, message, history, sessionId }) => {
+  if (!message || !message.trim()) {
+    throw new Error("Pesan tidak boleh kosong");
+  }
+
+  const session = await _resolveSession({ userId, sessionId, message });
+
+  let convo = Array.isArray(history) ? history.slice(-HISTORY_SIZE) : [];
+  if (sessionId) {
+    const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
+    convo = messagesToHistory(recent);
+  }
+
+  const productsContext = await fetchProductsContext(message);
+
+  // Persist user message *after* building convo (so it doesn't appear in history for this turn)
+  await chatRepository.addMessage({
+    sessionId: session.id,
+    role: "user",
+    content: message,
+  });
+
+  const { llmResult, hydrated } = await _callLlmAndPersist({
+    session,
+    message,
+    history: convo,
+    productsContext,
+  });
+
+  return {
+    session_id: session.id,
+    intent: llmResult.intent,
+    reply: llmResult.reply,
+    entities: llmResult.entities,
+    follow_up_suggestions: llmResult.follow_up_suggestions || [],
+    suggested_products: hydrated,
+  };
+};
+
+const sendMessage = async ({ userId, sessionId, message }) => {
+  if (!message || !message.trim()) {
+    throw new Error("Pesan tidak boleh kosong");
+  }
+
+  const session = await _resolveSession({ userId, sessionId, message });
+
+  const userMessage = await chatRepository.addMessage({
+    sessionId: session.id,
+    role: "user",
+    content: message,
+  });
+
+  const recent = await chatRepository.getRecentMessages(session.id, HISTORY_SIZE);
+  const history = messagesToHistory(recent.filter((m) => m.id !== userMessage.id));
+
+  const productsContext = await fetchProductsContext(message);
+
+  const { llmResult, assistantMessage, hydrated } = await _callLlmAndPersist({
+    session,
+    message,
+    history,
+    productsContext,
+  });
 
   return {
     session_id: session.id,
@@ -205,11 +242,24 @@ const getUserSessions = async (userId) => {
   return rows.map((s) => ({
     id: s.id,
     title: s.title || "Percakapan baru",
-    message_count: s._count?.messages ?? 0,
-    last_message: s.messages?.[0]?.content?.slice(0, 80) || null,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   }));
+};
+
+const createSession = async (userId, title) => {
+  await enforceSessionLimit(userId);
+
+  const session = await chatRepository.createSession({
+    userId: Number(userId),
+    title: title.trim(),
+  });
+
+  return {
+    id: session.id,
+    title: session.title || title.trim(),
+    created_at: session.createdAt,
+  };
 };
 
 const getSessionMessages = async (userId, sessionId) => {
@@ -217,15 +267,11 @@ const getSessionMessages = async (userId, sessionId) => {
   if (!session) throw new Error("Akses ditolak: sesi bukan milik Anda");
 
   const messages = await chatRepository.getSessionMessages(session.id, 100);
-  const productsContext = await fetchProductsContext();
 
   return messages.map((msg) => ({
     id: msg.id,
-    role: msg.role,
-    content: msg.content,
-    intent: msg.intent || null,
-    entities: msg.entities || null,
-    suggested_products: hydrateProducts(productsContext, msg.suggestedProductIds || []),
+    sender: msg.role,
+    message: msg.content,
     created_at: msg.createdAt,
   }));
 };
@@ -242,6 +288,7 @@ module.exports = {
   runLlmChat,
   sendMessage,
   getUserSessions,
+  createSession,
   getSessionMessages,
   deleteSession,
 };

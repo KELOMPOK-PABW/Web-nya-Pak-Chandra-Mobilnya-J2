@@ -2,18 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { productService } from "@/services/productService";
+import { cartService } from "@/services/cartService";
+import { authService } from "@/services/authService";
 import { ReviewList } from "@/components/reviews/ReviewList";
-
-const formatPrice = (value) => `Rp ${Number(value).toLocaleString("id-ID")}`;
+import { useCartContext } from "@/components/CartContext";
+import { formatPrice } from "@/utils/format";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
+  const { refreshCartCount } = useCartContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -34,6 +40,29 @@ export default function ProductDetailPage() {
     if (id) load();
     return () => { mounted = false; };
   }, [id]);
+
+  const addToCart = async () => {
+    const user = authService.getUser();
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (!product?.id) return;
+
+    setAddingToCart(true);
+    setCartMessage(null);
+
+    try {
+      await cartService.addItem({ product_id: product.id, qty: 1 });
+      await refreshCartCount();
+      setCartMessage({ type: "success", text: "Produk berhasil ditambahkan ke keranjang." });
+    } catch (err) {
+      setCartMessage({ type: "error", text: err.message || "Gagal menambahkan produk ke keranjang." });
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
@@ -81,10 +110,14 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-6">
               <div className="bg-white border border-[#E8E8E8] rounded-2xl p-6">
-                <div
-                  className="rounded-3xl h-72 flex items-center justify-center text-6xl bg-[#F3F4F6]"
-                >
-                  📦
+                <div className="rounded-3xl h-72 flex items-center justify-center bg-[#F3F4F6] overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name}
+                      className="w-full h-full object-cover"
+                      onError={e => { e.target.style.display = "none"; e.target.parentElement.innerText = "📦"; }} />
+                  ) : (
+                    <span className="text-6xl">📦</span>
+                  )}
                 </div>
               </div>
 
@@ -130,11 +163,38 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
                 <div className="mt-5 flex flex-col gap-3">
-                  <Link
-                    href={`/product/${product.id}`}
-                    className="rounded-xl bg-[#1A3C34] text-white text-sm font-semibold py-3 text-center hover:bg-[#16332C] transition-colors block"
+                  {cartMessage && (
+                    <div className={`rounded-xl px-4 py-2.5 text-[13px] font-medium ${
+                      cartMessage.type === "success"
+                        ? "bg-[#F0FBF8] border border-[#C8EDE8] text-[#1A3C34]"
+                        : "bg-red-50 border border-red-200 text-red-700"
+                    }`}>
+                      {cartMessage.text}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={addToCart}
+                    disabled={addingToCart || Number(product.stock || 0) === 0}
+                    className="rounded-xl bg-[#1A3C34] text-white text-sm font-semibold py-3 text-center hover:bg-[#16332C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors block"
                   >
-                    Lihat Detail & Beli
+                    {addingToCart
+                      ? "Menambahkan..."
+                      : Number(product.stock || 0) === 0
+                        ? "Stok Habis"
+                        : "Tambah ke Keranjang"}
+                  </button>
+                  <Link
+                    href="/cart"
+                    className="rounded-xl border border-[#1A3C34] bg-[#F0FBF8] text-[#1A3C34] text-sm font-semibold py-3 text-center hover:bg-[#D8F5F0] transition-colors block"
+                  >
+                    Buka Keranjang
+                  </Link>
+                  <Link
+                    href="/products"
+                    className="rounded-xl border border-[#E8E8E8] text-[#555] text-sm font-semibold py-3 text-center hover:bg-[#FAFAF8] transition-colors block"
+                  >
+                    Lanjut Belanja
                   </Link>
                 </div>
               </div>

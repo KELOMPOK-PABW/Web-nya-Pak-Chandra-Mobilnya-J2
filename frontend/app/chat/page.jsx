@@ -9,6 +9,11 @@ import { chatService } from "@/services/chatService";
 import { cartService } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { useCartContext } from "@/components/CartContext";
+import { Package, Bot, MessageSquare, ChevronDown, Loader2, Trash2, AlertCircle, Send } from "lucide-react";
+import ComparisonCard from "@/components/chat/ComparisonCard";
+import ReviewSummary from "@/components/chat/ReviewSummary";
+import ConfirmationCard from "@/components/chat/ConfirmationCard";
+import MemoryPanel from "@/components/chat/MemoryPanel";
 
 const STORAGE_KEY = "chat_session_id";
 
@@ -33,11 +38,7 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
     <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[180px]">
       <Link href={productHref} style={{ textDecoration: "none" }}>
         <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A5D6D0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
+          <Package size={32} color="#A5D6D0" strokeWidth={1.5} />
         </div>
         <div className="p-3">
           <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1 line-clamp-2">{name}</p>
@@ -47,7 +48,7 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
       </Link>
       {onAddToCart && (
         <button
-          onClick={(e) => { e.preventDefault(); onAddToCart(pid); }}
+          onClick={(e) => { e.preventDefault(); onAddToCart(product); }}
           disabled={addingToCart}
           className="w-full bg-[#1A3C34] text-white text-[11px] font-semibold py-2 hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50"
         >
@@ -58,46 +59,67 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
   );
 }
 
-const PRODUCT_INTENTS = ["search_product", "add_to_cart"];
+const PRODUCT_INTENTS = ["search_product", "compare", "add_to_cart"];
 
-function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart, sessionId }) {
+function ChatBubble({ role, content, products, intent, entities, followUpSuggestions, onFollowUp, onAddToCart, onCheckout, onTrackOrder, onClearCart, addingToCart, sessionId, reviewData, confidence, citations }) {
   const isUser = role === "user";
   const isProductRelated = PRODUCT_INTENTS.includes(intent);
+  const isCompare = intent === "compare";
   const showCartButton = intent === "add_to_cart" && products && products.length > 0;
   const showCheckoutButton = intent === "checkout_order";
   const showTrackButton = intent === "track_order" && entities?.order_id;
   const showClearCartButton = intent === "clear_cart";
+  const hasReviewData = reviewData || (products?.[0]?.review_summary);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className="flex gap-2 max-w-[85%]">
+      <div className="flex gap-2 max-w-[90%]">
         {!isUser && (
           <div className="w-8 h-8 rounded-xl bg-[#1A3C34] flex items-center justify-center flex-shrink-0 mt-1">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
-              <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-            </svg>
+            <Bot size={16} color="white" strokeWidth={2} />
           </div>
         )}
         <div className="min-w-0">
           <div className={`rounded-2xl px-4 py-3 text-[14px] leading-relaxed break-words whitespace-pre-wrap ${
             isUser
-              ? "bg-[#1A3C34] text-white rounded-br-md"
-              : "bg-white border border-[#EBEBEB] text-[#1A1A1A] rounded-bl-md shadow-sm"
+              ? "bg-gradient-to-br from-[#1A3C34] to-[#2D6A5E] text-white rounded-br-md shadow-md shadow-emerald-900/10"
+              : "bg-white border border-[#EBEBEB] text-[#1A1A1A] rounded-bl-md shadow-sm hover:shadow-md transition-shadow"
           }`}>
             {content}
           </div>
 
-          {/* Intent action buttons */}
-          {!isUser && showCartButton && (
+          {/* ComparisonCard (2+ products) */}
+          {!isUser && isCompare && products && products.length >= 2 && (
+            <div className="mt-2">
+              <ComparisonCard
+                products={products}
+                onAddToCart={onAddToCart}
+                addingToCart={addingToCart}
+              />
+            </div>
+          )}
+
+          {/* ReviewSummary */}
+          {!isUser && hasReviewData && !isCompare && (
+            <div className="mt-2">
+              <ReviewSummary
+                summary={reviewData || products?.[0]?.review_summary}
+                reviews={products?.[0]?.reviews || []}
+                productName={products?.[0]?.name ?? products?.[0]?.product_name}
+              />
+            </div>
+          )}
+
+          {/* Add-to-cart single button (non-compare) */}
+          {!isUser && showCartButton && !isCompare && (
             <div className="mt-2">
               <button
-                onClick={() => onAddToCart && onAddToCart(products[0].product_id ?? products[0].id)}
+                onClick={() => onAddToCart && onAddToCart(products[0])}
                 disabled={addingToCart}
                 className="w-full bg-[#1A3C34] text-white text-[13px] font-semibold py-2.5 px-4 rounded-xl hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <span>🛒</span>
-                <span>{addingToCart ? "Menambahkan..." : `Tambahkan "${products[0].name ?? products[0].product_name}" ke Keranjang`}</span>
+                <span>{addingToCart ? "Menambahkan..." : "Tambah ke Keranjang"}</span>
               </button>
             </div>
           )}
@@ -138,8 +160,8 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
             </div>
           )}
 
-          {/* Product cards — only show when intent is product-related */}
-          {isProductRelated && products && products.length > 0 && (
+          {/* Product cards (non-compare search results) */}
+          {!isUser && isProductRelated && !isCompare && products && products.length > 0 && !showCartButton && (
             <div className="mt-3 max-w-full">
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {products.map((p, i) => (
@@ -155,7 +177,7 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
             </div>
           )}
 
-          {/* Follow-up suggestion chips (recommendation bubbles) */}
+          {/* Follow-up suggestion chips */}
           {!isUser && followUpSuggestions && followUpSuggestions.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {followUpSuggestions.map((suggestion, i) => (
@@ -166,6 +188,21 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
                 >
                   {suggestion}
                 </button>
+              ))}
+            </div>
+          )}
+
+          {/* Source citations */}
+          {!isUser && citations && citations.length > 0 && (
+            <div className="mt-2 border-t border-[#F0F0F0] pt-2">
+              <p className="text-[10px] text-gray-400 mb-1 font-medium">Sumber:</p>
+              {citations.map((cit, i) => (
+                <div key={i} className="text-[10px] text-gray-400">
+                  <a href={cit.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[#1A3C34] hover:underline">
+                    {cit.label || `Sumber ${i + 1}`}
+                  </a>
+                </div>
               ))}
             </div>
           )}
@@ -199,14 +236,9 @@ function SessionList({ sessions, activeId, onSelect, onNew, onDelete }) {
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-2 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-semibold text-[#1A1A1A] hover:border-[#1A3C34] transition-colors cursor-pointer"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-          </svg>
+          <MessageSquare size={14} />
           {active ? active.title : "Riwayat Chat"}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className={`transition-transform ${collapsed ? "" : "rotate-180"}`}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
+          <ChevronDown size={12} className={`transition-transform ${collapsed ? "" : "rotate-180"}`} />
         </button>
         <button onClick={onNew}
           className="bg-[#1A3C34] text-white rounded-xl px-3 py-2 text-[12px] font-semibold hover:bg-[#2D6A5E] transition-colors cursor-pointer">
@@ -241,16 +273,9 @@ function SessionList({ sessions, activeId, onSelect, onNew, onDelete }) {
                 title="Hapus sesi"
               >
                 {deletingId === s.id ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
-                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
-                  </svg>
+                  <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                    <line x1="10" y1="11" x2="10" y2="17"/>
-                    <line x1="14" y1="11" x2="14" y2="17"/>
-                  </svg>
+                  <Trash2 size={14} />
                 )}
               </button>
             </div>
@@ -273,6 +298,9 @@ export default function ChatPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartFeedback, setCartFeedback] = useState(null); // { type: 'success'|'error', message }
   const [confirmAction, setConfirmAction] = useState(null); // { action: 'clear_cart' } | null
+  const [pendingProduct, setPendingProduct] = useState(null);
+  const [confirmQty, setConfirmQty] = useState(1);
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const sessionIdRef = useRef(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -334,6 +362,9 @@ export default function ChatPage() {
               products: m.suggested_products || [],
               intent: m.intent,
               entities: m.entities || {},
+              reviewData: m.review_summary || m.review_data || null,
+              confidence: m.confidence || null,
+              citations: m.citations || [],
             }))
           );
         }
@@ -352,20 +383,26 @@ export default function ChatPage() {
 
   // --- Intent action handlers ---
 
-  const handleAddToCart = useCallback(async (productId) => {
-    if (addingToCart) return;
+  const handleRequestAddToCart = useCallback((product) => {
+    setPendingProduct(product);
+    setConfirmQty(1);
+  }, []);
+
+  const handleConfirmAddToCart = useCallback(async () => {
+    if (!pendingProduct || addingToCart) return;
     setAddingToCart(true);
     setCartFeedback(null);
     try {
-      await cartService.addItem({ product_id: productId, qty: 1 });
+      await cartService.addItem({ product_id: pendingProduct.product_id ?? pendingProduct.id, qty: confirmQty });
       await refreshCartCount();
-      setCartFeedback({ type: "success", message: "✅ Produk berhasil ditambahkan ke keranjang!" });
+      setCartFeedback({ type: "success", message: `${pendingProduct.name ?? pendingProduct.product_name} (${confirmQty}x) berhasil ditambahkan!` });
+      setPendingProduct(null);
     } catch (err) {
-      setCartFeedback({ type: "error", message: `❌ Gagal menambahkan: ${err.message}` });
+      setCartFeedback({ type: "error", message: `Gagal menambahkan: ${err.message}` });
     } finally {
       setAddingToCart(false);
     }
-  }, [addingToCart, refreshCartCount]);
+  }, [pendingProduct, addingToCart, confirmQty, refreshCartCount]);
 
   const handleCheckout = useCallback(() => {
     router.push("/checkout");
@@ -386,9 +423,9 @@ export default function ChatPage() {
     try {
       await cartService.clearCart();
       await refreshCartCount();
-      setCartFeedback({ type: "success", message: "✅ Keranjang berhasil dikosongkan!" });
+      setCartFeedback({ type: "success", message: "Keranjang berhasil dikosongkan!" });
     } catch (err) {
-      setCartFeedback({ type: "error", message: `❌ Gagal mengosongkan keranjang: ${err.message}` });
+      setCartFeedback({ type: "error", message: `Gagal mengosongkan keranjang: ${err.message}` });
     }
   }, [refreshCartCount]);
 
@@ -441,6 +478,9 @@ export default function ChatPage() {
         intent: result.intent,
         entities: result.entities || {},
         followUpSuggestions: result.follow_up_suggestions || [],
+        reviewData: result.review_summary || result.review_data || null,
+        confidence: result.confidence || (result.intent === "search_product" ? "high" : "medium"),
+        citations: result.citations || [],
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -497,6 +537,9 @@ export default function ChatPage() {
           products: m.suggested_products || [],
           intent: m.intent,
           entities: m.entities || {},
+          reviewData: m.review_summary || m.review_data || null,
+          confidence: m.confidence || null,
+          citations: m.citations || [],
         }))
       );
       setError(null);
@@ -537,6 +580,9 @@ export default function ChatPage() {
                   products: m.suggested_products || [],
                   intent: m.intent,
                   entities: m.entities || {},
+                  reviewData: m.review_summary || m.review_data || null,
+                  confidence: m.confidence || null,
+                  citations: m.citations || [],
                 }))
               );
             }).catch(() => {});
@@ -552,6 +598,14 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
       <Navbar />
+      <style>{`
+        @keyframes typingDot {
+          0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+          30% { opacity: 1; transform: translateY(-4px); }
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
       <main className="flex-1 max-w-[800px] mx-auto w-full px-4 py-6 flex flex-col">
 
         {/* ── HEADER ── */}
@@ -562,12 +616,27 @@ export default function ChatPage() {
               Tanyakan produk, cari rekomendasi, atau belanja dengan bantuan AI
             </p>
           </div>
-          {messages.length > 0 && (
-            <button onClick={handleReset}
-              className="text-[12px] font-semibold text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
-              Mulai ulang
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMemoryPanel(!showMemoryPanel)}
+              className={`text-[12px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                showMemoryPanel ? "text-[#1A3C34]" : "text-gray-400 hover:text-[#1A3C34]"
+              }`}
+              title="Yang saya ingat"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a4 4 0 00-4 4v1h8V6a4 4 0 00-4-4z"/>
+                <path d="M4 10h16v10a2 2 0 01-2 2H6a2 2 0 01-2-2V10z"/>
+              </svg>
+              Ingatan
             </button>
-          )}
+            {messages.length > 0 && (
+              <button onClick={handleReset}
+                className="text-[12px] font-semibold text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
+                Mulai ulang
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── SESSION PICKER ── */}
@@ -581,19 +650,53 @@ export default function ChatPage() {
           />
         )}
 
+        {/* ── MEMORY PANEL ── */}
+        {showMemoryPanel && (
+          <div className="mb-4">
+            <MemoryPanel
+              memories={[
+                { id: "budget-1", label: "Budget laptop", value: "Rp 10-15 juta", category: "budget" },
+                { id: "brand-1", label: "Brand favorit", value: "Lenovo, ASUS", category: "brand" },
+                { id: "pref-1", label: "Preferensi", value: "Laptop tipis, gaming", category: "preference" },
+              ]}
+              onEdit={(id, val) => console.log("Edit", id, val)}
+              onDelete={(id) => console.log("Delete", id)}
+              onClearAll={() => console.log("Clear all")}
+              onClose={() => setShowMemoryPanel(false)}
+            />
+          </div>
+        )}
+
         {/* ── CART FEEDBACK BANNER ── */}
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
           cartFeedback ? "max-h-20 opacity-100 mb-3" : "max-h-0 opacity-0 mb-0"
         }`}>
           {cartFeedback && (
-            <div className={`rounded-xl px-4 py-2.5 text-[13px] font-medium flex items-center gap-2 ${
+            <div className={`rounded-xl px-4 py-2.5 text-[13px] font-medium flex items-center gap-2.5 ${
               cartFeedback.type === "success"
-                ? "bg-green-50 border border-green-200 text-green-700"
+                ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
                 : "bg-red-50 border border-red-200 text-red-700"
             }`}>
-              {cartFeedback.message}
-              <button onClick={() => setCartFeedback(null)} className="ml-auto text-current opacity-50 hover:opacity-100 cursor-pointer">
-                ✕
+              <span className="flex-shrink-0">
+                {cartFeedback.type === "success" ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                )}
+              </span>
+              <span className="flex-1">{cartFeedback.message}</span>
+              <button onClick={() => setCartFeedback(null)} className="flex-shrink-0 text-current opacity-40 hover:opacity-100 transition-opacity cursor-pointer" aria-label="Tutup">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
               </button>
             </div>
           )}
@@ -602,27 +705,60 @@ export default function ChatPage() {
         {/* ── CHAT AREA ── */}
         <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-4 mb-4 overflow-y-auto overflow-x-hidden min-h-[400px] max-h-[600px] shadow-sm">
 
-          {/* Empty state */}
+          {/* ── Empty state: personality-driven welcome ── */}
           {messages.length === 0 && !loading && (
-            <div className="h-full flex flex-col items-center justify-center text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-[#F0FBF8] flex items-center justify-center mb-4">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A3C34" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h10a2 2 0 012 2v8"/>
-                  <path d="M12 8V4m0 0L8 8m4-4l4 4"/>
+            <div className="h-full flex flex-col items-center justify-center text-center py-10 px-6">
+              {/* Avatar */}
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1A3C34] to-[#2D6A5E] flex items-center justify-center mb-5 shadow-lg shadow-emerald-900/20">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 16v-4"/>
+                  <path d="M12 8h.01"/>
                 </svg>
               </div>
-              <h2 className="text-[15px] font-bold text-[#1A1A1A] mb-2">Mulai Belanja dengan AI</h2>
-              <p className="text-[13px] text-gray-400 max-w-sm mb-6">
-                Klik salah satu saran di bawah atau ketik pertanyaanmu sendiri untuk memulai percakapan.
+
+              {/* Greeting */}
+              <h2 className="text-[18px] font-bold text-[#1A1A1A] mb-1.5">
+                Halo! Ada yang bisa dibantu?
+              </h2>
+              <p className="text-[13px] text-gray-400 max-w-xs leading-relaxed mb-6">
+                Saya asisten belanja kamu — bisa cari produk, bandingin spesifikasi, cek promo, dan langsung masukin ke keranjang. Bilang aja kebutuhan kamu!
               </p>
-              <div className="flex flex-wrap gap-2 justify-center max-w-md">
+
+              {/* Capability badges */}
+              <div className="flex flex-wrap gap-2 justify-center mb-6 max-w-sm">
+                {[
+                  { icon: "🔍", label: "Cari produk" },
+                  { icon: "📊", label: "Bandingkan" },
+                  { icon: "⭐", label: "Rekomendasi" },
+                  { icon: "🛒", label: "Tambah belanja" },
+                  { icon: "💳", label: "Cek promo" },
+                ].map((item, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 bg-[#F5F5F5] rounded-full px-3 py-1.5 text-[11px] font-medium text-[#555]">
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </span>
+                ))}
+              </div>
+
+              {/* Quick prompts */}
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2.5">Coba salah satu:</p>
+              <div className="flex flex-wrap gap-2 justify-center max-w-sm">
                 {QUICK_PROMPTS.map((q, i) => (
                   <button key={i} onClick={() => handleQuickSend(q)}
                     disabled={loading}
-                    className="bg-[#F0FBF8] border border-[#C8EDE8] rounded-full px-4 py-2 text-[12px] font-medium text-[#1A3C34] hover:bg-[#E0F2F1] transition-colors cursor-pointer disabled:opacity-50">
+                    className="bg-white border border-[#E5E7EB] rounded-full px-4 py-2 text-[12px] font-medium text-[#1A1A1A] hover:border-[#1A3C34] hover:text-[#1A3C34] hover:bg-[#F0FBF8] transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
                     {q}
                   </button>
                 ))}
+              </div>
+
+              {/* Tip */}
+              <div className="mt-6 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  💡 <strong>Tips:</strong> Coba bilang natural — misalnya "cari laptop gaming tipis budget 15jt" atau "sepatu lari yang mirip Nike"
+                </p>
               </div>
             </div>
           )}
@@ -638,89 +774,115 @@ export default function ChatPage() {
               entities={msg.entities}
               followUpSuggestions={msg.followUpSuggestions}
               onFollowUp={handleFollowUp}
-              onAddToCart={handleAddToCart}
+              onAddToCart={handleRequestAddToCart}
               onCheckout={handleCheckout}
               onTrackOrder={handleTrackOrder}
               onClearCart={handleClearCart}
               addingToCart={addingToCart}
               sessionId={sessionIdRef.current}
+              reviewData={msg.reviewData}
+              confidence={msg.confidence}
+              citations={msg.citations}
             />
           ))}
 
-          {/* Loading dots */}
+          {/* ── Confirmation card (above next input) ── */}
+          {pendingProduct && (
+            <div className="flex justify-center mb-4">
+              <div className="w-full max-w-sm">
+                <ConfirmationCard
+                  product={pendingProduct}
+                  qty={confirmQty}
+                  onConfirm={handleConfirmAddToCart}
+                  onCancel={() => setPendingProduct(null)}
+                  onEditQty={setConfirmQty}
+                  loading={addingToCart}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Loading dots (smooth typing indicator) ── */}
           {loading && (
             <div className="flex justify-start mb-4">
               <div className="flex gap-2 max-w-[85%]">
-                <div className="w-8 h-8 rounded-xl bg-[#1A3C34] flex items-center justify-center flex-shrink-0 mt-1">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 8V4m0 0L8 8m4-4l4 4M12 20v-4"/>
-                    <path d="M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-                  </svg>
+                <div className="w-8 h-8 rounded-xl bg-[#1A3C34] flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                  <Bot size={16} color="white" strokeWidth={2} />
                 </div>
-                <div className="bg-white border border-[#EBEBEB] rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#1A3C34] animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-[#1A3C34] animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-[#1A3C34] animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="bg-white border border-[#EBEBEB] rounded-2xl rounded-bl-md px-4 py-3.5 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#1A3C34]/60" style={{
+                      animation: "typingDot 1.2s ease-in-out infinite",
+                      animationDelay: "0ms",
+                    }} />
+                    <div className="w-2 h-2 rounded-full bg-[#1A3C34]/60" style={{
+                      animation: "typingDot 1.2s ease-in-out infinite",
+                      animationDelay: "200ms",
+                    }} />
+                    <div className="w-2 h-2 rounded-full bg-[#1A3C34]/60" style={{
+                      animation: "typingDot 1.2s ease-in-out infinite",
+                      animationDelay: "400ms",
+                    }} />
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Error banner */}
+          {/* ── Error banner ── */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <div>
-                <p className="text-[13px] font-semibold text-red-700">Gagal terhubung ke AI</p>
-                <p className="text-[12px] text-red-500 mt-0.5">{error}</p>
+            <div className="bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-3 shadow-sm">
+              <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <AlertCircle size={14} color="#DC2626" />
               </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold text-red-800">Gagal terhubung ke AI</p>
+                <p className="text-[12px] text-red-600 mt-0.5">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors cursor-pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
           )}
 
           <div ref={bottomRef} />
         </div>
 
-        {/* ── INPUT AREA ── */}
+      {/* ── INPUT AREA ── */}
         <div className="bg-white rounded-2xl border border-[#EBEBEB] p-3 shadow-sm">
           <div className="flex gap-3">
             <input ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ketik pesan... (contoh: cari baju putih)"
+              placeholder="Ketik pesan... cari laptop, bandingkan produk, atau tanya promo"
               disabled={loading}
-              className="flex-1 bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 rounded-xl px-4 py-3 text-[14px] outline-none transition-all disabled:opacity-50"
+              className="flex-1 bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 rounded-xl px-4 py-3 text-[14px] outline-none transition-all disabled:opacity-50 placeholder:text-gray-400"
             />
             <button onClick={handleSend}
               disabled={loading || !input.trim()}
-              className="w-[48px] h-[48px] rounded-xl bg-[#1A3C34] flex items-center justify-center disabled:opacity-40 hover:bg-[#2D6A5E] transition-colors cursor-pointer flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
+              className="w-[48px] h-[48px] rounded-xl bg-[#1A3C34] flex items-center justify-center disabled:opacity-40 hover:bg-[#2D6A5E] active:scale-95 transition-all cursor-pointer flex-shrink-0 shadow-sm">
+              <Send size={18} color="white" strokeWidth={2} />
             </button>
           </div>
         </div>
 
         {/* ── QUICK PROMPTS (always visible when chat is active) ── */}
         {messages.length > 0 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
             {QUICK_PROMPTS.map((q, i) => (
               <button key={i} onClick={() => handleQuickSend(q)}
                 disabled={loading}
-                className="bg-white border border-[#EBEBEB] rounded-full px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:border-[#1A3C34] hover:text-[#1A3C34] transition-colors whitespace-nowrap cursor-pointer disabled:opacity-40">
+                className="bg-white border border-[#EBEBEB] rounded-full px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:border-[#1A3C34] hover:text-[#1A3C34] hover:bg-[#F0FBF8] transition-all whitespace-nowrap cursor-pointer disabled:opacity-40 shadow-sm">
                 {q}
               </button>
             ))}
           </div>
         )}
       </main>
-
-      {/* ── CONFIRMATION MODAL ── */}
       {confirmAction && (
         <Modal
           isOpen={true}
@@ -747,9 +909,7 @@ export default function ChatPage() {
         >
           <div className="text-center py-2">
             <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
+              <Trash2 size={28} color="#DC2626" />
             </div>
             <p className="text-[15px] font-semibold text-[#1A1A1A] mb-2">
               {confirmAction.action === "clear_cart"

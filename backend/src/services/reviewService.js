@@ -1,4 +1,5 @@
 const reviewRepository = require("../repository/reviewRepository");
+const AppError = require("../utils/AppError");
 
 const formatReviewResponse = (review) => {
   return {
@@ -13,7 +14,7 @@ const formatReviewResponse = (review) => {
 const formatProductReviewResponse = (review) => {
   return {
     user: review.reviewer
-      ? { name: review.reviewer.full_name }
+      ? { name: review.reviewer.fullName }
       : null,
     rating: review.rating,
     comment: review.comment,
@@ -35,12 +36,12 @@ const createReview = async (data, userId) => {
   // 1. Cek order_item exists
   const orderItem = await reviewRepository.findOrderItemById(order_item_id);
   if (!orderItem) {
-    throw new Error("Order item tidak ditemukan");
+    throw new AppError("Order item tidak ditemukan", 404);
   }
 
   // 2. Cek order_item milik user
   if (orderItem.order.buyerId !== userId) {
-    throw new Error("Akses ditolak");
+    throw new AppError("Akses ditolak", 403);
   }
 
   // 3. Cek status = diterima_pembeli
@@ -106,7 +107,7 @@ const getMyReviews = async (userId, { page = 1, limit = 10 }) => {
 const getReviewById = async (id) => {
   const review = await reviewRepository.findById(id);
   if (!review) {
-    throw new Error("Review tidak ditemukan");
+    throw new AppError("Review tidak ditemukan", 404);
   }
   return formatReviewResponse(review);
 };
@@ -114,11 +115,11 @@ const getReviewById = async (id) => {
 const updateReview = async (id, data, userId) => {
   const review = await reviewRepository.findById(id);
   if (!review) {
-    throw new Error("Review tidak ditemukan");
+    throw new AppError("Review tidak ditemukan", 404);
   }
 
   if (review.reviewerId !== userId) {
-    throw new Error("Akses ditolak");
+    throw new AppError("Akses ditolak", 403);
   }
 
   const updateData = {};
@@ -137,11 +138,11 @@ const updateReview = async (id, data, userId) => {
 const deleteReview = async (id, userId) => {
   const review = await reviewRepository.findById(id);
   if (!review) {
-    throw new Error("Review tidak ditemukan");
+    throw new AppError("Review tidak ditemukan", 404);
   }
 
   if (review.reviewerId !== userId) {
-    throw new Error("Akses ditolak");
+    throw new AppError("Akses ditolak", 403);
   }
 
   await reviewRepository.deleteById(id);

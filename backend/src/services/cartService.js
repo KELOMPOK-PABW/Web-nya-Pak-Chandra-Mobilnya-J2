@@ -3,13 +3,14 @@ const cartRepository = require("../repository/cartRepository");
 const formatCartResponse = (cart) => {
   const items = (cart.items || []).map((item) => ({
     id: item.id,
+    cartId: item.cartId,
     product: {
-      id: item.productId,
+      id: item.productListId,
       name: item.product.name,
       price: item.product.price,
     },
-    qty: item.quantity,
-    subtotal: item.product.price * item.quantity,
+    qty: item.qty,
+    subtotal: item.product.price * item.qty,
   }));
 
   return items;
@@ -56,7 +57,7 @@ const addItemToCart = async (userId, payload) => {
   let finalQty = qty;
 
   if (existingItem) {
-    finalQty = existingItem.quantity + qty;
+    finalQty = existingItem.qty + qty;
 
     if (finalQty > product.stock) {
       throw new Error("Qty melebihi stock produk");
@@ -71,7 +72,7 @@ const addItemToCart = async (userId, payload) => {
     await cartRepository.createCartItem({
       cartId: cart.id,
       productId: product_id,
-      quantity: qty,
+      qty,
     });
   }
 
@@ -94,8 +95,8 @@ const updateCartItem = async({ cartItemId, quantity, userId }) => {
   const updateItem = await cartRepository.updateCartItemQuantity(Number(cartItemId), quantity)
   return {
     id : updateItem.id,
-    qty : updateItem.quantity,
-    subtotal : Number(updateItem.quantity) * Number(updateItem.product.price)
+    qty : updateItem.qty,
+    subtotal : Number(updateItem.qty) * Number(updateItem.product.price)
   }
 }
 
@@ -115,72 +116,36 @@ const deleteCartItem = async({ cartItemId, userId }) => {
 
 const clearCart = async ({ user_id }) => {
   await cartRepository.clearCartItemsByUserId(user_id);
-
-  return {
-    message: "Cart dikosongkan",
-  };
+  return { message: "Cart dikosongkan" };
 };
-
-const getUserIdFromRequest = (req) => {
-  return req.headers["x-user-id"] || req.query.user_id;
-};
-
 
 const validateCart = async ({ userId }) => {
-
   if (!userId) {
-    return {
-      statusCode: 400,
-      success: false,
-      message: "user_id is required",
-      data: null,
-    };
+    return { statusCode: 400, success: false, message: "user_id is required", data: null };
   }
 
   const cart = await cartRepository.getCartByUserId(userId);
-
   if (!cart) {
-    return {
-      statusCode: 404,
-      success: false,
-      message: "Cart not found",
-      data: null,
-    };
+    return { statusCode: 404, success: false, message: "Cart not found", data: null };
   }
 
   const cartItems = await cartRepository.getCartItemsByCartId(cart.id);
-
   if (!cartItems.length) {
-    return {
-      statusCode: 200,
-      success: true,
-      message: "Cart is empty",
-      data: {
-        valid: false,
-        cart_id: cart.id,
-        invalid_items: [],
-      },
-    };
+    return { statusCode: 200, success: true, message: "Cart is empty", data: { valid: false, cart_id: cart.id, invalid_items: [] } };
   }
 
   const invalidItems = [];
-
   for (const item of cartItems) {
     if (!item.product) {
-      invalidItems.push({
-        cart_item_id: item.id,
-        product_id: item.product_id,
-        reason: "Product not found",
-      });
+      invalidItems.push({ cart_item_id: item.id, product_id: item.productListId, reason: "Product not found" });
       continue;
     }
-
-    if (item.product.stock < item.quantity) {
+    if (item.product.stock < item.qty) {
       invalidItems.push({
         cart_item_id: item.id,
-        product_id: item.product_id,
+        product_id: item.productListId,
         product_name: item.product.name,
-        requested_quantity: item.quantity,
+        requested_quantity: item.qty,
         available_stock: item.product.stock,
         reason: "Insufficient stock",
       });
@@ -200,51 +165,25 @@ const validateCart = async ({ userId }) => {
 };
 
 const countCartItems = async ({ userId }) => {
-
   if (!userId) {
-    return {
-      statusCode: 400,
-      success: false,
-      message: "user_id is required",
-      data: null,
-    };
+    return { statusCode: 400, success: false, message: "user_id is required", data: null };
   }
 
   const cart = await cartRepository.getCartByUserId(userId);
-
   if (!cart) {
     return {
-      statusCode: 200,
-      success: true,
-      message: "Cart count fetched successfully",
-      data: {
-        cart_id: null,
-        total_items: 0,
-        total_quantity: 0,
-      },
+      statusCode: 200, success: true, message: "Cart count fetched successfully",
+      data: { cart_id: null, total_items: 0, total_quantity: 0 },
     };
   }
 
   const count = await cartRepository.getCartCountByCartId(cart.id);
-
   return {
-    statusCode: 200,
-    success: true,
-    message: "Cart count fetched successfully",
-    data: {
-      cart_id: cart.id,
-      total_items: count.totalItems,
-      total_quantity: count.totalQuantity,
-    },
+    statusCode: 200, success: true, message: "Cart count fetched successfully",
+    data: { cart_id: cart.id, total_items: count.totalItems, total_quantity: count.totalQuantity },
   };
 };
 
 module.exports = {
-  getCart,
-  addItemToCart,
-  updateCartItem,
-  clearCart,
-  deleteCartItem,
-  validateCart,
-  countCartItems
+  getCart, addItemToCart, updateCartItem, clearCart, deleteCartItem, validateCart, countCartItems
 };

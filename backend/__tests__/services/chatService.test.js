@@ -238,3 +238,110 @@ describe("chatService.runLlmChat", () => {
     });
   });
 });
+
+describe("chatService.getUserSessions", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return sessions per API contract", async () => {
+    const createdAt = new Date("2026-04-09T10:00:00Z");
+    const updatedAt = new Date("2026-04-09T10:05:00Z");
+    chatRepository.findSessionsByUser.mockResolvedValue([
+      {
+        id: 1,
+        title: "Cari laptop murah",
+        createdAt,
+        updatedAt,
+      },
+    ]);
+
+    const result = await chatService.getUserSessions(1);
+
+    expect(result).toEqual([
+      {
+        id: 1,
+        title: "Cari laptop murah",
+        created_at: createdAt,
+        updated_at: updatedAt,
+      },
+    ]);
+  });
+});
+
+describe("chatService.createSession", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    chatRepository.countSessionsByUser.mockResolvedValue(0);
+  });
+
+  it("should create a new session per API contract", async () => {
+    const createdAt = new Date("2026-04-09T11:00:00Z");
+    chatRepository.createSession.mockResolvedValue({
+      id: 2,
+      title: "Cari sepatu running",
+      createdAt,
+    });
+
+    const result = await chatService.createSession(1, "Cari sepatu running");
+
+    expect(chatRepository.createSession).toHaveBeenCalledWith({
+      userId: 1,
+      title: "Cari sepatu running",
+    });
+    expect(result).toEqual({
+      id: 2,
+      title: "Cari sepatu running",
+      created_at: createdAt,
+    });
+  });
+});
+
+describe("chatService.getSessionMessages", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return messages per API contract", async () => {
+    chatRepository.findSessionByIdForUser.mockResolvedValue({ id: 1, userId: 1 });
+    chatRepository.getSessionMessages.mockResolvedValue([
+      {
+        id: 1,
+        role: "user",
+        content: "Cari laptop murah",
+        createdAt: new Date("2026-04-09T10:00:00Z"),
+      },
+      {
+        id: 2,
+        role: "assistant",
+        content: "Berikut beberapa rekomendasi laptop...",
+        createdAt: new Date("2026-04-09T10:00:02Z"),
+      },
+    ]);
+
+    const result = await chatService.getSessionMessages(1, 1);
+
+    expect(result).toEqual([
+      {
+        id: 1,
+        sender: "user",
+        message: "Cari laptop murah",
+        created_at: new Date("2026-04-09T10:00:00Z"),
+      },
+      {
+        id: 2,
+        sender: "assistant",
+        message: "Berikut beberapa rekomendasi laptop...",
+        created_at: new Date("2026-04-09T10:00:02Z"),
+      },
+    ]);
+  });
+
+  it("should reject when session is not owned by user", async () => {
+    chatRepository.findSessionByIdForUser.mockResolvedValue(null);
+
+    await expect(chatService.getSessionMessages(1, 99)).rejects.toThrow(
+      "Akses ditolak: sesi bukan milik Anda"
+    );
+  });
+});
