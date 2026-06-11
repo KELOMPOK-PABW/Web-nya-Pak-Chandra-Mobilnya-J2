@@ -75,6 +75,7 @@ app.get("/api/stores/me", authenticate, storeController.getMyStore)
 app.put("/api/stores/me", authenticate, storeController.updateMyStore)
 app.get("/api/my/reviews", authenticate, reviewController.getMyReviews)
 app.get("/api/me", authenticate, authController.getMe)
+app.put("/api/me", authenticate, authController.updateMe)
 
 // Error handling
 app.use(notFound);

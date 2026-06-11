@@ -1,11 +1,11 @@
 import { apiUrl } from "./apiClient";
 
 export const authService = {
-  async register({ full_name, email, password, role = "buyer" }) {
+  async register({ full_name, email, phone, password, role = "buyer" }) {
     const res = await fetch(apiUrl(`/auth/register`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name, email, password, role }),
+      body: JSON.stringify({ full_name, email, phone, password, role }),
     });
     const data = await res.json();
     if (!res.ok || data.success === false) {
@@ -46,6 +46,7 @@ export const authService = {
           id: data.user.id,
           full_name: data.user.full_name,
           email: data.user.email,
+          phone: data.user.phone,
           role: data.user.roles?.[0] || "buyer",
         })
       );
