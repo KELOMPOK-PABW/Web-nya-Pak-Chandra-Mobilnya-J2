@@ -43,6 +43,15 @@ export const courierService = {
     return normalizeTask(unwrapData(data));
   },
 
+  async getAssignmentByOrderItem(orderItemId) {
+    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}`), {
+      headers: buildAuthHeaders(),
+    });
+    const data = await handleResponse(res);
+    // backend might return an assignment object or an array; normalizeTask will handle single object
+    return normalizeTask(unwrapData(data));
+  },
+
   async getTasks() {
     const res = await fetch(apiUrl("/courier/task"), {
       headers: buildAuthHeaders(),

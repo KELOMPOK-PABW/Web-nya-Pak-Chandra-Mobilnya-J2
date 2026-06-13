@@ -17,6 +17,8 @@ const authenticate = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
+    // log error for debugging token verification issues
+    try { console.error('[authMiddleware] jwt verify error:', error && error.message); } catch (e) {}
     return res.status(401).json({
       success: false,
       message: "Akses ditolak. Token tidak valid atau kedaluwarsa.",

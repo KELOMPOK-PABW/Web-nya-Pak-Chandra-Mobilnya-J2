@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
+import { courierService } from "@/services/courierService";
 
 const STATUS_LABELS = {
   pending: "Menunggu Pembayaran",
@@ -53,6 +54,7 @@ export default function OrderDetailPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const isLoggedIn = Boolean(authService.getToken());
+  const [shippingStatuses, setShippingStatuses] = useState({});
 
   async function loadOrder() {
     setLoading(true);
@@ -75,6 +77,25 @@ export default function OrderDetailPage() {
     }
     if (id) loadOrder();
   }, [id, isLoggedIn]);
+
+  useEffect(() => {
+    async function loadStatuses() {
+      if (!order || !Array.isArray(order.items) || order.items.length === 0) return;
+      const map = {};
+      await Promise.all(order.items.map(async (it) => {
+        const itemId = it.order_item_id ?? it.id;
+        if (!itemId) return;
+        try {
+          const assign = await courierService.getAssignmentByOrderItem(itemId);
+          map[itemId] = assign?.status ?? null;
+        } catch (e) {
+          map[itemId] = null;
+        }
+      }));
+      setShippingStatuses(map);
+    }
+    loadStatuses();
+  }, [order]);
 
   const items = order?.items || [];
   const status = order?.status || "pending";
@@ -164,6 +185,18 @@ export default function OrderDetailPage() {
                         <p className="text-sm text-gray-500 mt-1">
                           {item.store_name || item.store?.store_name || "Toko"} - x{item.qty || item.quantity || 1}
                         </p>
+                        {shippingStatuses[item.order_item_id ?? item.id] && (
+                          <div className="mt-2">
+                            <Badge variant={
+                              shippingStatuses[item.order_item_id ?? item.id] === 'sedang dikirim' ? 'info'
+                              : shippingStatuses[item.order_item_id ?? item.id] === 'sampai di tujuan' ? 'success'
+                              : shippingStatuses[item.order_item_id ?? item.id] === 'dikirim balik' ? 'danger'
+                              : 'default'
+                            }>
+                              {shippingStatuses[item.order_item_id ?? item.id]}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                       <p className="font-bold text-[#1A3C34]">{fmt(getItemSubtotal(item))}</p>
                     </div>
