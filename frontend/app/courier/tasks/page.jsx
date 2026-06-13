@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/ui/Button";
 import { courierService } from "@/services/courierService";
+import normalizeStatus from "@/utils/normalizeStatus";
 
 const COURIER_MENUS = [
   { label: "Dashboard", href: "/courier/dashboard" },
@@ -86,9 +87,10 @@ export default function CourierTasksPage() {
     setMessage("");
     try {
       const data = await courierService.getTasks();
-      setTasks(data.length > 0 ? data : TASKS_DUMMY);
+      const normalized = (data.length > 0 ? data : TASKS_DUMMY).map(t => ({ ...t, status: normalizeStatus(t.status) }));
+      setTasks(normalized);
     } catch (err) {
-      setTasks(TASKS_DUMMY);
+      setTasks(TASKS_DUMMY.map(t => ({ ...t, status: normalizeStatus(t.status) })));
       setMessage(err.message || "Menampilkan data contoh karena API tugas kurir belum tersedia.");
     } finally {
       setIsLoading(false);

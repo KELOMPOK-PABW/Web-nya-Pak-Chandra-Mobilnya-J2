@@ -90,7 +90,7 @@ export default function CourierTaskDetailPage() {
       pickup: "sedang dikirim",
       deliver: "sampai di tujuan",
       return: "dikirim balik",
-      "return-to-seller": "menunggu penjual",
+      "return-to-seller": "dikirim balik",
     };
 
     setSavingAction(action);

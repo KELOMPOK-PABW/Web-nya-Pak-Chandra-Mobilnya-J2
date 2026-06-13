@@ -21,10 +21,39 @@ export async function handleResponse(res) {
   }
 
   if (!res.ok || data.success === false) {
-    throw new Error(data.message || `Request failed with status ${res.status}`);
+    // Server-side errors: localize common statuses
+    if (res.status >= 500) {
+      throw new Error("Terjadi kesalahan pada server. Silakan coba lagi nanti.");
+    }
+    if (res.status === 429) {
+      throw new Error("Terlalu banyak permintaan. Coba lagi sebentar.");
+    }
+
+    // Expose validation or business messages coming from server (kept in Indonesian where possible)
+    if (serverMsg) {
+      throw new Error(serverMsg);
+    }
+
+    throw new Error(`Request failed with status ${res.status}`);
   }
 
   return data;
+}
+
+// Wrapper around fetch + handleResponse that normalizes network errors
+export async function apiFetch(path, options = {}) {
+  try {
+    const res = await fetch(apiUrl(path), options);
+    return await handleResponse(res);
+  } catch (err) {
+    const msg = String(err?.message || err);
+    // Common network-level failures (browser/DevServer/ECONN issues)
+    if (/failed to fetch|networkerror|network request failed|net::err_|ecconnectrefused|ecconnrefused/i.test(msg)) {
+      throw new Error("Gagal terhubung ke server. Periksa koneksi dan coba lagi.");
+    }
+    // Pass through other human-friendly messages
+    throw new Error(msg || "Terjadi kesalahan jaringan.");
+  }
 }
 
 export function buildAuthHeaders(isJson = false) {

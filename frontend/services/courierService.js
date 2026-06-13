@@ -1,4 +1,5 @@
-import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
+import { buildAuthHeaders, apiFetch, unwrapData } from "./apiClient";
+import normalizeStatus from "@/utils/normalizeStatus";
 
 function normalizeTask(task = {}) {
   return {
@@ -9,7 +10,7 @@ function normalizeTask(task = {}) {
     product_name: task.product_name ?? task.product?.name ?? "Produk",
     pickup_address: task.pickup_address ?? task.store?.address ?? "-",
     delivery_address: task.delivery_address ?? task.address?.address ?? "-",
-    status: task.status ?? "menunggu kurir",
+    status: normalizeStatus(task.status ?? task.order_item?.status ?? "menunggu kurir"),
     assigned_at: task.assigned_at ?? task.created_at ?? null,
     created_at: task.created_at ?? task.assigned_at ?? null,
     buyer_name: task.buyer_name ?? task.buyer?.full_name ?? "-",
@@ -26,73 +27,42 @@ function normalizeList(payload) {
 
 export const courierService = {
   async assignCourier({ order_item_id, kurir_id }) {
-    const res = await fetch(apiUrl("/courier/assign"), {
-      method: "POST",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify({ order_item_id, kurir_id }),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/courier/assign", { method: "POST", headers: buildAuthHeaders(true), body: JSON.stringify({ order_item_id, kurir_id }) });
     return normalizeTask(unwrapData(data));
   },
 
   async getAssignment(id) {
-    const res = await fetch(apiUrl(`/courier/assignments/${id}`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/courier/assignments/${id}`, { headers: buildAuthHeaders() });
     return normalizeTask(unwrapData(data));
   },
 
   async getAssignmentByOrderItem(orderItemId) {
-    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
-    // backend might return an assignment object or an array; normalizeTask will handle single object
+    const data = await apiFetch(`/courier/order-items/${orderItemId}`, { headers: buildAuthHeaders() });
     return normalizeTask(unwrapData(data));
   },
 
   async getTasks() {
-    const res = await fetch(apiUrl("/courier/task"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/courier/task", { headers: buildAuthHeaders() });
     return normalizeList(data);
   },
 
   async pickupOrderItem(orderItemId) {
-    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}/pickup`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/courier/order-items/${orderItemId}/pickup`, { method: "PUT", headers: buildAuthHeaders() });
     return unwrapData(data);
   },
 
   async deliverOrderItem(orderItemId) {
-    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}/deliver`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/courier/order-items/${orderItemId}/deliver`, { method: "PUT", headers: buildAuthHeaders() });
     return unwrapData(data);
   },
 
   async returnOrderItem(orderItemId) {
-    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}/return`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/courier/order-items/${orderItemId}/return`, { method: "PUT", headers: buildAuthHeaders() });
     return unwrapData(data);
   },
 
   async returnToSeller(orderItemId) {
-    const res = await fetch(apiUrl(`/courier/order-items/${orderItemId}/return-to-seller`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/courier/order-items/${orderItemId}/return-to-seller`, { method: "PUT", headers: buildAuthHeaders() });
     return unwrapData(data);
   },
 };

@@ -2,34 +2,50 @@ import { apiUrl } from "./apiClient";
 
 export const authService = {
   async register({ full_name, email, phone, password }) {
-    const res = await fetch(apiUrl(`/auth/register`), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name, email, phone, password }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.success === false) {
-      throw new Error(data.message || "Register gagal");
+    try {
+      const res = await fetch(apiUrl(`/auth/register`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name, email, phone, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || "Register gagal");
+      }
+      return data;
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (/failed to fetch|networkerror|network request failed|net::err_|ecconnectrefused|ecconnrefused/i.test(msg)) {
+        throw new Error("Gagal terhubung ke server. Periksa koneksi dan coba lagi.");
+      }
+      throw new Error(msg || "Terjadi kesalahan jaringan.");
     }
-    return data;
   },
 
   async login({ email, password }) {
-    const res = await fetch(apiUrl(`/auth/login`), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.success === false) {
-      throw new Error(data.message || "Login gagal");
+    try {
+      const res = await fetch(apiUrl(`/auth/login`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || "Login gagal");
+      }
+
+      // Save session with correct field mapping
+      const d = data.data;
+      this.saveSession(d);
+
+      return data;
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (/failed to fetch|networkerror|network request failed|net::err_|ecconnectrefused|ecconnrefused/i.test(msg)) {
+        throw new Error("Gagal terhubung ke server. Periksa koneksi dan coba lagi.");
+      }
+      throw new Error(msg || "Terjadi kesalahan jaringan.");
     }
-
-    // Save session with correct field mapping
-    const d = data.data;
-    this.saveSession(d);
-
-    return data;
   },
 
   saveSession(data) {

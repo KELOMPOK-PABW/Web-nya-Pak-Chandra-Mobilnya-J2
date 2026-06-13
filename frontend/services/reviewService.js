@@ -1,4 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
+import { buildAuthHeaders, apiFetch, unwrapData } from "./apiClient";
 
 function normalizeReview(review = {}) {
   return {
@@ -27,55 +27,32 @@ function normalizeList(payload) {
 
 export const reviewService = {
   async createReview({ order_item_id, rating, comment }) {
-    const res = await fetch(apiUrl("/reviews"), {
-      method: "POST",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify({ order_item_id, rating, comment }),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/reviews", { method: "POST", headers: buildAuthHeaders(true), body: JSON.stringify({ order_item_id, rating, comment }) });
     return normalizeReview(unwrapData(data));
   },
 
   async getProductReviews(productId) {
-    const res = await fetch(apiUrl(`/products/${productId}/reviews`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/products/${productId}/reviews`, { headers: buildAuthHeaders() });
     return normalizeList(data);
   },
 
   async getProductRating(productId) {
-    const res = await fetch(apiUrl(`/products/${productId}/rating`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/products/${productId}/rating`, { headers: buildAuthHeaders() });
     return unwrapData(data);
   },
 
   async getMyReviews() {
-    const res = await fetch(apiUrl("/my/reviews"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/my/reviews", { headers: buildAuthHeaders() });
     return normalizeList(data);
   },
 
   async updateReview(id, payload) {
-    const res = await fetch(apiUrl(`/reviews/${id}`), {
-      method: "PUT",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify(payload),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/reviews/${id}`, { method: "PUT", headers: buildAuthHeaders(true), body: JSON.stringify(payload) });
     return normalizeReview(unwrapData(data));
   },
 
   async deleteReview(id) {
-    const res = await fetch(apiUrl(`/reviews/${id}`), {
-      method: "DELETE",
-      headers: buildAuthHeaders(),
-    });
-    return handleResponse(res);
+    return apiFetch(`/reviews/${id}`, { method: "DELETE", headers: buildAuthHeaders() });
   },
 };
 

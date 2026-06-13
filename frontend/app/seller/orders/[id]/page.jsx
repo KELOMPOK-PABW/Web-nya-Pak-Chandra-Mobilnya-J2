@@ -113,7 +113,7 @@ export default function SellerOrderDetailPage() {
 
     const status = String(order?.status || "").toLowerCase();
     const canProcess = ["paid", "pending", "menunggu_penjual"].includes(status);
-    const canReadyToShip = ["processing", "process"].includes(status);
+    const canReadyToShip = ["processing", "ready_to_ship"].includes(status);
 
     return (
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#f8f9fa", fontFamily: "'DM Sans', sans-serif" }}>

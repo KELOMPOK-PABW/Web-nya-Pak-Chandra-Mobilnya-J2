@@ -1,4 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse, unwrapData } from "./apiClient";
+import { buildAuthHeaders, apiFetch, unwrapData } from "./apiClient";
 
 function normalizeStore(store = {}) {
   return {
@@ -106,106 +106,58 @@ function normalizeList(payload, mapper) {
 
 export const sellerService = {
   async getMyStore() {
-    const res = await fetch(apiUrl("/stores/me"), {
-      headers: buildAuthHeaders(),
-    });
-    const payload = await handleResponse(res);
+    const payload = await apiFetch("/stores/me", { headers: buildAuthHeaders() });
     return normalizeStore(unwrapData(payload));
   },
 
   async updateMyStore(payload) {
-    const res = await fetch(apiUrl("/stores/me"), {
-      method: "PUT",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify({
-        store_name: payload.storeName ?? payload.store_name,
-        phone: payload.phone,
-      }),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/stores/me", { method: "PUT", headers: buildAuthHeaders(true), body: JSON.stringify({ store_name: payload.storeName ?? payload.store_name, phone: payload.phone }) });
     return normalizeStore(unwrapData(data));
   },
 
   async submitApplication(payload) {
-    const res = await fetch(apiUrl("/seller/apply"), {
-      method: "POST",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify({
-        store_name: payload.storeName ?? payload.store_name,
-        phone: payload.phone,
-      }),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/apply", { method: "POST", headers: buildAuthHeaders(true), body: JSON.stringify({ store_name: payload.storeName ?? payload.store_name, phone: payload.phone }) });
     return normalizeApplication(unwrapData(data));
   },
 
   async getApplicationStatus() {
-    const res = await fetch(apiUrl("/seller/application/me"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/application/me", { headers: buildAuthHeaders() });
     const raw = unwrapData(data);
     return raw ? normalizeApplication(raw) : null;
   },
 
   async getSellerApplications() {
-    const res = await fetch(apiUrl("/seller/application"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/application", { headers: buildAuthHeaders() });
     return normalizeList(data, normalizeApplication);
   },
 
   async approveApplication(id) {
-    const res = await fetch(apiUrl(`/seller/application/${id}/approve`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/application/${id}/approve`, { method: "PUT", headers: buildAuthHeaders() });
     return normalizeApplication(unwrapData(data));
   },
 
   async rejectApplication(id, reason) {
-    const res = await fetch(apiUrl(`/seller/application/${id}/reject`), {
-      method: "PUT",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify({ reason }),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/application/${id}/reject`, { method: "PUT", headers: buildAuthHeaders(true), body: JSON.stringify({ reason }) });
     return normalizeApplication(unwrapData(data));
   },
 
   async getSellerOrders() {
-    const res = await fetch(apiUrl("/seller/orders"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/orders", { headers: buildAuthHeaders() });
     return normalizeList(data, normalizeOrder);
   },
 
   async getSellerOrderById(id) {
-    const res = await fetch(apiUrl(`/seller/orders/${id}`), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/orders/${id}`, { headers: buildAuthHeaders() });
     return normalizeOrder(unwrapData(data));
   },
 
   async processOrder(orderItemId) {
-    const res = await fetch(apiUrl(`/seller/orders/${orderItemId}/process`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/orders/${orderItemId}/process`, { method: "PUT", headers: buildAuthHeaders() });
     return normalizeOrder(unwrapData(data));
   },
 
   async readyToShipOrder(orderItemId) {
-    const res = await fetch(apiUrl(`/seller/orders/${orderItemId}/ready-to-ship`), {
-      method: "PUT",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/orders/${orderItemId}/ready-to-ship`, { method: "PUT", headers: buildAuthHeaders() });
     return normalizeOrder(unwrapData(data));
   },
 };

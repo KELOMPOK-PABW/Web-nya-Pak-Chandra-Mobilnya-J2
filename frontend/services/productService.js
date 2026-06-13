@@ -1,4 +1,4 @@
-import { apiUrl, buildAuthHeaders, handleResponse } from "./apiClient";
+import { buildAuthHeaders, apiFetch } from "./apiClient";
 
 export const productService = {
   async getProducts(params = {}) {
@@ -7,58 +7,38 @@ export const productService = {
       if (v !== undefined && v !== null && v !== "") searchParams.set(k, v);
     });
     const qs = searchParams.toString();
-    const url = apiUrl(`/products${qs ? `?${qs}` : ''}`);
-    const res = await fetch(url);
-    const data = await handleResponse(res);
+    const path = `/products${qs ? `?${qs}` : ''}`;
+    const data = await apiFetch(path);
     return { data: data.data, meta: data.meta };
   },
 
   async getProductById(id) {
-    const res = await fetch(apiUrl(`/products/${id}`));
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/products/${id}`);
     return data.data;
   },
 
   async getCategories() {
-    const res = await fetch(apiUrl("/categories"));
-    const data = await handleResponse(res);
+    const data = await apiFetch("/categories");
     return data.data;
   },
 
   async getSellerProducts() {
-    const res = await fetch(apiUrl("/seller/products"), {
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/products", { headers: buildAuthHeaders() });
     return { data: data.data, meta: data.meta };
   },
 
   async createProduct(payload) {
-    const res = await fetch(apiUrl("/seller/products"), {
-      method: "POST",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify(payload),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch("/seller/products", { method: "POST", headers: buildAuthHeaders(true), body: JSON.stringify(payload) });
     return data.data;
   },
 
   async updateProduct(id, payload) {
-    const res = await fetch(apiUrl(`/seller/products/${id}`), {
-      method: "PUT",
-      headers: buildAuthHeaders(true),
-      body: JSON.stringify(payload),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/products/${id}`, { method: "PUT", headers: buildAuthHeaders(true), body: JSON.stringify(payload) });
     return data.data;
   },
 
   async deleteProduct(id) {
-    const res = await fetch(apiUrl(`/seller/products/${id}`), {
-      method: "DELETE",
-      headers: buildAuthHeaders(),
-    });
-    const data = await handleResponse(res);
+    const data = await apiFetch(`/seller/products/${id}`, { method: "DELETE", headers: buildAuthHeaders() });
     return data;
   },
 };
