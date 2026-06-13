@@ -1,19 +1,38 @@
 const prisma = require("../config/database");
 
+const orderItemInclude = {
+  order: {
+    include: {
+      buyer: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+        },
+      },
+      address: {
+        select: {
+          address: true,
+          city: true,
+          postalCode: true,
+        },
+      },
+    },
+  },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+    },
+  },
+};
+
 const findOrderItemsBySellerId = async (sellerId, { skip = 0, take = 10 } = {}) => {
   return prisma.orderItem.findMany({
     where: { sellerId: Number(sellerId) },
-    include: {
-      order: {
-        select: {
-          id: true,
-          buyer: { select: { fullName: true } },
-        },
-      },
-      product: {
-        select: { name: true },
-      },
-    },
+    include: orderItemInclude,
     orderBy: { createdAt: "desc" },
     skip,
     take,
@@ -26,13 +45,22 @@ const countOrderItemsBySellerId = async (sellerId) => {
   });
 };
 
+const findOrderItemById = async (orderItemId) => {
+  return prisma.orderItem.findUnique({
+    where: { id: Number(orderItemId) },
+    include: orderItemInclude,
+  });
+};
+
 const findOrderByIdForSeller = async (orderId, sellerId) => {
   return prisma.order.findUnique({
     where: { id: Number(orderId) },
     include: {
       buyer: {
         select: {
+          id: true,
           fullName: true,
+          email: true,
           phone: true,
         },
       },
@@ -40,21 +68,22 @@ const findOrderByIdForSeller = async (orderId, sellerId) => {
         select: {
           address: true,
           city: true,
+          postalCode: true,
         },
       },
       items: {
         where: { sellerId: Number(sellerId) },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+        },
         orderBy: { createdAt: "asc" },
       },
-    },
-  });
-};
-
-const findOrderItemById = async (orderItemId) => {
-  return prisma.orderItem.findUnique({
-    where: { id: Number(orderItemId) },
-    include: {
-      order: { select: { id: true, buyerId: true } },
     },
   });
 };
@@ -73,8 +102,8 @@ const createStatusHistory = async (data) => {
 module.exports = {
   findOrderItemsBySellerId,
   countOrderItemsBySellerId,
-  findOrderByIdForSeller,
   findOrderItemById,
+  findOrderByIdForSeller,
   updateOrderItemStatus,
   createStatusHistory,
 };

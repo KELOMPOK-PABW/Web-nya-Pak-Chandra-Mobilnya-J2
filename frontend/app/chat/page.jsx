@@ -35,7 +35,7 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
   const sellerName = product.store?.store_name ?? product.seller?.name ?? "";
   const productHref = `/product/${pid}?chat=1${sessionId ? `&sid=${sessionId}` : ""}`;
   return (
-    <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[180px]">
+    <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[160px] sm:w-[180px]">
       <Link href={productHref} style={{ textDecoration: "none" }}>
         <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
           <Package size={32} color="#A5D6D0" strokeWidth={1.5} />
@@ -73,7 +73,7 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className="flex gap-2 max-w-[90%]">
+      <div className="flex gap-2 max-w-[94%] sm:max-w-[90%]">
         {!isUser && (
           <div className="w-8 h-8 rounded-xl bg-[#1A3C34] flex items-center justify-center flex-shrink-0 mt-1">
             <Bot size={16} color="white" strokeWidth={2} />
@@ -444,6 +444,10 @@ export default function ChatPage() {
 
   const sendMessage = useCallback(async (msg) => {
     if (!msg.trim() || loading) return;
+    if (msg.trim().length > 2000) {
+      setError("Pesan terlalu panjang");
+      return;
+    }
 
     setError(null);
     setCartFeedback(null);
@@ -498,6 +502,10 @@ export default function ChatPage() {
   const handleSend = () => {
     const msg = input.trim();
     if (!msg) return;
+    if (msg.length > 2000) {
+      setError("Pesan terlalu panjang");
+      return;
+    }
     setInput("");
     sendMessage(msg);
   };
@@ -606,7 +614,7 @@ export default function ChatPage() {
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-      <main className="flex-1 max-w-[800px] mx-auto w-full px-4 py-6 flex flex-col">
+      <main className="flex-1 max-w-[800px] mx-auto w-full px-3 sm:px-4 py-5 sm:py-6 flex flex-col">
 
         {/* ── HEADER ── */}
         <div className="flex items-center justify-between mb-4">
@@ -703,7 +711,7 @@ export default function ChatPage() {
         </div>
 
         {/* ── CHAT AREA ── */}
-        <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-4 mb-4 overflow-y-auto overflow-x-hidden min-h-[400px] max-h-[600px] shadow-sm">
+        <div className="flex-1 bg-white rounded-2xl border border-[#EBEBEB] p-3 sm:p-4 mb-4 overflow-y-auto overflow-x-hidden min-h-[360px] max-h-[600px] shadow-sm">
 
           {/* ── Empty state: personality-driven welcome ── */}
           {messages.length === 0 && !loading && (
@@ -858,8 +866,9 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ketik pesan... cari laptop, bandingkan produk, atau tanya promo"
+              placeholder="Ketik pesan..."
               disabled={loading}
+              maxLength={2000}
               className="flex-1 bg-[#F5F5F5] border border-transparent focus:bg-white focus:border-[#1A3C34]/30 focus:ring-2 focus:ring-[#1A3C34]/10 rounded-xl px-4 py-3 text-[14px] outline-none transition-all disabled:opacity-50 placeholder:text-gray-400"
             />
             <button onClick={handleSend}

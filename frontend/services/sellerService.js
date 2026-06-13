@@ -37,13 +37,23 @@ function normalizeApplication(application = {}) {
     bankName: application.bankName ?? application.bank_name ?? "-",
     bankAccountNumber:
       application.bankAccountNumber ?? application.bank_account_number ?? application.account_number ?? "-",
-    status: application.status ?? "pending",
+    status: String(application.status ?? "pending").toLowerCase(),
   };
 }
 
 function normalizeOrder(order = {}) {
   const items = order.items ?? order.order_items ?? (order.product ? [order] : []);
   const firstItem = Array.isArray(items) ? items[0] : null;
+  const rawStatus = order.status ?? firstItem?.status ?? "menunggu_penjual";
+  const statusMap = {
+    menunggu_penjual: "menunggu_penjual",
+    diproses_penjual: "processing",
+    menunggu_kurir: "ready_to_ship",
+    sedang_dikirim: "shipped",
+    sampai_di_tujuan: "delivered",
+    diterima_pembeli: "completed",
+    transaksi_gagal: "cancelled",
+  };
 
   return {
     ...order,
@@ -76,8 +86,15 @@ function normalizeOrder(order = {}) {
       firstItem?.subtotal ??
       firstItem?.price ??
       0,
-    status: order.status ?? firstItem?.status ?? "pending",
+    rawStatus,
+    status: statusMap[rawStatus] ?? rawStatus,
     createdAt: order.createdAt ?? order.created_at ?? order.order_date ?? null,
+    address:
+      typeof order.address === "string"
+        ? order.address
+        : order.address?.address
+          ? `${order.address.address}${order.address.city ? `, ${order.address.city}` : ""}${order.address.postal_code ? ` ${order.address.postal_code}` : ""}`
+          : "-",
   };
 }
 
@@ -123,13 +140,12 @@ export const sellerService = {
   },
 
   async getApplicationStatus() {
-    const res = await fetch(apiUrl("/seller/application"), {
+    const res = await fetch(apiUrl("/seller/application/me"), {
       headers: buildAuthHeaders(),
     });
     const data = await handleResponse(res);
     const raw = unwrapData(data);
-    const application = Array.isArray(raw) ? raw[0] : raw;
-    return application ? normalizeApplication(application) : null;
+    return raw ? normalizeApplication(raw) : null;
   },
 
   async getSellerApplications() {

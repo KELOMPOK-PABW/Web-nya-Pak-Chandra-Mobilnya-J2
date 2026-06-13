@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { authService } from "@/services/authService";
+import { profileService } from "@/services/profileService";
 import { useToast } from "@/components/ui/Toast";
 
 const ROLE_LABELS = {
@@ -33,16 +34,8 @@ export default function ProfilePage() {
       setLoading(true);
       setError("");
       try {
-        const token = authService.getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setProfile(data.data);
-        } else {
-          throw new Error(data.message || "Gagal memuat profil");
-        }
+        const data = await profileService.getMe();
+        setProfile(data);
       } catch (err) {
         setError(err.message || "Gagal memuat data profil");
       } finally {

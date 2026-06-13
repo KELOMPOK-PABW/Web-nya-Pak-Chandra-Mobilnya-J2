@@ -27,8 +27,7 @@ const getOrderById = async (req, res, next) => {
 
 const processOrder = async (req, res, next) => {
   try {
-    const { orderItemId } = req.params;
-    const result = await sellerOrderService.processOrderItem(orderItemId, req.user.id);
+    const result = await sellerOrderService.processOrderItem(req.params.orderItemId, req.user.id);
     return res.status(200).json({ success: true, message: "Pesanan diproses", data: result });
   } catch (error) {
     next(error);
@@ -37,8 +36,7 @@ const processOrder = async (req, res, next) => {
 
 const readyToShip = async (req, res, next) => {
   try {
-    const { orderItemId } = req.params;
-    const result = await sellerOrderService.readyToShipOrderItem(orderItemId, req.user.id);
+    const result = await sellerOrderService.readyToShipOrderItem(req.params.orderItemId, req.user.id);
     return res.status(200).json({ success: true, message: "Pesanan siap dikirim", data: result });
   } catch (error) {
     next(error);

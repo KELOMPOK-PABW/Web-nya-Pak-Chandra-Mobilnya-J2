@@ -5,15 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 
-const ROLES = [
-  { value: "buyer",  label: "Pembeli", desc: "Cari & beli produk" },
-  { value: "seller", label: "Penjual", desc: "Jual produk kamu" },
-  { value: "kurir",  label: "Kurir",   desc: "Antar pesanan" },
-];
-
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "buyer" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,13 +17,40 @@ export default function RegisterPage() {
     setError("");
   };
 
+  const validateForm = () => {
+    const fullName = form.full_name.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const password = form.password;
+
+    if (!fullName) return "Nama wajib diisi";
+    if (fullName.length < 3) return "Nama minimal 3 karakter";
+    if (!email) return "Email wajib diisi";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Format email tidak valid";
+    if (!password) return "Password wajib diisi";
+    if (password.length < 8) return "Password minimal 8 karakter";
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return "Password harus mengandung huruf dan angka";
+    if (phone && !/^\d+$/.test(phone)) return "Nomor telepon harus angka";
+    if (phone && phone.length < 10) return "Nomor telepon minimal 10 digit";
+    if (phone && phone.length > 15) return "Nomor telepon maksimal 15 digit";
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.full_name || !form.email || !form.password) { setError("Semua field wajib diisi."); return; }
-    if (form.password.length < 6) { setError("Password minimal 6 karakter."); return; }
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setLoading(true);
     try {
-      await authService.register(form);
+      await authService.register({
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
       router.push("/auth/login?registered=1");
     } catch (err) {
       setError(err.message || "Register gagal. Coba lagi.");
@@ -253,29 +274,6 @@ export default function RegisterPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Role Selector */}
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "8px", fontFamily: "inherit" }}>Daftar sebagai</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ROLES.map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setForm({ ...form, role: r.value })}
-                        style={{ fontFamily: "inherit", transition: "all 0.15s" }}
-                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center ${
-                          form.role === r.value
-                            ? "border-[#1A3C34] bg-[#1A3C34]/5 text-[#1A3C34]"
-                            : "border-[#E5E2DB] bg-[#FAFAF8] text-[#777] hover:border-[#1A3C34]/30"
-                        }`}
-                      >
-                        <span style={{ fontSize: "12px", fontWeight: 800, color: "#1A3C34" }}>{r.label}</span>
-                        <span style={{ fontSize: "10px", lineHeight: 1.3, opacity: 0.7 }}>{r.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Full Name */}
                 <div>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "7px", fontFamily: "inherit" }}>Nama lengkap</label>
@@ -293,6 +291,17 @@ export default function RegisterPage() {
                   <input
                     type="email" name="email" value={form.email} onChange={handleChange}
                     placeholder="nama@email.com" autoComplete="email"
+                    style={{ fontFamily: "inherit", fontSize: "15px", height: "50px" }}
+                    className="w-full px-4 rounded-2xl border border-[#E5E2DB] bg-[#FAFAF8] text-[#1A1A1A] placeholder:text-[#C8C8C8] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 focus:border-[#1A3C34] transition-all"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#0A0A0A", marginBottom: "7px", fontFamily: "inherit" }}>Nomor HP</label>
+                  <input
+                    type="tel" name="phone" value={form.phone} onChange={handleChange}
+                    placeholder="08123456789" autoComplete="tel"
                     style={{ fontFamily: "inherit", fontSize: "15px", height: "50px" }}
                     className="w-full px-4 rounded-2xl border border-[#E5E2DB] bg-[#FAFAF8] text-[#1A1A1A] placeholder:text-[#C8C8C8] focus:outline-none focus:ring-2 focus:ring-[#1A3C34]/20 focus:border-[#1A3C34] transition-all"
                   />
@@ -323,7 +332,7 @@ export default function RegisterPage() {
                       )}
                     </button>
                   </div>
-                  <p style={{ fontSize: "12px", color: "#AAAAAA", marginTop: "6px", fontFamily: "inherit" }}>Minimal 6 karakter untuk keamanan yang lebih baik</p>
+                  <p style={{ fontSize: "12px", color: "#AAAAAA", marginTop: "6px", fontFamily: "inherit" }}>Minimal 8 karakter, berisi huruf dan angka</p>
                 </div>
 
                 {/* Submit */}

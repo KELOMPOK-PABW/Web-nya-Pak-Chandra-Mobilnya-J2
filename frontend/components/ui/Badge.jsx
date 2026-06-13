@@ -1,17 +1,30 @@
+"use client";
+
 import React from "react";
 
-export function Badge({ children, variant = "info", className = "" }) {
-  const variants = {
-    success: "bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0]",
-    warning: "bg-[#FEF9C3] text-[#CA8A04] border border-[#FEF08A]",
-    danger:  "bg-[#FEE2E2] text-[#DC2626] border border-[#FECACA]",
-    info:    "bg-[#DBEAFE] text-[#2563EB] border border-[#BFDBFE]",
-    default: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
-  };
+const VARIANTS = {
+    default: { color: "#6B7280", bg: "#F3F4F6" },
+    warning: { color: "#F59E0B", bg: "#FEF3C7" },
+    info: { color: "#3B82F6", bg: "#DBEAFE" },
+    success: { color: "#059669", bg: "#A7F3D0" },
+    danger: { color: "#EF4444", bg: "#FEE2E2" },
+    purple: { color: "#8B5CF6", bg: "#EDE9FE" },
+};
 
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${variants[variant] || variants.default} ${className}`}>
-      {children}
-    </span>
-  );
+export function Badge({ children, variant = "default" }) {
+    const v = VARIANTS[variant] || VARIANTS.default;
+    return (
+        <span style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: v.color,
+            background: v.bg,
+            borderRadius: 99,
+            padding: "4px 12px",
+            display: "inline-block",
+            whiteSpace: "nowrap",
+        }}>
+            {children}
+        </span>
+    );
 }

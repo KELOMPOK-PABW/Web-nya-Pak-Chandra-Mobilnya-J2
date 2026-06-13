@@ -19,13 +19,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) {
-      setError("Email dan password wajib diisi.");
+    const email = form.email.trim();
+    if (!email) {
+      setError("Email wajib diisi");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Format email tidak valid");
+      return;
+    }
+    if (!form.password) {
+      setError("Password wajib diisi");
       return;
     }
     setLoading(true);
     try {
-      const data = await authService.login(form);
+      const data = await authService.login({ email, password: form.password });
       const user = data.data?.user;
       const role = user?.roles?.[0] || "buyer";
       if (role === "seller") router.push("/seller/dashboard");
