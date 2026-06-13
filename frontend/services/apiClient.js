@@ -4,6 +4,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function handleResponse(res) {
   const data = await res.json().catch(() => ({}));
+  // Map authentication-related server messages to a generic client message
+  const serverMsg = (data && data.message) ? String(data.message) : "";
+  if (res.status === 401 || /token tidak valid|kedaluwarsa|akses ditolak/i.test(serverMsg)) {
+    throw new Error("Sesi Anda telah berakhir. Silakan login kembali.");
+  }
 
   if (!res.ok || data.success === false) {
     throw new Error(data.message || `Request failed with status ${res.status}`);
