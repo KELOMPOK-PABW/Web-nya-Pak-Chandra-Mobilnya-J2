@@ -7,7 +7,17 @@ export async function handleResponse(res) {
   // Map authentication-related server messages to a generic client message
   const serverMsg = (data && data.message) ? String(data.message) : "";
   if (res.status === 401 || /token tidak valid|kedaluwarsa|akses ditolak/i.test(serverMsg)) {
-    throw new Error("Sesi Anda telah berakhir. Silakan login kembali.");
+    // Clear local session and redirect to login immediately to avoid showing server auth message
+    try {
+      authService.logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/auth/login";
+      }
+    } catch (e) {
+      // ignore
+    }
+    // Throw to short-circuit any further UI handling (redirect will occur)
+    throw new Error("SESSION_EXPIRED");
   }
 
   if (!res.ok || data.success === false) {
