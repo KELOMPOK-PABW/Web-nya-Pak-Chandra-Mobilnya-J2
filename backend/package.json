@@ -11,7 +11,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
-    "build": "prisma generate"
+    "build": "prisma generate",
+    "db:fix": "npx prisma db push --force-reset && node scripts/install_stored_procedures.js",
+    "seed:courier": "node scripts/seed_courier_assignment.js"
   },
   "keywords": [],
   "author": "",

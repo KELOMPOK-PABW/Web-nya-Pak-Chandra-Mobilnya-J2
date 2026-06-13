@@ -11,10 +11,11 @@ const assertAdmin = (role) => {
 
 const formatStatusLabel = (assignment) => {
   if (assignment.deliveredAt) return "sampai di tujuan";
-  if (assignment.pickupAt) return "sedang dikirim";
   const itemStatus = assignment.orderItem?.status;
+  if (itemStatus === "dikirim_balik") return "dikirim balik";
   if (itemStatus === "menunggu_kurir") return "menunggu kurir";
   if (itemStatus) return itemStatus.replace(/_/g, " ");
+  if (assignment.pickupAt) return "sedang dikirim";
   return "menunggu kurir";
 };
 
@@ -176,6 +177,25 @@ const deliver = async (orderItemId, kurirId) => {
   return { status: "sampai_di_tujuan", delivered_at: new Date() };
 };
 
+const returnToSeller = async (orderItemId, kurirId) => {
+  const assignment = await courierRepository.findAssignmentByOrderItemId(Number(orderItemId));
+  if (!assignment) throw new AppError("Tugas tidak ditemukan", 404);
+  if (assignment.kurirId !== Number(kurirId)) throw new AppError("Akses ditolak", 403);
+  if (!assignment.pickupAt) throw new AppError("Belum di-pickup", 400);
+  if (assignment.deliveredAt) throw new AppError("Sudah diantar", 400);
+
+  // Mark order item as returned to seller
+  await sellerOrderRepository.updateOrderItemStatus(assignment.orderItemId, "dikirim_balik");
+  const orderItem = await sellerOrderRepository.findOrderItemById(assignment.orderItemId);
+  await sellerOrderRepository.createStatusHistory({
+    orderId: orderItem.orderId,
+    status: "dikirim_balik",
+    updatedBy: Number(kurirId),
+  });
+
+  return { status: "dikirim_balik" };
+};
+
 module.exports = {
   assignCourier,
   getAssignmentDetail,
@@ -184,4 +204,5 @@ module.exports = {
   getTaskDetail,
   pickup,
   deliver,
+  returnToSeller,
 };

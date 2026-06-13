@@ -53,8 +53,14 @@ const findAssignmentById = async (id) => {
 };
 
 const findAssignmentByOrderItemId = async (orderItemId) => {
-  return prisma.kurirAssignment.findUnique({
-    where: { orderItemId: Number(orderItemId) },
+  // Validate input: return null when no orderItemId provided
+  if (orderItemId === undefined || orderItemId === null) return null;
+  const id = Number(orderItemId);
+  if (Number.isNaN(id)) return null;
+
+  // Use findFirst because orderItemId may not be a unique field in the schema
+  return prisma.kurirAssignment.findFirst({
+    where: { orderItemId: id },
   });
 };
 

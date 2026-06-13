@@ -262,8 +262,13 @@ export default function OrderDetailPage() {
 
   // Load shipping status per item
   useEffect(() => {
+    // Load shipping status per item and poll periodically so UI reflects courier updates
+    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+      setShippingStatuses({});
+      return;
+    }
+    let mounted = true;
     async function loadStatuses() {
-      if (!order || !Array.isArray(order.items) || order.items.length === 0) return;
       const map = {};
       await Promise.all(order.items.map(async (it) => {
         const itemId = it.order_item_id ?? it.id;
@@ -275,9 +280,11 @@ export default function OrderDetailPage() {
           map[itemId] = null;
         }
       }));
-      setShippingStatuses(map);
+      if (mounted) setShippingStatuses(map);
     }
     loadStatuses();
+    const poll = setInterval(loadStatuses, 8000);
+    return () => { mounted = false; clearInterval(poll); };
   }, [order]);
 
   // Derived

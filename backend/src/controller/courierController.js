@@ -83,6 +83,15 @@ const deliver = async (req, res, next) => {
   }
 };
 
+const returnToSeller = async (req, res, next) => {
+  try {
+    const result = await courierService.returnToSeller(req.params.id, req.user.id);
+    return res.status(200).json({ success: true, message: "Return berhasil", data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   assign,
   getAssignment,
@@ -91,4 +100,5 @@ module.exports = {
   getTaskDetail,
   pickup,
   deliver,
+  returnToSeller,
 };
