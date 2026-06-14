@@ -1,7 +1,7 @@
 const Joi = require("joi");
 
 const topupSchema = Joi.object({
-  amount: Joi.number().positive().required(),
+  amount: Joi.number().integer().positive().required(),
 });
 
 const refundSchema = Joi.object({

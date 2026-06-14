@@ -29,7 +29,17 @@ const getTransactions = async (userId) => {
 };
 
 const topup = async (userId, amount) => {
-  const result = await walletRepository.callTopupSP(userId, amount);
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) {
+    const err = new Error("Jumlah topup harus berupa angka positif.");
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+  // ensure integer amount because DB schema uses Int for balances/amounts
+  const safeAmount = Math.round(amt);
+
+  const result = await walletRepository.callTopupSP(userId, safeAmount);
   if (result.message && result.message.startsWith("ERROR")) {
     const err = new Error(result.message.replace("ERROR: ", ""));
     err.status = 400;
@@ -41,7 +51,15 @@ const topup = async (userId, amount) => {
 };
 
 const refund = async (userId, orderId) => {
-  const result = await walletRepository.callRefundSP(userId, orderId);
+  const oid = Number(orderId);
+  if (!Number.isInteger(oid) || oid <= 0) {
+    const err = new Error("Order ID tidak valid.");
+    err.status = 400;
+    err.expose = true;
+    throw err;
+  }
+
+  const result = await walletRepository.callRefundSP(userId, oid);
   if (result.message && result.message.startsWith("ERROR")) {
     const err = new Error(result.message.replace("ERROR: ", ""));
     err.status = 400;
