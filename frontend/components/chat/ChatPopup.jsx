@@ -519,7 +519,7 @@ function ChatBubble({ msg, onAddToCart, addingToCart }) {
   const isNotification = msg.isNotification;
   const isProductRelated = PRODUCT_INTENTS.includes(msg.intent);
   const isCompare = msg.intent === "compare";
-  const showCartButton = msg.intent === "add_to_cart" && msg.products && msg.products.length > 0 && !msg.confirmed;
+  const showCartButton = msg.intent === "add_to_cart" && msg.products && msg.products.length === 1 && !msg.confirmed;
   const hasReviewData = msg.reviewData || (msg.products?.[0]?.review_summary);
 
   if (isNotification) {

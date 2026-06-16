@@ -85,7 +85,7 @@ export default function RegisterPage() {
           </div>
           <span style={{ fontFamily: "inherit", fontWeight: 700, fontSize: "18px", color: "#1A3C34", letterSpacing: "-0.3px" }}>PABW Shop</span>
         </div>
-        <p style={{ fontFamily: "inherit", fontSize: "13px", color: "#888", margin: 0 }}>
+        <p style={{ fontFamily: "inherit", fontSize: "13px", color: "#555", margin: 0 }}>
           Butuh bantuan?{" "}
           <span style={{ color: "#1A3C34", fontWeight: 600, cursor: "pointer" }}>Hubungi Kami</span>
         </p>
@@ -230,7 +230,7 @@ export default function RegisterPage() {
               <h2 style={{ fontFamily: "inherit", fontSize: "24px", fontWeight: 700, color: "#1A3C34", margin: "0 0 8px 0", letterSpacing: "-0.3px", lineHeight: 1.3 }}>
                 Gabung sekarang,<br />belanja makin mudah!
               </h2>
-              <p style={{ fontFamily: "inherit", fontSize: "14px", color: "#777", margin: 0, lineHeight: 1.65 }}>
+              <p style={{ fontFamily: "inherit", fontSize: "14px", color: "#4B5563", margin: 0, lineHeight: 1.65 }}>
                 Daftar gratis dan nikmati jutaan produk pilihan<br />dengan pengiriman cepat ke seluruh Indonesia.
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function RegisterPage() {
                 <h1 style={{ fontFamily: "inherit", fontSize: "1.9rem", fontWeight: 800, color: "#0A0A0A", letterSpacing: "-0.6px", marginBottom: "6px", lineHeight: 1.2 }}>
                   Buat Akun Baru
                 </h1>
-                <p style={{ fontFamily: "inherit", fontSize: "14px", color: "#888", margin: 0 }}>
+                <p style={{ fontFamily: "inherit", fontSize: "14px", color: "#555", margin: 0 }}>
                   Sudah punya akun?{" "}
                   <Link href="/auth/login" style={{ fontWeight: 700, color: "#1A3C34", textDecoration: "none" }}>Masuk di sini</Link>
                 </p>

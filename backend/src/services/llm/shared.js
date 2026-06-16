@@ -41,11 +41,18 @@ const buildSystemInstruction = (productsContext) => {
    - "update_shipping" — kurir mengupdate status pengiriman (contoh: "Pickup order #5", "Pesanan #3 dalam perjalanan", "Order #7 sudah sampai tujuan")
    - "manage_user_admin" — admin mengelola akun user (contoh: "Ban user #42", "Aktifkan akun user #15", "Ubah role user #10 jadi seller", "Daftar semua buyer")
 
+   ATURAN AMBIGUITAS: Jika user minta add_to_cart tapi nama produk yang disebut cocok dengan BANYAK produk (>1) di katalog (misal "MacBook" cocok dengan MacBook Air, MacBook Pro 13, MacBook Pro 14, dll), maka:
+   - Tetap gunakan intent "add_to_cart"
+   - Masukkan SEMUA produk yang cocok ke suggested_product_ids (jangan pilih satu saja)
+   - Tulis reply yang menanyakan "produk yang mana?" sertai daftar opsi
+   - Contoh reply: "Ada beberapa MacBook yang tersedia. Yang mana yang mau ditambahkan?"
+   - JANGAN menebak satu produk — biarkan user memilih.
+
 2. Tulis "reply": balasan singkat ramah dalam Bahasa Indonesia (1-3 kalimat) yang sesuai dengan intent.
 
 3. "suggested_product_ids": jika intent search_product ATAU add_to_cart, pilih hingga 5 produk paling relevan DARI katalog. Untuk add_to_cart, cocokkan nama produk dari entities.product dengan nama produk di katalog. Jika tidak relevan, kembalikan array kosong []. JANGAN mengarang id — hanya gunakan id yang ada di katalog.
 
-4. "follow_up_suggestions": 2-4 saran pertanyaan lanjutan dalam Bahasa Indonesia yang bisa diklik pengguna untuk mempersempit pencarian atau melanjutkan aksi. Contoh untuk search_product: ["Yang di bawah 100rb", "Warna hitam saja", "Urutkan dari termurah"]. Untuk add_to_cart: ["Lihat keranjang saya", "Checkout sekarang"]. Untuk checkout_order: ["Lanjut bayar", "Kembali belanja"]. Untuk clear_cart: ["Kembali belanja", "Cari produk lagi"]. Untuk intent lain, berikan saran yang relevan atau array kosong [].
+4. "follow_up_suggestions": 2-4 saran pertanyaan lanjutan dalam Bahasa Indonesia yang bisa diklik pengguna untuk mempersempit pencarian atau melanjutkan aksi. Contoh untuk search_product: ["Yang di bawah 100rb", "Warna hitam saja", "Urutkan dari termurah"]. Untuk add_to_cart: ["Lihat keranjang saya", "Checkout sekarang"]. Untuk checkout_order: ["Lanjut bayar", "Kembali belanja"]. Untuk clear_cart: ["Kembali belanja", "Cari produk lagi"]. UNTUK INTENT "compare": setelah menampilkan perbandingan, sertakan saran "Checkout [Nama Produk]" untuk setiap produk yang dibandingkan (misal: ["Checkout MacBook Air", "Checkout MacBook Pro 13\""]). Contoh lainnya: untuk add_to_cart dengan banyak opsi, sertakan "Tambah [Nama Produk]" untuk setiap opsi. Untuk intent lain, berikan saran yang relevan atau array kosong [].
 45
 46	5. "entities": ekstrak entitas dari pesan pengguna. Hanya isi field yang benar-benar ditemukan; field lain boleh null atau tidak disertakan.
    - "product": nama produk/kategori (string)

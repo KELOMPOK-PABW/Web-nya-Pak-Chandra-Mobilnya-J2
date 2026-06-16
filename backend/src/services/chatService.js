@@ -163,6 +163,13 @@ const _callLlmAndPersist = async ({ session, message, history, productsContext }
     }
   }
 
+  // Safety: add_to_cart with MULTIPLE ambiguous products → ask user to pick
+  // (Frontend will show product cards with per-item add buttons instead of a single button)
+  if (llmResult.intent === "add_to_cart" && llmResult.suggested_product_ids.length > 1) {
+    llmResult.reply = "Ada beberapa produk yang cocok. Yang mana yang ingin Anda tambahkan ke keranjang?";
+    // Keep suggested_product_ids so frontend renders selectable product cards
+  }
+
   const assistantMessage = await chatRepository.addMessage({
     sessionId: session.id,
     role: "assistant",

@@ -90,7 +90,7 @@ export default function LoginPage() {
             PABW Shop
           </span>
         </div>
-        <p style={{ fontFamily: "inherit", fontSize: "13px", color: "#888", margin: 0 }}>
+        <p style={{ fontFamily: "inherit", fontSize: "13px", color: "#555", margin: 0 }}>
           Butuh bantuan?{" "}
           <span style={{ color: "#1A3C34", fontWeight: 600, cursor: "pointer" }}>Hubungi Kami</span>
         </p>
@@ -249,7 +249,7 @@ export default function LoginPage() {
               <h2 style={{ fontFamily: "inherit", fontSize: "26px", fontWeight: 700, color: "#1A3C34", margin: "0 0 8px 0", letterSpacing: "-0.3px", lineHeight: 1.3 }}>
                 Belanja lebih mudah,<br/>lebih hemat, lebih cepat.
               </h2>
-              <p style={{ fontFamily: "inherit", fontSize: "15px", color: "#777", margin: 0, lineHeight: 1.65 }}>
+              <p style={{ fontFamily: "inherit", fontSize: "15px", color: "#4B5563", margin: 0, lineHeight: 1.65 }}>
                 Jutaan produk tersedia untukmu. Masuk dan nikmati<br/>pengalaman belanja terbaik bersama PABW Shop.
               </p>
 
@@ -317,7 +317,7 @@ export default function LoginPage() {
               {/* Divider */}
               <div className="flex items-center gap-3" style={{ marginBottom: "18px" }}>
                 <div className="flex-1 h-px bg-[#EBEBEB]" />
-                <span style={{ fontSize: "12px", color: "#C0BDB6", fontWeight: 500, fontFamily: "inherit" }}>atau dengan email</span>
+                <span style={{ fontSize: "12px", color: "#666666", fontWeight: 500, fontFamily: "inherit" }}>atau dengan email</span>
                 <div className="flex-1 h-px bg-[#EBEBEB]" />
               </div>
 
@@ -393,7 +393,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <p style={{ marginTop: "16px", textAlign: "center", fontSize: "11px", color: "#BBBBBB", lineHeight: 1.7, fontFamily: "inherit" }}>
+              <p style={{ marginTop: "16px", textAlign: "center", fontSize: "11px", color: "#666666", lineHeight: 1.7, fontFamily: "inherit" }}>
                 Dengan masuk, kamu menyetujui{" "}
                 <span style={{ color: "#1A3C34", fontWeight: 500, cursor: "pointer" }}>Syarat & Ketentuan</span>
                 {" "}serta{" "}

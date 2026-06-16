@@ -35,14 +35,22 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
   const sellerName = product.store?.store_name ?? product.seller?.name ?? "";
   const productHref = `/product/${pid}?chat=1${sessionId ? `&sid=${sessionId}` : ""}`;
   return (
-    <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[160px] sm:w-[180px]">
-      <Link href={productHref} style={{ textDecoration: "none" }}>
-        <div className="h-24 flex items-center justify-center bg-[#F0FBF8]">
-          <Package size={32} color="#A5D6D0" strokeWidth={1.5} />
+    <div className="block bg-white rounded-xl border border-[#EBEBEB] overflow-hidden hover:border-[#1A3C34] transition-colors flex-shrink-0 w-[160px] sm:w-[180px] flex flex-col">
+      <Link href={productHref} style={{ textDecoration: "none" }} className="flex flex-col flex-1">
+        <div className="h-24 flex items-center justify-center bg-[#F0FBF8] overflow-hidden flex-shrink-0">
+          {product.image_url ? (
+            <img src={product.image_url} alt={name}
+              className="w-full h-full object-cover"
+              onError={e => { e.target.style.display = "none"; e.target.parentElement.innerText = "📦"; }} />
+          ) : (
+            <Package size={32} color="#A5D6D0" strokeWidth={1.5} />
+          )}
         </div>
-        <div className="p-3">
-          <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug mb-1 line-clamp-2">{name}</p>
-          {sellerName && <p className="text-[10px] text-gray-400 mb-1">{sellerName}</p>}
+        <div className="p-3 flex-1 flex flex-col justify-between gap-1">
+          <div>
+            <p className="text-[12px] font-semibold text-[#1A1A1A] leading-snug line-clamp-2">{name}</p>
+            {sellerName && <p className="text-[10px] text-gray-400 mt-1">{sellerName}</p>}
+          </div>
           <p className="text-[13px] font-bold text-[#1A3C34]">{fmt(price)}</p>
         </div>
       </Link>
@@ -50,7 +58,7 @@ function ProductCard({ product, onAddToCart, addingToCart, sessionId }) {
         <button
           onClick={(e) => { e.preventDefault(); onAddToCart(product); }}
           disabled={addingToCart}
-          className="w-full bg-[#1A3C34] text-white text-[11px] font-semibold py-2 hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50"
+          className="w-full bg-[#1A3C34] text-white text-[11px] font-semibold py-2.5 hover:bg-[#2D6A5E] transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
         >
           {addingToCart ? "Menambahkan..." : "🛒 Tambah ke Keranjang"}
         </button>
@@ -65,7 +73,7 @@ function ChatBubble({ role, content, products, intent, entities, followUpSuggest
   const isUser = role === "user";
   const isProductRelated = PRODUCT_INTENTS.includes(intent);
   const isCompare = intent === "compare";
-  const showCartButton = intent === "add_to_cart" && products && products.length > 0;
+  const showCartButton = intent === "add_to_cart" && products && products.length === 1;
   const showCheckoutButton = intent === "checkout_order";
   const showTrackButton = intent === "track_order" && entities?.order_id;
   const showClearCartButton = intent === "clear_cart";
@@ -762,8 +770,10 @@ export default function ChatPage() {
                 ))}
               </div>
 
+
+
               {/* Tip */}
-              <div className="mt-6 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="mt-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-[11px] text-amber-700 leading-relaxed">
                   💡 <strong>Tips:</strong> Coba bilang natural — misalnya "cari laptop gaming tipis budget 15jt" atau "sepatu lari yang mirip Nike"
                 </p>
@@ -881,15 +891,18 @@ export default function ChatPage() {
 
         {/* ── QUICK PROMPTS (always visible when chat is active) ── */}
         {messages.length > 0 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
-            {QUICK_PROMPTS.map((q, i) => (
-              <button key={i} onClick={() => handleQuickSend(q)}
-                disabled={loading}
-                className="bg-white border border-[#EBEBEB] rounded-full px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:border-[#1A3C34] hover:text-[#1A3C34] hover:bg-[#F0FBF8] transition-all whitespace-nowrap cursor-pointer disabled:opacity-40 shadow-sm">
-                {q}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+              {QUICK_PROMPTS.map((q, i) => (
+                <button key={i} onClick={() => handleQuickSend(q)}
+                  disabled={loading}
+                  className="bg-white border border-[#EBEBEB] rounded-full px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:border-[#1A3C34] hover:text-[#1A3C34] hover:bg-[#F0FBF8] transition-all whitespace-nowrap cursor-pointer disabled:opacity-40 shadow-sm">
+                  {q}
+                </button>
+              ))}
+            </div>
+
+          </>
         )}
       </main>
       {confirmAction && (
