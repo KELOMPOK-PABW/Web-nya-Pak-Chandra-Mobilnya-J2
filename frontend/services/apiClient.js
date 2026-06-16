@@ -75,7 +75,7 @@ export function apiUrl(path) {
   if (!BASE_URL) return path;
   const base = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
   const p = path.startsWith("/") ? path : `/${path}`;
-  return `${base}/api${p}`;
+  return `${base}${p}`;
 }
 
 export function unwrapData(payload) {

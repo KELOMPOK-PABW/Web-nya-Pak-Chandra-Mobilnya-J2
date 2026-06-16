@@ -29,6 +29,8 @@ const PRODUCT_KEYWORDS = [
   "asus", "lenovo", "acer", "dell", "hp",
   "sony", "nintendo", "playstation",
   "nike", "adidas", "puma", "converse", "h&m", "zara", "uniqlo",
+  // ── Motorcycle brands ──
+  "honda", "yamaha", "kawasaki", "suzuki", "ducati", "bmw",
 ];
 
 /**
@@ -116,13 +118,46 @@ const _callLlmAndPersist = async ({ session, message, history, productsContext }
     llmResult.suggested_product_ids = [];
   }
 
-  // Fallback: add_to_cart with named product but no IDs → search catalog by name
+  // Helper: fallback search — first in-memory, then direct DB
+  const _fallbackByProductEntity = async (productName) => {
+    // Try in-memory catalog first
+    const fromCatalog = findProductIdsByEntityName(productsContext, productName);
+    if (fromCatalog.length > 0) return fromCatalog;
+
+    // Not found in catalog — query DB directly with full name + first word
+    try {
+      const nameWords = productName.toLowerCase().trim().split(/\s+/);
+      const searchTerms = [productName.trim(), nameWords[0]].filter(Boolean);
+      const dbProducts = await productRepository.getAllProducts({
+        skip: 0,
+        take: 10,
+        keywords: searchTerms,
+      });
+      return dbProducts.slice(0, 3).map((p) => p.id);
+    } catch {
+      return [];
+    }
+  };
+
+  // Fallback: add_to_cart with named product but no IDs → search (catalog then DB)
   if (
     llmResult.intent === "add_to_cart" &&
     llmResult.suggested_product_ids.length === 0 &&
     llmResult.entities?.product
   ) {
-    const fallbackIds = findProductIdsByEntityName(productsContext, llmResult.entities.product);
+    const fallbackIds = await _fallbackByProductEntity(llmResult.entities.product);
+    if (fallbackIds.length > 0) {
+      llmResult.suggested_product_ids = fallbackIds;
+    }
+  }
+
+  // Fallback: search_product with named product but no IDs → search (catalog then DB)
+  if (
+    llmResult.intent === "search_product" &&
+    llmResult.suggested_product_ids.length === 0 &&
+    llmResult.entities?.product
+  ) {
+    const fallbackIds = await _fallbackByProductEntity(llmResult.entities.product);
     if (fallbackIds.length > 0) {
       llmResult.suggested_product_ids = fallbackIds;
     }
@@ -139,10 +174,28 @@ const _callLlmAndPersist = async ({ session, message, history, productsContext }
 
   await chatRepository.touchSession(session.id);
 
+  // If fallback found products outside original context, fetch from DB
+  let hydrated = hydrateProducts(productsContext, llmResult.suggested_product_ids);
+  if (hydrated.length < llmResult.suggested_product_ids.length) {
+    try {
+      const missingIds = llmResult.suggested_product_ids.filter(
+        (id) => !hydrated.some((h) => h.id === id)
+      );
+      for (const id of missingIds) {
+        const product = await productRepository.findProductById(id);
+        if (product) {
+          hydrated.push(productService.formatProductByIdResponse(product));
+        }
+      }
+    } catch {
+      // Best-effort — keep what we have
+    }
+  }
+
   return {
     llmResult,
     assistantMessage,
-    hydrated: hydrateProducts(productsContext, llmResult.suggested_product_ids),
+    hydrated,
   };
 };
 

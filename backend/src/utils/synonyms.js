@@ -54,7 +54,7 @@ const SYNONYM_MAP = {
 
   // ── Vehicles ──
   mobil: ["car", "mobil", "kendaraan", "sedan", "suv", "mpv"],
-  motor: ["motorcycle", "sepeda motor", "vespa", "matic", "bebek"],
+  motor: ["motorcycle", "sepeda motor", "vespa", "matic", "bebek", "honda", "yamaha", "kawasaki", "suzuki", "ducati", "bmw motor", "harley", "triumph", "ktm"],
 
   // ── Electronics (general) ──
   elektronik: ["electronics", "gadget", "digital", "elektrik"],

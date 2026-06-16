@@ -1,0 +1,5 @@
+# Download Tokopedia Product Reviews dataset from:
+# https://www.kaggle.com/datasets/farhan999/tokopedia-product-reviews
+# and place the CSV file here as `tokopedia-product-reviews-2019.csv`
+#
+# You can also set TOKOPEDIA_CSV_PATH env var to point to a different location.
