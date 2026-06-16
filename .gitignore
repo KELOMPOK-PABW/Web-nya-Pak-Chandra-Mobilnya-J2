@@ -1,3 +1,10 @@
 .codewhale/
 .deepseek/
 .reasonix/
+.codegraph/
+.next/
+node_modules/
+.DS_Store
+*.pem
+npm-debug.log*
+package-lock.json
