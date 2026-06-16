@@ -106,11 +106,12 @@ const enforceSessionLimit = async (userId) => {
 // ── Shared LLM pipeline ─────────────────────────────────────────────
 // Calls the LLM, applies add_to_cart safety rules, stores the assistant
 // message, touches the session, and hydrates suggested products.
-const _callLlmAndPersist = async ({ session, message, history, productsContext }) => {
+const _callLlmAndPersist = async ({ session, message, history, productsContext, role }) => {
   const llmResult = await llmService.classifyAndSuggest({
     message,
     history,
     productsContext,
+    role,
   });
 
   // Safety: add_to_cart without specific product entity → clear suggested IDs
@@ -223,7 +224,7 @@ const _resolveSession = async ({ userId, sessionId, message }) => {
 
 // ── Public API ─────────────────────────────────────────────────────
 
-const runLlmChat = async ({ userId, message, history, sessionId }) => {
+const runLlmChat = async ({ userId, message, history, sessionId, role }) => {
   if (!message || !message.trim()) {
     throw new Error("Pesan tidak boleh kosong");
   }
@@ -250,6 +251,7 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
     message,
     history: convo,
     productsContext,
+    role,
   });
 
   return {
@@ -262,7 +264,7 @@ const runLlmChat = async ({ userId, message, history, sessionId }) => {
   };
 };
 
-const sendMessage = async ({ userId, sessionId, message }) => {
+const sendMessage = async ({ userId, sessionId, message, role }) => {
   if (!message || !message.trim()) {
     throw new Error("Pesan tidak boleh kosong");
   }
@@ -285,6 +287,7 @@ const sendMessage = async ({ userId, sessionId, message }) => {
     message,
     history,
     productsContext,
+    role,
   });
 
   return {

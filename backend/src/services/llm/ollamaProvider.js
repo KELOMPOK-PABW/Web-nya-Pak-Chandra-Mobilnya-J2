@@ -9,11 +9,11 @@ const {
 const DEFAULT_BASE_URL = "http://localhost:11434";
 const DEFAULT_MODEL = "qwen2.5:7b";
 
-const classifyAndSuggest = async ({ message, history = [], productsContext = [] }) => {
+const classifyAndSuggest = async ({ message, history = [], productsContext = [], role = "buyer" }) => {
   const baseUrl = process.env.OLLAMA_BASE_URL || DEFAULT_BASE_URL;
   const model = process.env.OLLAMA_MODEL || DEFAULT_MODEL;
 
-  const systemInstruction = buildOllamaSystemInstruction(productsContext);
+  const systemInstruction = buildOllamaSystemInstruction(productsContext, role);
   const messages = buildOllamaMessages(systemInstruction, history, message);
 
   let response;
@@ -51,7 +51,7 @@ const classifyAndSuggest = async ({ message, history = [], productsContext = [] 
   }
 
   const parsed = extractJson(rawText);
-  return validateAndNormalizeResponse(parsed, productsContext);
+  return validateAndNormalizeResponse(parsed, productsContext, role);
 };
 
 module.exports = { classifyAndSuggest };

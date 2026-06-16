@@ -202,6 +202,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "update stok kaos polos jadi 50",
       productsContext: sampleCatalog,
+      role: "seller",
     });
 
     expect(result.intent).toBe("manage_product");
@@ -223,6 +224,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "tambah produk sepatu kets harga 150rb",
       productsContext: sampleCatalog,
+      role: "seller",
     });
 
     expect(result.intent).toBe("manage_product");
@@ -243,6 +245,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "konfirmasi pesanan #5",
       productsContext: sampleCatalog,
+      role: "seller",
     });
 
     expect(result.intent).toBe("process_order");
@@ -263,6 +266,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "kirim pesanan #8",
       productsContext: sampleCatalog,
+      role: "seller",
     });
 
     expect(result.intent).toBe("process_order");
@@ -283,6 +287,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "order #7 sudah sampai tujuan",
       productsContext: sampleCatalog,
+      role: "kurir",
     });
 
     expect(result.intent).toBe("update_shipping");
@@ -303,6 +308,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "pickup order #5",
       productsContext: sampleCatalog,
+      role: "kurir",
     });
 
     expect(result.intent).toBe("update_shipping");
@@ -323,6 +329,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "ban user #42",
       productsContext: sampleCatalog,
+      role: "admin",
     });
 
     expect(result.intent).toBe("manage_user_admin");
@@ -343,6 +350,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "ubah role user #10 jadi seller",
       productsContext: sampleCatalog,
+      role: "admin",
     });
 
     expect(result.intent).toBe("manage_user_admin");
@@ -364,6 +372,7 @@ describe("llmService.classifyAndSuggest (gemini provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "daftar semua buyer",
       productsContext: sampleCatalog,
+      role: "admin",
     });
 
     expect(result.intent).toBe("manage_user_admin");
@@ -525,6 +534,7 @@ describe("llmService.classifyAndSuggest (ollama provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "update stok kaos polos jadi 50",
       productsContext: sampleCatalog,
+      role: "seller",
     });
 
     expect(result.intent).toBe("manage_product");
@@ -548,6 +558,7 @@ describe("llmService.classifyAndSuggest (ollama provider)", () => {
     const result = await llmService.classifyAndSuggest({
       message: "ban user #42",
       productsContext: sampleCatalog,
+      role: "admin",
     });
 
     expect(result.intent).toBe("manage_user_admin");

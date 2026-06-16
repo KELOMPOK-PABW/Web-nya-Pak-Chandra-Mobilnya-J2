@@ -90,7 +90,7 @@ const isRetryable = (err) => {
   return code === 429 || code === 500 || code === 502 || code === 503;
 };
 
-const classifyAndSuggest = async ({ message, history = [], productsContext = [] }) => {
+const classifyAndSuggest = async ({ message, history = [], productsContext = [], role = "buyer" }) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY belum diatur di environment");
@@ -98,7 +98,7 @@ const classifyAndSuggest = async ({ message, history = [], productsContext = [] 
 
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const ai = new GoogleGenAI({ apiKey });
-  const systemInstruction = buildSystemInstruction(productsContext);
+  const systemInstruction = buildSystemInstruction(productsContext, role);
   const contents = buildGeminiContents(history, message);
 
   const MAX_RETRIES = 2;
@@ -129,7 +129,7 @@ const classifyAndSuggest = async ({ message, history = [], productsContext = [] 
         throw new Error("Layanan AI mengembalikan format yang tidak valid");
       }
 
-      return validateAndNormalizeResponse(parsed, productsContext);
+      return validateAndNormalizeResponse(parsed, productsContext, role);
     } catch (error) {
       lastError = error;
 

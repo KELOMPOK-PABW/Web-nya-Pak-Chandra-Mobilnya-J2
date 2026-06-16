@@ -9,6 +9,7 @@ const { INTENTS } = require("./llm/shared");
  * @param {string} params.message          - User message text
  * @param {Array}  [params.history]        - Previous conversation turns [{role, content}]
  * @param {Array}  [params.productsContext] - Catalog snapshot [{id, name, price, stock, ...}]
+ * @param {string} [params.role]           - User role (buyer, seller, kurir, admin)
  * @returns {Promise<{intent, reply, suggested_product_ids, entities}>}
  */
 const classifyAndSuggest = async (params) => {

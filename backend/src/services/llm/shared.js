@@ -13,13 +13,34 @@ const INTENTS = [
   "clear_cart",
 ];
 
+/**
+ * Role-to-intent mapping.
+ * Setiap role hanya boleh mengakses intent yang relevan.
+ */
+const ROLE_INTENTS = {
+  buyer: ["search_product", "add_to_cart", "clear_cart", "checkout_order", "make_payment", "track_order"],
+  seller: ["search_product", "add_to_cart", "clear_cart", "checkout_order", "make_payment", "track_order", "manage_product", "process_order"],
+  kurir: ["update_shipping"],
+  admin: ["search_product", "add_to_cart", "clear_cart", "checkout_order", "make_payment", "track_order", "manage_product", "process_order", "update_shipping", "manage_user_admin"],
+};
+
+/**
+ * Get the list of intents allowed for a given role.
+ * Falls back to buyer-level intents for unknown roles.
+ */
+const INTENTS_FOR_ROLE = (role) => {
+  return ROLE_INTENTS[role] || ROLE_INTENTS.buyer;
+};
+
 const ENTITY_STRING_FIELDS = ["product", "color", "action", "address", "payment_method", "role"];
 const ENTITY_NUMBER_FIELDS = ["price", "order_id", "stock", "user_id"];
 
 /**
  * Build the base system instruction (without JSON format suffix).
+ * @param {Array} productsContext - Katalog produk
+ * @param {string} [role="buyer"] - Role user (buyer, seller, kurir, admin)
  */
-const buildSystemInstruction = (productsContext) => {
+const buildSystemInstruction = (productsContext, role = "buyer") => {
   const catalog = (productsContext || [])
     .map(
       (p) =>
@@ -27,19 +48,27 @@ const buildSystemInstruction = (productsContext) => {
     )
     .join("\n");
 
+  const allowedIntents = INTENTS_FOR_ROLE(role);
+
+  const INTENT_DESCRIPTIONS = {
+    search_product: `- "search_product" — mencari atau menelusuri produk (contoh: "Cari baju putih", "Ada sepatu murah?")`,
+    add_to_cart: `- "add_to_cart" — menambahkan item ke keranjang (contoh: "Tambahkan sabun ini ke keranjang", "Masukkan 2 baju ke cart"). PERHATIKAN konteks percakapan: jika pengguna sebelumnya ingin menambah ke keranjang lalu menyebut nama produk, intent tetap add_to_cart, BUKAN search_product.`,
+    clear_cart: `- "clear_cart" — mengosongkan/menghapus semua item di keranjang (contoh: "Hapus semua keranjang saya", "Kosongkan cart", "Bersihkan keranjang belanja")`,
+    checkout_order: `- "checkout_order" — checkout dari keranjang (contoh: "Checkout sekarang", "Lanjut ke pembayaran", "Beli semua item di keranjang")`,
+    make_payment: `- "make_payment" — membayar atau menanyakan status pembayaran (contoh: "Bayar pakai ewallet", "Status pembayaran order #12")`,
+    track_order: `- "track_order" — melacak status pengiriman (contoh: "Dimana pesanan saya?", "Status pengiriman order #7")`,
+    manage_product: `- "manage_product" — mengelola produk (contoh: "Tambah produk baru", "Update stok kaos polos", "Hapus produk sabun", "Ubah harga sepatu jadi 100rb")`,
+    process_order: `- "process_order" — memproses pesanan masuk (contoh: "Proses order #5", "Konfirmasi pesanan #3", "Tolak pesanan #8", "Kirim pesanan #4")`,
+    update_shipping: `- "update_shipping" — mengupdate status pengiriman (contoh: "Pickup order #5", "Pesanan #3 dalam perjalanan", "Order #7 sudah sampai tujuan")`,
+    manage_user_admin: `- "manage_user_admin" — mengelola akun user (contoh: "Ban user #42", "Aktifkan akun user #15", "Ubah role user #10 jadi seller", "Daftar semua buyer")`,
+  };
+
+  const intentDescriptions = allowedIntents.map((key) => INTENT_DESCRIPTIONS[key] || INTENT_DESCRIPTIONS.search_product);
+
   return `Anda adalah asisten belanja untuk marketplace berbahasa Indonesia. Tugas Anda:
 
 1. Tentukan INTENT dari pesan pengguna. Pilih SATU dari:
-   - "search_product" — mencari atau menelusuri produk (contoh: "Cari baju putih", "Ada sepatu murah?")
-   - "add_to_cart" — menambahkan item ke keranjang (contoh: "Tambahkan sabun ini ke keranjang", "Masukkan 2 baju ke cart"). PERHATIKAN konteks percakapan: jika pengguna sebelumnya ingin menambah ke keranjang lalu menyebut nama produk, intent tetap add_to_cart, BUKAN search_product.
-   - "clear_cart" — mengosongkan/menghapus semua item di keranjang (contoh: "Hapus semua keranjang saya", "Kosongkan cart", "Bersihkan keranjang belanja")
-   - "checkout_order" — checkout dari keranjang (contoh: "Checkout sekarang", "Lanjut ke pembayaran", "Beli semua item di keranjang")
-   - "make_payment" — membayar atau menanyakan status pembayaran (contoh: "Bayar pakai ewallet", "Status pembayaran order #12")
-   - "track_order" — melacak status pengiriman (contoh: "Dimana pesanan saya?", "Status pengiriman order #7")
-   - "manage_product" — seller/admin mengelola produk (contoh: "Tambah produk baru", "Update stok kaos polos", "Hapus produk sabun", "Ubah harga sepatu jadi 100rb")
-   - "process_order" — seller/admin memproses pesanan masuk (contoh: "Proses order #5", "Konfirmasi pesanan #3", "Tolak pesanan #8", "Kirim pesanan #4")
-   - "update_shipping" — kurir mengupdate status pengiriman (contoh: "Pickup order #5", "Pesanan #3 dalam perjalanan", "Order #7 sudah sampai tujuan")
-   - "manage_user_admin" — admin mengelola akun user (contoh: "Ban user #42", "Aktifkan akun user #15", "Ubah role user #10 jadi seller", "Daftar semua buyer")
+${intentDescriptions.join("\n")}
 
    ATURAN AMBIGUITAS: Jika user minta add_to_cart tapi nama produk yang disebut cocok dengan BANYAK produk (>1) di katalog (misal "MacBook" cocok dengan MacBook Air, MacBook Pro 13, MacBook Pro 14, dll), maka:
    - Tetap gunakan intent "add_to_cart"
@@ -84,8 +113,8 @@ ${catalog || "(katalog kosong)"}
  * Build system instruction for providers that need JSON format inline (Ollama).
  * Appends explicit JSON output instructions.
  */
-const buildOllamaSystemInstruction = (productsContext) => {
-  const base = buildSystemInstruction(productsContext);
+const buildOllamaSystemInstruction = (productsContext, role = "buyer") => {
+  const base = buildSystemInstruction(productsContext, role);
   return `${base}
 
 PENTING: Jawaban WAJIB berupa JSON mentah (raw JSON) tanpa markdown fences, tanpa teks tambahan. Format JSON yang harus diikuti:
@@ -162,8 +191,9 @@ const sanitizeEntities = (entities) => {
 
 /**
  * Validate and normalize the parsed LLM response into the standard result shape.
+ * Optionally validates that the intent is allowed for the given role.
  */
-const validateAndNormalizeResponse = (parsed, productsContext) => {
+const validateAndNormalizeResponse = (parsed, productsContext, role) => {
   const validIds = new Set((productsContext || []).map((p) => p.id));
   const suggested = Array.isArray(parsed.suggested_product_ids)
     ? parsed.suggested_product_ids
@@ -179,8 +209,17 @@ const validateAndNormalizeResponse = (parsed, productsContext) => {
         .slice(0, 4)
     : [];
 
+  let intent = INTENTS.includes(parsed.intent) ? parsed.intent : "search_product";
+
+  // Role-gate: if intent isn't allowed for this role, fallback to search_product.
+  // Default to "buyer" so missing role never bypasses the gate.
+  const effectiveRole = role || "buyer";
+  if (!INTENTS_FOR_ROLE(effectiveRole).includes(intent)) {
+    intent = "search_product";
+  }
+
   return {
-    intent: INTENTS.includes(parsed.intent) ? parsed.intent : "search_product",
+    intent,
     reply: typeof parsed.reply === "string" ? parsed.reply : "",
     suggested_product_ids: suggested,
     follow_up_suggestions: followUpSuggestions,
@@ -229,6 +268,8 @@ const extractJson = (text) => {
 
 module.exports = {
   INTENTS,
+  ROLE_INTENTS,
+  INTENTS_FOR_ROLE,
   buildSystemInstruction,
   buildOllamaSystemInstruction,
   buildGeminiContents,

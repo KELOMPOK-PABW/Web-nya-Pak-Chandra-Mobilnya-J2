@@ -24,6 +24,7 @@ const sendMessage = async (req, res) => {
       userId: req.user.id,
       sessionId: value.session_id,
       message: value.message,
+      role: req.user.role,
     });
     return res.status(200).json({ success: true, data: result });
   } catch (e) {
@@ -46,6 +47,7 @@ const llmChat = async (req, res) => {
       sessionId: value.session_id,
       message: value.message,
       history: value.history,
+      role: req.user.role,
     });
     return res.status(200).json({ success: true, data: result });
   } catch (e) {
